@@ -15,8 +15,8 @@ dw 512 ; root directory entries count
 dw 2880 ; sectors count
 db 0xf0 ; media descriptor
 dw 9 ; sectors per FAT
-dw 18  ; sectors per track 0x20
-dw 2 ; heads per cylinder 0x10
+floppy_sectors_per_track: dw 18
+floppy_heads_count: dw 2
 dd 0 ; hidden sectors
 dd 0 ; large sectors
 db 0 ; drive number
@@ -36,57 +36,69 @@ start:
 	mov es, ax
 	mov ss, ax
 
-	mov sp, 0x7c00
+	;mov sp, 0x7c00
 
-	mov ax, message_welcome
+	mov ax, msg_welcome
 	call print
-	
-	mov ax, lf
-	call print
-	
+	call print_new_line
+
 	;mov ax, 1
 	;mov bx, fat1
 	;mov cx, 9
 	;call read_floppy_data
-	
+
 	mov ax, 19
 	mov bx, buffer
 	mov cx, 1
 	call read_floppy_data
 	
-	mov ax, buffer
+	;mov ax, buffer
+	;call print
+	
+	;mov ax, buffer
+	;call read_file
+	
+	; Should not reach this
+	mov ax, msg_bootstrap_failed
+	call fatal_error
+
+; Stop execution and show message
+; in
+;  ax: message address
+fatal_error:
 	call print
+	hlt
+.halt:
+	jmp .halt
 	
-	mov ax, buffer
-	call read_file
-	
-	call stop
+; Print new line
+print_new_line:
+	mov ah, 0x0e
+	mov al, 0x0a ; LF
+	int 0x10
+	mov al, 0x0d ; CR
+	int 0x10
 
 ; Print string
-; ax - pointer to message
+; in
+;  ax: message address
 print:	
 	push ax
 	push bx
-	push cx
-	push dx
 	push si
 
 	mov si, ax
-	
+	mov bx, 0
 	mov ah, 0x0e
-	mov bl, 0
-	mov bh, 0
-.next_char:
+.loop:
 	lodsb
 	cmp al, 0
 	jz .string_finished ; if al == 0
-	int 10h
-	jmp .next_char
+	int 0x10
+	jmp .loop
 .string_finished:
 
 	pop si
-	pop dx
-	pop cx
 	pop bx
 	pop ax
 	ret
@@ -125,38 +137,30 @@ print_digit:
 	pop bx
 	pop ax
 	ret
-
-; Read floppy
-; ax: linear sector to read
-; bx: buffer address
-; cx: sectors to read
-read_floppy_data:
-%define floppy_cylinders_count 80
-%define floppy_sectors_count 18
-%define floppy_heads_count 2
+	
+; ax: address
+; bx: count
+dump_bytes:
 	push ax
 	push bx
 	push cx
 	push dx
 	push si
 	
-	push cx
-	
-	mov dx, floppy_sectors_count
-	div dl
-	mov cl, ah ; sector, lba % sectors per track + 1
-	add cl, 1
+	mov cx, 0
+.loop:
+	mov si, ax
+	add si, cx
+	mov dh, 0
+	mov dl, [si]
+	push ax
+	mov ax, dx
+	call print_int
 
-	mov ah, 0
-	mov dx, floppy_heads_count
-	div dl
-	mov dh, ah ; head, (lba / secttors per track) % heads
-	mov ch, al ; cylinder, (lba / secttors per track) / heads
-	mov dl, 0 ; drive
-	
-	pop ax ; sectors to read
-	mov ah, 0x02
-	int 0x13
+	pop ax
+	inc cx
+	cmp cx, bx
+	jl .loop
 	
 	pop si
 	pop dx
@@ -164,13 +168,69 @@ read_floppy_data:
 	pop bx
 	pop ax
 	ret
-
-; Stop execution
-stop:
-	hlt
-.halt:
-	jmp .halt
 	
+; Converts LBA to CHS addressing
+; in
+;  ax: LBA address
+; out
+;  cl: sector
+;  dh: head
+;  ch: cylinder
+lba_to_chs:
+	push ax
+	
+	div byte [floppy_sectors_per_track]
+	mov cl, ah
+	add cl, 1 ; sector, lba % sectors per track + 1
+	
+	mov ah, 0
+	div byte [floppy_heads_count]
+	mov dh, ah ; head, (lba / secttors per track) % heads
+	mov ch, al ; cylinder, (lba / secttors per track) / heads
+	
+	pop ax
+	ret
+
+; Read sectors from floppy
+; in
+;  ax: LBA addressed sector to read
+;  bx: buffer address
+;  cx: number of sectors to read
+read_floppy_data:
+%define floppy_cylinders_count 80
+%define floppy_sectors_count 18
+%define floppy_heads_count 2
+	push ax
+	push cx
+	push dx
+	push di
+	
+	call lba_to_chs
+
+	mov dl, 0 ; drive number
+
+	; try reading 3 times
+	mov di, 3
+.loop:
+	mov al, cl ; sectors to read
+	mov ah, 0x02
+	int 0x13
+	jnc .read_successful
+	dec di
+	cmp di, 0
+	jnz .loop
+
+	; Read failed
+	mov ax, msg_disk_read_failed
+	call fatal_error
+.read_successful:
+	
+	pop di
+	pop dx
+	pop cx
+	pop ax
+	ret
+
 ; Read file
 read_file:
 	push ax
@@ -219,43 +279,10 @@ extension:
 	pop bx
 	pop ax
 	ret
-	
-; ax: address
-; bx: count
-dump_bytes:
-	push ax
-	push bx
-	push cx
-	push dx
-	push si
-	
-	mov cx, 0
-.loop:
-	mov si, ax
-	add si, cx
-	mov dh, 0
-	mov dl, [si]
-	push ax
-	mov ax, dx
-	call print_int
-	
-	mov ax, lf
-	call print
-	
-	pop ax
-	inc cx
-	cmp cx, bx
-	jl .loop
-	
-	pop si
-	pop dx
-	pop cx
-	pop bx
-	pop ax
-	ret
 
-	message_welcome db "Welcome to Dummy OS!", 0
-	lf db ` `, 0
+	msg_welcome db "Welcome to Dummy OS!", 0
+	msg_bootstrap_failed db "Fatal Error! Bootstrap failed.", 0
+	msg_disk_read_failed db "Fatal Error! Failed to read disk.", 0
 	times 510 - ($ - $$) db 0
 	db 0x55, 0xaa
 	
