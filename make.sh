@@ -1,8 +1,18 @@
-#!/bin/bash
+#!/bin/sh
+
+function check {
+    if [ $? -ne 0 ]; then
+        echo
+        echo "⛔️ ${1}, aborting..."
+        exit 1
+    fi
+}
 
 VOLUME_NAME="DUMMY OS"
 
+# Compile code
 nasm -f bin -o boot.bin boot.asm
+check "Failed to compile source"
 
 # Generate empty image file
 dd if=/dev/zero bs=512 count=2880 of=floppy.img

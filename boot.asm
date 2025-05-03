@@ -2,17 +2,18 @@ org 0x7c00
 cpu 8086
 bits 16
 
+main:
 	jmp short start
 	nop
 
 ; FAT12 header
 ; BPB (BIOS Parameter Block)
 db "MSDOS5.0" ; (8 bytes)
-dw 512 ; bytes per sector
+bpb_bytes_per_sector: dw 512
 db 1 ; sectors per cluster
 bpb_reserved_sectors_count: dw 1
 bpb_fats_count: db 2
-dw 512 ; root directory entries count
+bpb_root_dir_entries_count: dw 512
 dw 2880 ; sectors count
 db 0xf0 ; media descriptor
 bpb_sectors_per_fat: dw 9
@@ -29,7 +30,7 @@ db "NO NAME    " ; volume label (11 bytes)
 db "FAT12   " ; file system type (8 bytes)
 
 ;%define fat1 512 ; 512 * 9
-%define buffer 0x7c00 + 512 ; 512
+;%define buffer 0x7c00 + 512 ; 512
 %define name_buffer 0x7c00 + 512 + 512 ; 16
 
 start:
@@ -45,25 +46,29 @@ start:
 	call print
 	call print_new_line
 	
+	; Get number of sectors to read
+	mov ax, [bpb_root_dir_entries_count]
+	mov cl, 5
+	shl ax, cl ; ax *= 32
+	div word [bpb_bytes_per_sector]
+	mov cx, ax
+	
+	; Get starting sector
 	mov ax, [bpb_sectors_per_fat]
-	mul [bpb_fats_count]
+	mul byte [bpb_fats_count]
+	add ax, [bpb_reserved_sectors_count]
 
-	;mov ax, 1
-	;mov bx, fat1
-	;mov cx, 9
-	;call read_floppy_data
-
-	mov ax, 19
+	; Read root directory
 	mov bx, buffer
-	mov cx, 1
 	call read_floppy_data
-	
-	;mov ax, buffer
-	;call print
-	
-	;mov ax, buffer
-	;call read_file
-	
+
+	mov ax, buffer
+	mov bx, kernel_file_name
+	call find_cluster_number
+
+	call print_int
+	call print_new_line
+
 	; Should not reach this
 	mov ax, msg_bootstrap_failed
 	call fatal_error
@@ -77,13 +82,29 @@ fatal_error:
 .halt:
 	jmp .halt
 	
+; Print space
+print_space:
+	push ax
+
+	mov ah, 0x0e
+	mov al, " "
+	int 0x10
+
+	pop ax
+	ret
+	
 ; Print new line
 print_new_line:
+	push ax
+
 	mov ah, 0x0e
 	mov al, 0x0d ; CR
 	int 0x10
 	mov al, 0x0a ; LF
 	int 0x10
+	
+	pop ax
+	ret
 
 ; Print string
 ; in
@@ -143,34 +164,26 @@ print_digit:
 	pop bx
 	pop ax
 	ret
-	
+
+; Print contents of memory
 ; ax: address
 ; bx: count
 dump_bytes:
 	push ax
 	push bx
-	push cx
-	push dx
 	push si
 	
-	mov cx, 0
-.loop:
 	mov si, ax
-	add si, cx
-	mov dh, 0
-	mov dl, [si]
-	push ax
-	mov ax, dx
+	add bx, ax
+	mov ax, 0
+.loop:
+	lodsb
 	call print_int
-
-	pop ax
-	inc cx
-	cmp cx, bx
-	jl .loop
+	call print_space
+	cmp si, bx
+	jne .loop
 	
 	pop si
-	pop dx
-	pop cx
 	pop bx
 	pop ax
 	ret
@@ -237,64 +250,51 @@ read_floppy_data:
 	pop ax
 	ret
 
-; Read file
-read_file:
-	push ax
+; Try finding cluster number for a file of a given name
+; in
+;  ax: root dir buffer address
+;  bx: file name address
+; out
+;  ax: cluster number (or 0 if not found)
+find_cluster_number:
 	push bx
-	push cx
-	push dx
+	push di
 	push si
-filename:
-	mov cx, 0
-	mov bx, ax
-	add bx, cx
-	mov dl, [bx]
-	mov bx, name_buffer
-	add bx, cx
-	mov [bx], dl
-	inc cx
-	cmp cx, 8
-	jl filename
 	
-	mov bx, name_buffer
-	add bx, 8
-	mov byte [bx], "."
+	mov di, ax ; current entry address
+	mov ax, 0 ; current entry count
+.loop:
+	mov si, bx ; searching file name
+	mov cx, 11 ; chars in file name
+	push di
+	repe cmpsb ; Try matching file names
+	pop di
+	je .found_file
 	
-extension:
-	mov cx, 0
-	mov bx, ax
-	add bx, 8
-	add bx, cx
-	mov dl, [bx]
-	mov bx, name_buffer
-	add bx, 9
-	add bx, cx
-	mov [bx], dl
-	inc cx
-	cmp cx, 3
-	jl extension
+	; Try next entry
+	add di, 32
+	inc ax
+	cmp ax, [bpb_root_dir_entries_count]
+	jl .loop
 	
-	mov byte [name_buffer + 13], 0
-	
-	mov ax, name_buffer
-	call print
-	
+	; Gone through all file entries, nothing found
+	mov ax, 0
+	jmp .not_found
+
+.found_file:
+	mov ax, [di + 26]
+
+.not_found:
 	pop si
-	pop dx
-	pop cx
+	pop di
 	pop bx
-	pop ax
 	ret
 
+kernel_file_name db "BOOT    ASM", 0
 msg_welcome db "Welcome to Dummy OS!", 0
 msg_bootstrap_failed db "Fatal Error! Bootstrap failed.", 0
 msg_disk_read_failed db "Fatal Error! Failed to read disk.", 0
 times 510 - ($ - $$) db 0
 db 0x55, 0xaa
-	
-; dynamic data
-;fat1: resb 512 * 9
-;buffer: resb 512
-;name_buffer: resb 16
 
-
+buffer:
