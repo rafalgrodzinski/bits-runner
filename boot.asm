@@ -4,21 +4,23 @@ bits 16
 
 	jmp short start
 	nop
-	
+
 ; FAT12 header
+; BPB (BIOS Parameter Block)
 db "MSDOS5.0" ; (8 bytes)
 dw 512 ; bytes per sector
 db 1 ; sectors per cluster
-dw 1 ; reserved sectors count
-db 2 ; FATs count
+bpb_reserved_sectors_count: dw 1
+bpb_fats_count: db 2
 dw 512 ; root directory entries count
 dw 2880 ; sectors count
 db 0xf0 ; media descriptor
-dw 9 ; sectors per FAT
+bpb_sectors_per_fat: dw 9
 floppy_sectors_per_track: dw 18
 floppy_heads_count: dw 2
 dd 0 ; hidden sectors
 dd 0 ; large sectors
+; Extended Boot Record
 db 0 ; drive number
 db 0 ; unused
 db 0x29 ; boot signature
@@ -38,9 +40,13 @@ start:
 
 	;mov sp, 0x7c00
 
+	; Show welcome message
 	mov ax, msg_welcome
 	call print
 	call print_new_line
+	
+	mov ax, [bpb_sectors_per_fat]
+	mul [bpb_fats_count]
 
 	;mov ax, 1
 	;mov bx, fat1
@@ -74,9 +80,9 @@ fatal_error:
 ; Print new line
 print_new_line:
 	mov ah, 0x0e
-	mov al, 0x0a ; LF
-	int 0x10
 	mov al, 0x0d ; CR
+	int 0x10
+	mov al, 0x0a ; LF
 	int 0x10
 
 ; Print string
@@ -280,11 +286,11 @@ extension:
 	pop ax
 	ret
 
-	msg_welcome db "Welcome to Dummy OS!", 0
-	msg_bootstrap_failed db "Fatal Error! Bootstrap failed.", 0
-	msg_disk_read_failed db "Fatal Error! Failed to read disk.", 0
-	times 510 - ($ - $$) db 0
-	db 0x55, 0xaa
+msg_welcome db "Welcome to Dummy OS!", 0
+msg_bootstrap_failed db "Fatal Error! Bootstrap failed.", 0
+msg_disk_read_failed db "Fatal Error! Failed to read disk.", 0
+times 510 - ($ - $$) db 0
+db 0x55, 0xaa
 	
 ; dynamic data
 ;fat1: resb 512 * 9
