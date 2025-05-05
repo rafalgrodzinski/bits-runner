@@ -7,34 +7,36 @@ main:
 	nop
 
 ; FAT12 header
-%define bpb_bytes_per_sector 512
-%define bpb_reserved_sectors_count 1
-%define bpb_fats_count 2
-%define bpb_root_dir_entries_count 512
-%define bpb_sectors_per_fat 9
+%define BPB_BYTES_PER_SECTOR 512
+%define BPB_RESERVED_SECTORS_COUNT 1
+%define BPB_FATS_COUNT 2
+%define BPB_ROOT_DIR_ENTRIES_COUNT 512
+%define BPB_SECTORS_PER_FAT 9
+%define BPB_SECTORS_PER_TRACK 18
+%define BPB_HEADS_COUNT 2
 
 %define FAT_BYTES_PER_ENTRY 32
 %define FAT_ENTRY_CLUSTER_OFFSET 26
-%define FAT_FIRST_DATA_SECTOR bpb_reserved_sectors_count + (bpb_fats_count * bpb_sectors_per_fat) + ((bpb_root_dir_entries_count * FAT_BYTES_PER_ENTRY) / bpb_bytes_per_sector) - 2
-%define FAT_ROOT_DIR_OFFSET bpb_reserved_sectors_count + bpb_sectors_per_fat * bpb_fats_count
-%define FAT_ROOT_DIR_SECTORS_COUNT (bpb_root_dir_entries_count * FAT_BYTES_PER_ENTRY) / bpb_bytes_per_sector
+%define FAT_FIRST_DATA_SECTOR BPB_RESERVED_SECTORS_COUNT + (BPB_FATS_COUNT * BPB_SECTORS_PER_FAT) + ((BPB_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY) / BPB_BYTES_PER_SECTOR) - 2
+%define FAT_ROOT_DIR_OFFSET BPB_RESERVED_SECTORS_COUNT + BPB_SECTORS_PER_FAT * BPB_FATS_COUNT
+%define FAT_ROOT_DIR_SECTORS_COUNT (BPB_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY) / BPB_BYTES_PER_SECTOR
 
 %define FAT_EOF 0x0ff8
 
-%define BUFFER_KERNEL buffer + bpb_sectors_per_fat * bpb_bytes_per_sector
+%define BUFFER_KERNEL buffer + BPB_SECTORS_PER_FAT * BPB_BYTES_PER_SECTOR
 
 ; BPB (BIOS Parameter Block)
-db "MSDOS5.0" ; (8 bytes)
-dw bpb_bytes_per_sector
+db "MSDOS5.0" ; label (8 bytes)
+dw BPB_BYTES_PER_SECTOR
 db 1 ; sectors per cluster
-dw bpb_reserved_sectors_count
-db bpb_fats_count
-dw bpb_root_dir_entries_count
+dw BPB_RESERVED_SECTORS_COUNT
+db BPB_FATS_COUNT
+dw BPB_ROOT_DIR_ENTRIES_COUNT
 dw 2880 ; sectors count
 db 0xf0 ; media descriptor
-dw bpb_sectors_per_fat
-floppy_sectors_per_track: dw 18
-floppy_heads_count: dw 2
+dw BPB_SECTORS_PER_FAT
+bpb_sectors_per_track: dw BPB_SECTORS_PER_TRACK
+bpb_heads_count: dw BPB_HEADS_COUNT
 dd 0 ; hidden sectors
 dd 0 ; large sectors
 ; Extended Boot Record
@@ -79,9 +81,9 @@ start:
 	push ax ; preserve found cluster number
 
 	; Read first fat entry
-	mov ax, bpb_reserved_sectors_count
+	mov ax, BPB_RESERVED_SECTORS_COUNT
 	mov bx, buffer
-	mov cx, bpb_sectors_per_fat
+	mov cx, BPB_SECTORS_PER_FAT
 	call read_floppy_data
 	
 	; Load kernel file
@@ -207,12 +209,12 @@ dump_bytes:
 lba_to_chs:
 	push ax
 	
-	div byte [floppy_sectors_per_track]
+	div byte [bpb_sectors_per_track]
 	mov cl, ah
 	add cl, 1 ; sector, lba % sectors per track + 1
 	
 	mov ah, 0
-	div byte [floppy_heads_count]
+	div byte [bpb_heads_count]
 	mov dh, ah ; head, (lba / secttors per track) % heads
 	mov ch, al ; cylinder, (lba / secttors per track) / heads
 	
@@ -275,7 +277,7 @@ find_cluster_number:
 	; Try next entry
 	add di, FAT_BYTES_PER_ENTRY
 	inc ax
-	cmp ax, bpb_root_dir_entries_count
+	cmp ax, BPB_ROOT_DIR_ENTRIES_COUNT
 	jl .loop
 	
 	; Gone through all file entries, nothing found
@@ -307,7 +309,7 @@ load_file:
 	mov cx, 1
 	call read_floppy_data
 	popa
-	add cx, bpb_bytes_per_sector
+	add cx, BPB_BYTES_PER_SECTOR
 
 	; Load next next fat cluster
 	mov si, 3
