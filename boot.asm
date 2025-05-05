@@ -2,11 +2,9 @@ org 0x7c00
 cpu 386
 bits 16
 
-main:
-	jmp short start
-	nop
+jmp short start
+nop
 
-; FAT12 header
 %define BPB_BYTES_PER_SECTOR 512
 %define BPB_RESERVED_SECTORS_COUNT 1
 %define BPB_FATS_COUNT 2
@@ -23,8 +21,9 @@ main:
 
 %define FAT_EOF 0x0ff8
 
-%define BUFFER_KERNEL buffer + BPB_SECTORS_PER_FAT * BPB_BYTES_PER_SECTOR
+%define BUFFER_KERNEL 0x1000 ; 4KiB
 
+; FAT12 header
 ; BPB (BIOS Parameter Block)
 db "MSDOS5.0" ; label (8 bytes)
 dw BPB_BYTES_PER_SECTOR
@@ -48,7 +47,7 @@ db "NO NAME    " ; volume label (11 bytes)
 db "FAT12   " ; file system type (8 bytes)
 
 start:
-	; Setup
+	; Setup segments
 	mov ax, cs
 	mov ds, ax
 	mov es, ax
@@ -89,8 +88,14 @@ start:
 	; Load kernel file
 	pop ax ; restore cluster number
 	mov bx, buffer ; fat buffer
-	mov cx, BUFFER_KERNEL ; Right after loaded fat 1 table
+	mov cx, BUFFER_KERNEL
 	call load_file
+
+	; Kernel loaded, start execution
+	mov ax, msg_loaded
+	call print
+	call print_new_line
+	jmp (BUFFER_KERNEL >> 4):0
 
 	; Should not reach this point
 	mov ax, msg_bootstrap_failed
@@ -104,18 +109,7 @@ fatal_error:
 	hlt
 .halt:
 	jmp .halt
-	
-; Print space
-print_space:
-	pusha
 
-	mov ah, 0x0e
-	mov al, " "
-	int 0x10
-
-	popa
-	ret
-	
 ; Print new line
 print_new_line:
 	pusha
@@ -147,55 +141,6 @@ print:
 	jmp .loop
 
 .string_finished:
-	popa
-	ret
-
-; Print integer
-; in
-;  ax; integer to print
-print_int:
-	pusha
-
-	mov cx, 0
-
-process_digit:
-	inc cx
-	mov dx, 0
-	mov si, 10
-	div si
-	add dx, "0"
-	push dx
-	cmp ax, 0
-	jnz process_digit
-
-print_digit:
-	dec cx
-	mov ax, sp
-	call print
-	pop ax
-	cmp cx, 0
-	jnz print_digit
-
-	popa
-	ret
-
-; Print contents of memory
-; in
-;  ax: address
-;  bx: count
-dump_bytes:
-	pusha
-	
-	mov si, ax
-	add bx, ax
-	mov ax, 0
-.loop:
-	lodsb
-	call print_int
-	call print_space
-	cmp si, bx
-	jne .loop
-	
 	popa
 	ret
 	
@@ -337,9 +282,9 @@ load_file:
 	popa
 	ret
 
-kernel_file_name db "BOOT    ASM", 0
-;kernel_file_name db "KERNEL  BIN", 0
+kernel_file_name db "KERNEL  BIN", 0
 msg_welcome db "Booting Dummy OS...", 0
+msg_loaded db "Kernel loaded, starting...", 0
 msg_bootstrap_failed db "Boot failed!", 0
 msg_disk_read_failed db "Failed to read disk!", 0
 msg_kernel_file_not_found db "KERNEL.BIN not found!"
