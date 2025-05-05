@@ -1,6 +1,9 @@
 cpu 386
 bits 16
 
+%define SEGMENT_KERNEL 0x1000 >> 4
+%define INTERRUPT_NUMBER 0x20
+
 ; Use last 64KiB of the 640KiB region
 %define STACK_SIZE 0xFFFF
 %define STACK_SEGMENT (0x7FFFF - STACK_SIZE) >> 4
@@ -10,20 +13,26 @@ start:
     cli
     mov ax, cs
     mov ds, ax
-    mov es, ax
-    mov gs, ax
     mov ax, STACK_SEGMENT
     mov ss, ax
     mov sp, STACK_SIZE
     sti
 
-    ; Initialize kernel
+    ; Welcome message
     mov si, msg_welcome
     call print_string
+
+    ; Setup interrupts
+    mov ax, 0
+    mov es, ax
+    mov word es:[INTERRUPT_NUMBER * 4], interrupt_handler
+    mov word es:[INTERRUPT_NUMBER * 4 + 2], SEGMENT_KERNEL
 
     ; Reboot after keypress
     mov ah, 0x00
     int 0x16
+
+    int 0x20
 
     call reboot
 
@@ -34,6 +43,14 @@ start:
 ; Predefined messages
 msg_welcome db `Initializing kernel...\n\0`, 0
 msg_error_fatal db `Fatal Error!\n\0`
+msg_error_invalid_interrupt db `Invalid Interrupt!\n\0`
+
+;
+; Interrupt handler routine
+interrupt_handler:
+    mov si, msg_error_invalid_interrupt
+    call fatal_error
+    iret
 
 ;
 ; Stop execution and show error message
@@ -163,3 +180,5 @@ print_hex:
 
     popa
     ret
+
+buffer:
