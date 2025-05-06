@@ -2,7 +2,9 @@ cpu 386
 bits 16
 
 %define SEGMENT_KERNEL 0x1000 >> 4
-%define INTERRUPT_NUMBER 0x20
+
+%define SYS_INT 0x20
+%define SYS_PRINT_STRING 0x00
 
 ; Use last 64KiB of the 640KiB region
 %define STACK_SIZE 0xFFFF
@@ -25,14 +27,14 @@ start:
     ; Setup interrupts
     mov ax, 0
     mov es, ax
-    mov word es:[INTERRUPT_NUMBER * 4], interrupt_handler
-    mov word es:[INTERRUPT_NUMBER * 4 + 2], SEGMENT_KERNEL
+    mov word es:[SYS_INT * 4], interrupt_handler
+    mov word es:[SYS_INT * 4 + 2], SEGMENT_KERNEL
+
+    ; Init shell
 
     ; Reboot after keypress
     mov ah, 0x00
     int 0x16
-
-    int 0x20
 
     call reboot
 
@@ -44,6 +46,7 @@ start:
 msg_welcome db `Initializing kernel...\n\0`, 0
 msg_error_fatal db `Fatal Error!\n\0`
 msg_error_invalid_interrupt db `Invalid Interrupt!\n\0`
+msg_error_execution db `Max executables reached!\n\0`
 
 ;
 ; Interrupt handler routine
@@ -180,5 +183,8 @@ print_hex:
 
     popa
     ret
+
+%include "kernel/kernel_functions.asm"
+%include "kernel/kernel_fat12.asm"
 
 buffer:

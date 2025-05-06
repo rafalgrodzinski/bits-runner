@@ -14,7 +14,10 @@ VOLUME_NAME="DUMMY OS"
 nasm -f bin -o boot.bin boot.asm
 check "Failed to compile source"
 
-nasm -f bin -o kernel.bin kernel.asm
+nasm -f bin -o kernel.bin kernel/kernel.asm
+check "Failed to compile source"
+
+nasm -f bin -o shell.bin apps/shell.asm
 check "Failed to compile source"
 
 # Generate empty image file
@@ -28,4 +31,5 @@ diskutil eject ${DISK}
 # Mount and copy a file into it
 DISK=`hdiutil attach floppy.img`
 cp kernel.bin /Volumes/"${VOLUME_NAME}"/
+cp shell.bin /Volumes/"${VOLUME_NAME}"/
 diskutil eject ${DISK}

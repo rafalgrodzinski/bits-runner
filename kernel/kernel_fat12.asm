@@ -1,0 +1,163 @@
+cpu 386
+bits 16
+
+%define FAT_BYTES_PER_SECTOR 512
+%define FAT_RESERVED_SECTORS_COUNT 1
+%define FAT_FATS_COUNT 2
+%define FAT_ROOT_DIR_ENTRIES_COUNT 512
+%define FAT_SECTORS_PER_FAT 9
+%define FAT_SECTORS_PER_TRACK 18
+%define FAT_HEADS_COUNT 2
+
+%define FAT_BYTES_PER_ENTRY 32
+%define FAT_EOF 0x0ff8
+%define FAT_ENTRY_CLUSTER_OFFSET 26
+%define FAT_FIRST_DATA_SECTOR FAT_RESERVED_SECTORS_COUNT + (FAT_FATS_COUNT * FAT_SECTORS_PER_FAT) + ((FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY) / FAT_BYTES_PER_SECTOR) - 2
+
+;
+; Messages
+msg_disk_read_failed db "Failed to read disk!", 0
+
+;
+; Converts LBA to CHS addressing
+; in
+;  ax: LBA address
+; out
+;  cl: sector
+;  dh: head
+;  ch: cylinder
+lba_to_chs:
+	push ax
+	
+    mov bx, FAT_SECTORS_PER_TRACK
+	div bx
+	mov cl, ah
+	add cl, 1 ; sector, lba % sectors per track + 1
+	
+	mov ah, 0
+    mov bx, FAT_HEADS_COUNT
+	div bx
+	mov dh, ah ; head, (lba / secttors per track) % heads
+	mov ch, al ; cylinder, (lba / secttors per track) / heads
+	
+	pop ax
+	ret
+
+;
+; Read sectors from floppy
+; in
+;  ax: LBA addressed sector to read
+;  bx: buffer address
+;  cx: number of sectors to read
+read_floppy_data:
+	pusha
+	
+	push cx ; preserve source address
+	call lba_to_chs
+	mov dl, 0 ; drive number
+	pop ax ; restore source address
+
+	; try reading 3 times
+	mov di, 3
+.loop:
+	mov ah, 0x02
+	
+	int 0x13
+	jnc .read_successful
+	dec di
+	jnz .loop
+
+	; Read failed
+	mov ax, msg_disk_read_failed
+	call fatal_error
+
+.read_successful:
+	popa
+	ret
+
+;
+; Try finding cluster number for a file of a given name
+; in
+;  ax: root dir buffer address
+;  bx: file name address
+; out
+;  ax: cluster number (or 0 if not found)
+find_cluster_number:
+	push bx
+	push di
+	push si
+	
+	mov di, ax ; current entry address
+	mov ax, 0 ; current entry count
+
+.loop:
+	mov si, bx ; searching file name
+	mov cx, 11 ; chars in file name
+	push di
+	repe cmpsb ; Try matching file names
+	pop di
+	je .found_file
+	
+	; Try next entry
+	add di, FAT_BYTES_PER_ENTRY
+	inc ax
+	cmp ax, FAT_ROOT_DIR_ENTRIES_COUNT
+	jl .loop
+	
+	; Gone through all file entries, nothing found
+	mov ax, 0
+	jmp .not_found
+
+.found_file:
+	mov ax, [di + FAT_ENTRY_CLUSTER_OFFSET]
+
+.not_found:
+	pop si
+	pop di
+	pop bx
+	ret
+
+;
+; Load file into memory starting with given cluster number
+; in
+;  ax: fat cluster number
+;  bx: fat buffer address
+;  cx: target address
+load_file:
+	pusha
+	
+.loop:
+	; Load sector pointed by cluster into memory
+	pusha
+	add ax, FAT_FIRST_DATA_SECTOR
+	mov bx, cx
+	mov cx, 1
+	call read_floppy_data
+	popa
+	add cx, FAT_BYTES_PER_SECTOR
+
+	; Load next next fat cluster
+	mov si, 3
+	mul si
+	mov si, 2
+	div si ; Divide by 1.5 since we're extracting 12 bits (1.5 byte)
+	
+	mov si, bx
+	add si, ax
+	mov ax, [si]
+
+	; Adjust 12 bit to 16 bit
+	or dx, dx
+	jz .even
+.odd:
+	shr ax, 4
+	jmp .next_cluster
+.even:
+	and ax, 0x0fff
+
+.next_cluster:		
+	cmp ax, FAT_EOF ; range 0x0ff8 - 0x0fff marks last fat cluster
+	jb .loop
+
+	popa
+	ret
