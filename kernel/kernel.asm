@@ -24,13 +24,13 @@ start:
     mov si, msg_welcome
     call print_string
 
+    call memory_init
+
     ; Setup interrupts
     mov ax, 0
     mov es, ax
     mov word es:[SYS_INT * 4], interrupt_handler
     mov word es:[SYS_INT * 4 + 2], SEGMENT_KERNEL
-
-    ; Init shell
 
     ; Reboot after keypress
     mov ah, 0x00
@@ -186,5 +186,4 @@ print_hex:
 
 %include "kernel/kernel_functions.asm"
 %include "kernel/kernel_fat12.asm"
-
-buffer:
+%include "kernel/memory_manager.asm"
