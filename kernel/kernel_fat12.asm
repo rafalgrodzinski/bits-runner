@@ -216,6 +216,7 @@ fat_file_size:
 ;  es: target segment address
 fat_load_file:
 	pusha
+	push es
 	
 .loop:
 	; Load sector pointed by cluster into memory
@@ -251,5 +252,6 @@ fat_load_file:
 	cmp ax, FAT_EOF ; range 0x0ff8 - 0x0fff marks last fat cluster
 	jb .loop
 
+	pop es
 	popa
 	ret

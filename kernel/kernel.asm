@@ -57,6 +57,7 @@ start:
     mov [segment_app_shell], es
     call fat_cluster_number ; return number in ax
     call fat_load_file
+    call sys_execute
 
     ; Reboot after keypress
     mov ah, 0x00
@@ -70,8 +71,12 @@ start:
 ;
 ; Interrupt handler routine
 interrupt_handler:
+    push ds
+    mov ax, SEGMENT_KERNEL
+    mov ds, ax
     mov si, msg_error_invalid_interrupt
     call fatal_error
+    pop ds
     iret
 
 ;

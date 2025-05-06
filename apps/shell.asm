@@ -9,3 +9,5 @@ start:
     mov ax, 0x00
     mov bx, msg_welcome
     int 0x20
+.l:
+    jmp .l
