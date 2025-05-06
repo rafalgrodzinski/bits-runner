@@ -52,12 +52,11 @@ start:
 
     ; Load shell
     mov si, shell_file_name
-    call fat_file_size
-    call memory_allocate ; size in ax
+    call fat_file_size ; returns size in ax
+    call memory_allocate ; returns es:0
     mov [segment_app_shell], es
-    mov ax, es
-    call print_hex
-
+    call fat_cluster_number ; return number in ax
+    call fat_load_file
 
     ; Reboot after keypress
     mov ah, 0x00

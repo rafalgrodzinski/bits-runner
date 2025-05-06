@@ -87,7 +87,7 @@ lba_to_chs:
 ;  es: target segment address
 read_floppy_data:
 	pusha
-	
+
 	call lba_to_chs
 	mov dl, 0 ; drive number
 	mov al, bl ; number of sectors to read
@@ -114,47 +114,55 @@ read_floppy_data:
 ;
 ; Try finding cluster number for a file of a given name
 ; in
-;  ax: root dir buffer address
-;  bx: file name address
+;  si: file name address
 ; out
 ;  ax: cluster number (or 0 if not found)
-find_cluster_number:
+fat_cluster_number:
 	push bx
-	push di
+	push cx
 	push si
-	
-	mov di, ax ; current entry address
+	push di
+	push es
+
+	mov bx, si ; preserve
+
+	mov ax, [segment_root_dir]
+	mov es, ax
+	mov di, 0
+
 	mov ax, 0 ; current entry count
 
 .loop:
-	mov si, bx ; searching file name
-	mov cx, 11 ; chars in file name
+	mov si, bx
+	mov cx, 11 ; 11 chars in file name
 	push di
 	repe cmpsb ; Try matching file names
 	pop di
 	je .found_file
-	
+
 	; Try next entry
 	add di, FAT_BYTES_PER_ENTRY
 	inc ax
 	cmp ax, FAT_ROOT_DIR_ENTRIES_COUNT
 	jl .loop
-	
+
 	; Gone through all file entries, nothing found
 	mov ax, 0
 	jmp .not_found
 
 .found_file:
-	mov ax, [di + FAT_ENTRY_CLUSTER_OFFSET]
+	mov byte ax, es:[di + FAT_ENTRY_CLUSTER_OFFSET]
 
 .not_found:
-	pop si
+	pop es
 	pop di
+	pop si
+	pop cx
 	pop bx
 	ret
 
 ;
-;
+; Try getting file size for given file name
 ; in
 ;  si: file name address
 ; out
@@ -205,20 +213,20 @@ fat_file_size:
 ; Load file into memory starting with given cluster number
 ; in
 ;  ax: fat cluster number
-;  bx: fat buffer address
-;  cx: target address
-load_file:
+;  es: target segment address
+fat_load_file:
 	pusha
 	
 .loop:
 	; Load sector pointed by cluster into memory
 	pusha
-	add ax, FAT_FIRST_DATA_SECTOR
-	mov bx, cx
-	mov cx, 1
+	add ax, FAT_FIRST_DATA_SECTOR ; sector
+	mov bx, 1 ; count
 	call read_floppy_data
 	popa
-	add cx, FAT_BYTES_PER_SECTOR
+	mov cx, es
+	add cx, FAT_BYTES_PER_SECTOR >> 4
+	mov es, cx
 
 	; Load next next fat cluster
 	mov si, 3
@@ -226,9 +234,9 @@ load_file:
 	mov si, 2
 	div si ; Divide by 1.5 since we're extracting 12 bits (1.5 byte)
 	
-	mov si, bx
-	add si, ax
-	mov ax, [si]
+	mov gs, [segment_fat]
+	mov si, ax
+	mov ax, gs:[si]
 
 	; Adjust 12 bit to 16 bit
 	or dx, dx
