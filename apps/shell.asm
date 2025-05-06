@@ -6,8 +6,18 @@ jmp start
 msg_welcome db `Shell started\n\0`
 
 start:
-    mov ax, 0x00
-    mov bx, msg_welcome
-    int 0x20
-.l:
-    jmp .l
+    mov ax, ds
+    mov es, ax
+
+    mov ah, 0x01
+    mov si, msg_welcome
+    int 0xff
+
+.loop:
+    mov ah, 0x02
+    int 0xff
+
+    mov ah, 0x00
+    int 0xff
+
+    jmp .loop

@@ -5,9 +5,6 @@ jmp start
 
 %define SEGMENT_KERNEL 0x1000 >> 4
 
-%define SYS_INT 0x20
-%define SYS_PRINT_STRING 0x00
-
 ; Use last 64KiB of the 640KiB region
 %define STACK_SIZE 0xFFFF
 %define STACK_SEGMENT (0x7FFFF - STACK_SIZE) >> 4
@@ -42,13 +39,8 @@ start:
     call print_string
 
     call memory_init
+    call interrupt_init
     call fat_init
-
-    ; Setup interrupts
-    mov ax, 0
-    mov es, ax
-    mov word es:[SYS_INT * 4], interrupt_handler
-    mov word es:[SYS_INT * 4 + 2], SEGMENT_KERNEL
 
     ; Load shell
     mov si, shell_file_name
@@ -69,17 +61,6 @@ start:
     call fatal_error
 
 ;
-; Interrupt handler routine
-interrupt_handler:
-    push ds
-    mov ax, SEGMENT_KERNEL
-    mov ds, ax
-    mov si, msg_error_invalid_interrupt
-    call fatal_error
-    pop ds
-    iret
-
-;
 ; Stop execution and show error message
 ; in
 ;  si - Messge address
@@ -93,6 +74,13 @@ fatal_error:
 ; Reboot the system
 reboot:
     jmp 0xffff:0
+
+print_character:
+    pusha
+    mov ah, 0x0e
+    int 0x10
+    popa
+    ret
 
 ; 
 ; Print a `\0` terminated string
@@ -211,6 +199,12 @@ print_hex:
     popa
     ret
 
+get_keystroke:
+    mov ah, 0x00
+    int 0x16
+    ret
+
 %include "kernel/kernel_functions.asm"
 %include "kernel/kernel_fat12.asm"
+%include "kernel/interrupt.asm"
 %include "kernel/memory_manager.asm"
