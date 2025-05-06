@@ -1,10 +1,7 @@
 cpu 386
 bits 16
 
-%define SYS_INT 0xff
-%define SYS_INT_PRINT_CHAR 0x00
-%define SYS_INT_PRINT_STRING 0x01
-%define SYS_INT_GET_KEYSTROKE 0x02
+%include "kernel/constants.asm"
 
 ;
 ; Initialize the interrupt service
@@ -36,8 +33,17 @@ interrupt_handler:
     cmp ah, SYS_INT_PRINT_STRING
     je int_handler_print_string
 
+    cmp ah, SYS_INT_PRINT_HEX
+    je int_handler_print_hex
+
     cmp ah, SYS_INT_GET_KEYSTROKE
     je int_handler_get_keystroke
+
+    cmp ah, SYS_INT_CLEAR_SCREEN
+    je int_handler_clear_screen
+
+    cmp ah, SYS_INT_REBOOT
+    je int_handler_reboot
 
     ; Default case
     mov si, msg_error_invalid_interrupt
@@ -65,11 +71,27 @@ int_handler_print_string:
     pop ds
     iret
 
+int_handler_print_hex:
+    mov ax, bx
+    call print_hex
+    pop ds
+    iret
+
 ;
 ; Get a keyboard press
 ; out
 ;  al - Pressed key
 int_handler_get_keystroke:
     call get_keystroke
+    pop ds
+    iret
+
+int_handler_clear_screen:
+    call terminal_clear_screen
+    pop ds
+    iret
+
+int_handler_reboot:
+    call reboot
     pop ds
     iret

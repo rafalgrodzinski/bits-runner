@@ -151,7 +151,7 @@ fat_cluster_number:
 	jmp .not_found
 
 .found_file:
-	mov byte ax, es:[di + FAT_ENTRY_CLUSTER_OFFSET]
+	mov ax, es:[di + FAT_ENTRY_CLUSTER_OFFSET]
 
 .not_found:
 	pop es

@@ -1,3 +1,6 @@
+cpu 386
+bits 16
+
 heap_pointer resd 1
 ;heap_end resd 1
 
