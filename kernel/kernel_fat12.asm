@@ -12,34 +12,70 @@ bits 16
 %define FAT_BYTES_PER_ENTRY 32
 %define FAT_EOF 0x0ff8
 %define FAT_ENTRY_CLUSTER_OFFSET 26
+%define FAT_ENTRY_FILE_SIZE_OFFSET 28
 %define FAT_FIRST_DATA_SECTOR FAT_RESERVED_SECTORS_COUNT + (FAT_FATS_COUNT * FAT_SECTORS_PER_FAT) + ((FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY) / FAT_BYTES_PER_SECTOR) - 2
+%define FAT_ROOT_DIR_OFFSET FAT_RESERVED_SECTORS_COUNT + FAT_SECTORS_PER_FAT * FAT_FATS_COUNT
+%define FAT_ROOT_DIR_SECTORS_COUNT (FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY) / FAT_BYTES_PER_SECTOR
 
 ;
 ; Messages
-msg_disk_read_failed db "Failed to read disk!", 0
+msg_error_disk_read_failed db `Failed to read disk!\n\0`
+
+;
+; Allocated data
+segment_fat resw 1
+segment_root_dir resw 1
+
+;
+; Initialize fat file system
+fat_init:
+	pusha
+
+	; load fat
+	mov ax, FAT_SECTORS_PER_FAT * FAT_BYTES_PER_SECTOR
+	call memory_allocate
+	mov [segment_fat], es
+
+	mov ax, FAT_RESERVED_SECTORS_COUNT
+	mov bx, FAT_SECTORS_PER_FAT
+	call read_floppy_data
+
+	; load root directory
+	mov ax, FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY
+	call memory_allocate
+	mov [segment_root_dir], es
+
+	mov ax, FAT_ROOT_DIR_OFFSET
+	mov bx, FAT_ROOT_DIR_SECTORS_COUNT
+	call read_floppy_data
+
+	popa
+	ret
 
 ;
 ; Converts LBA to CHS addressing
 ; in
 ;  ax: LBA address
 ; out
-;  cl: sector
-;  dh: head
 ;  ch: cylinder
+;  dh: head
+;  cl: sector
 lba_to_chs:
 	push ax
+	push bx
 	
     mov bx, FAT_SECTORS_PER_TRACK
-	div bx
+	div bl
 	mov cl, ah
 	add cl, 1 ; sector, lba % sectors per track + 1
 	
 	mov ah, 0
     mov bx, FAT_HEADS_COUNT
-	div bx
+	div bl
 	mov dh, ah ; head, (lba / secttors per track) % heads
 	mov ch, al ; cylinder, (lba / secttors per track) / heads
 	
+	pop bx
 	pop ax
 	ret
 
@@ -47,15 +83,15 @@ lba_to_chs:
 ; Read sectors from floppy
 ; in
 ;  ax: LBA addressed sector to read
-;  bx: buffer address
-;  cx: number of sectors to read
+;  bx: number of sectors to read
+;  es: target segment address
 read_floppy_data:
 	pusha
 	
-	push cx ; preserve source address
 	call lba_to_chs
 	mov dl, 0 ; drive number
-	pop ax ; restore source address
+	mov al, bl ; number of sectors to read
+	mov bx, 0 ; es:bx is the target address
 
 	; try reading 3 times
 	mov di, 3
@@ -68,7 +104,7 @@ read_floppy_data:
 	jnz .loop
 
 	; Read failed
-	mov ax, msg_disk_read_failed
+	mov si, msg_error_disk_read_failed
 	call fatal_error
 
 .read_successful:
@@ -114,6 +150,54 @@ find_cluster_number:
 .not_found:
 	pop si
 	pop di
+	pop bx
+	ret
+
+;
+;
+; in
+;  si: file name address
+; out
+;  ax: size in bytes
+fat_file_size:
+	push bx
+	push cx
+	push si
+	push di
+
+	mov bx, si ; preserve
+
+	mov ax, [segment_root_dir]
+	mov es, ax
+	mov di, 0
+
+	mov ax, 0 ; current entry count
+
+.loop:
+	mov si, bx
+	mov cx, 11 ; 11 chars in file name
+	push di
+	repe cmpsb ; Try matching file names
+	pop di
+	je .found_file
+
+	; Try next entry
+	add di, FAT_BYTES_PER_ENTRY
+	inc ax
+	cmp ax, FAT_ROOT_DIR_ENTRIES_COUNT
+	jl .loop
+
+	; Gone through all file entries, nothing found
+	mov ax, 0
+	jmp .not_found
+
+.found_file:
+	mov word ax, es:[di + FAT_ENTRY_FILE_SIZE_OFFSET]
+
+.not_found:
+	pop di
+	pop si
+	pop cx
 	pop bx
 	ret
 

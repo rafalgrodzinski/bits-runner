@@ -1,6 +1,8 @@
 cpu 386
 bits 16
 
+jmp start
+
 %define SEGMENT_KERNEL 0x1000 >> 4
 
 %define SYS_INT 0x20
@@ -9,6 +11,21 @@ bits 16
 ; Use last 64KiB of the 640KiB region
 %define STACK_SIZE 0xFFFF
 %define STACK_SEGMENT (0x7FFFF - STACK_SIZE) >> 4
+
+;
+; Predefined messages
+msg_welcome db `Initializing kernel...\n\0`, 0
+msg_error_fatal db `Fatal Error!\n\0`
+msg_error_invalid_interrupt db `Invalid Interrupt!\n\0`
+msg_error_execution db `Max executables reached!\n\0`
+
+;
+; Data
+shell_file_name db `SHELL   BIN`
+
+;
+; Allocated data
+segment_app_shell resw 1
 
 start:
     ; Setup segments
@@ -25,12 +42,22 @@ start:
     call print_string
 
     call memory_init
+    call fat_init
 
     ; Setup interrupts
     mov ax, 0
     mov es, ax
     mov word es:[SYS_INT * 4], interrupt_handler
     mov word es:[SYS_INT * 4 + 2], SEGMENT_KERNEL
+
+    ; Load shell
+    mov si, shell_file_name
+    call fat_file_size
+    call memory_allocate ; size in ax
+    mov [segment_app_shell], es
+    mov ax, es
+    call print_hex
+
 
     ; Reboot after keypress
     mov ah, 0x00
@@ -40,13 +67,6 @@ start:
 
     mov si, msg_error_fatal
     call fatal_error
-
-;
-; Predefined messages
-msg_welcome db `Initializing kernel...\n\0`, 0
-msg_error_fatal db `Fatal Error!\n\0`
-msg_error_invalid_interrupt db `Invalid Interrupt!\n\0`
-msg_error_execution db `Max executables reached!\n\0`
 
 ;
 ; Interrupt handler routine
@@ -120,6 +140,9 @@ print_uint:
 	div bx
 	add dx, `0` ; Convert reminder of the division into an ASCII char
 	push dx ; and place it on stack
+
+    cmp ax, 0 ; Check if we're out of digits
+	jnz .loop_process_digit
 
 .loop_print_digit:
     pop ax
