@@ -1,3 +1,4 @@
+%define ADDRESS_KERNEL 0x1000
 %define SEGMENT_KERNEL 0x1000 >> 4
 
 %define SYS_INT 0xff
