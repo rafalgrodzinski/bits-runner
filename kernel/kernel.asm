@@ -1,9 +1,24 @@
 cpu 386
 bits 16
 
-jmp start_real_mode
+jmp start
 
 %include "kernel/constants.asm"
+
+;
+; Predefined messages
+msg_welcome db `Initializing Kernel...\n\0`
+msg_error_fatal db `Fatal Error!\n\0`
+;msg_error_invalid_interrupt db `Invalid Interrupt!\n\0`
+;msg_error_execution db `Max executables reached!\n\0`
+
+;
+; Data
+;shell_file_name db `SHELL   BIN`
+
+;
+; Allocated data
+;segment_app_shell resw 1
 
 gdt:
 dq 0
@@ -29,7 +44,7 @@ dd gdt + ADDRESS_KERNEL ; address of GTD + offset to the address of the kernel
 %define GDT_CODE gdt_code - gdt
 %define GDT_DATA gdt_data - gdt
 
-start_real_mode:
+start:
     ; Setup data segment
     cli
     mov ax, cs
@@ -46,43 +61,36 @@ start_real_mode:
 
 bits 32
 
-; Use last 64KiB of the 640KiB region
-%define STACK_SIZE 0xFFFF
-%define STACK_SEGMENT (0x7FFFF - STACK_SIZE) >> 4
-
-;
-; Predefined messages
-;msg_welcome db `Initializing kernel...\n\0`, 0
-;msg_error_fatal db `Fatal Error!\n\0`
-;msg_error_invalid_interrupt db `Invalid Interrupt!\n\0`
-;msg_error_execution db `Max executables reached!\n\0`
-
-;
-; Data
-;shell_file_name db `SHELL   BIN`
-
-;
-; Allocated data
-;segment_app_shell resw 1
-
 start_protected_mode:
+    ; setup segments
     mov ax, GDT_DATA
     mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    mov esp, ADDRESS_STACK
 
-    mov byte [0xb8000], "P"
-    mov byte [0xb8001], 0xb1
-.loop:
-jmp .loop
+    call terminal_init
+
+    ; Welcome message
+    mov esi, msg_welcome + 0x1000
+    mov al, TERMINAL_FOREGROUND_BLACK + TERMINAL_BACKGROUND_WHITE
+    call terminal_print_string
+
+    mov esi, msg_error_fatal + 0x1000
+    mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_BLINKING
 
 ;
 ; Stop execution and show error message
 ; in
-;  si - Messge address
-;fatal_error:
-;	call print_string
-;	hlt
-;.halt:
-;	jmp .halt
+;  esi: string address
+;  al: text attribute
+fatal_error:
+	call terminal_print_string
+	hlt
+.halt:
+	jmp .halt
 
 ;
 ; Reboot the system
@@ -112,6 +120,6 @@ sys_execute:
 
 ;%include "kernel/fat12.asm"
 ;%include "kernel/interrupt.asm"
-;%include "kernel/terminal.asm"
+%include "kernel/terminal.asm"
 ;%include "kernel/memory_manager.asm"
 

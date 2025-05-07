@@ -1,5 +1,95 @@
 cpu 386
-bits 16
+bits 32
+;org 0x1000
+
+%define ADDRESS_TERMINAL 0xb8000
+
+;
+; Data
+terminal_width dw 80
+terminal_height dw 25
+
+cursor_x dw 0
+cursor_y dw 0
+
+;
+; Initialize the terminal
+terminal_init:
+    ret
+
+; 
+; Print a `\0` terminated string
+; in
+;  esi: string address
+;  al: text attribute
+terminal_print_string:
+    pushad
+    mov bh, al ; keep attribute
+
+.loop:
+    lodsb
+    mov bl, al ; keep loaded char
+
+    ; End of string ?
+    cmp bl, `\0`
+    jz .end
+
+    ; New line ?
+    cmp bl, `\n`
+    jnz .not_new_line
+    mov word [cursor_x + 0x1000], 0
+    inc word [cursor_y + 0x1000]
+    jmp .loop
+
+.not_new_line:
+    mov eax, 0
+    mov word ax, [cursor_y + 0x1000]
+    mul word [terminal_width + 0x1000]
+    add word ax, [cursor_x + 0x1000]
+    shl ax, 1 ; two bytes per char
+    ;add eax, ADDRESS_TERMINAL
+    mov byte [ADDRESS_TERMINAL + eax], bl
+    mov byte [ADDRESS_TERMINAL + eax + 1], bh
+
+    ; End of line?
+    inc word [cursor_x + 0x1000]
+    mov word ax, [cursor_x + 0x1000]
+    cmp word ax, [terminal_width + 0x1000]
+    jb .loop
+    
+    mov word [cursor_x + 0x1000], 0
+    inc word [cursor_y + 0x1000]
+
+    jmp .loop
+
+.end:
+    ; Move cursor
+    mov eax, 0
+    mov word ax, [cursor_y + 0x1000]
+    mul word [terminal_width + 0x1000]
+    add word ax, [cursor_x + 0x1000]
+    mov bx, ax
+
+    ; Move high byte
+    mov dx, 0x03d4
+    mov al, 0x0e
+    out dx, al
+
+    mov dx, 0x03d5
+    mov al, bh
+    out dx, al
+
+    ; Move low byte
+    mov dx, 0x03d4
+    mov al, 0x0f
+    out dx, al
+
+    mov dx, 0x03d5
+    mov al, bl
+    out dx, al
+
+    popad
+    ret
 
 ;
 ; Print a single character to terminal
@@ -9,41 +99,6 @@ print_character:
     pusha
     mov ah, 0x0e
     int 0x10
-    popa
-    ret
-
-; 
-; Print a `\0` terminated string
-; in
-;  ds:si - Address
-print_string:
-    pusha
-    mov ah, 0x0e
-
-.loop:
-    lodsb
-
-    ; End of string
-    cmp al, `\0`
-    jz .end
-
-    ; New line
-    cmp al, `\n`
-    jnz .not_new_line
-
-    mov al, 0xd ; `\r` CR
-    int 0x10
-
-    mov al, 0xa ; `\n` LF
-    int 0x10
-
-    jmp .loop
-
-.not_new_line:
-    int 0x10
-    jmp .loop
-
-.end:
     popa
     ret
 
