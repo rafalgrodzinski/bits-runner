@@ -61,8 +61,23 @@ start:
 
 bits 32
 
+idt:
+dw interrupt_handler + ADDRESS_KERNEL
+dw 0x08
+db 0
+db 10001110b
+dw 0
+
+idt_descriptor:
+dw $ - idt - 1 ; size of IDT
+dd idt + ADDRESS_KERNEL
+db "AFTER_DESC"
+
 start_protected_mode:
-    ; setup segments
+    ; Load interrupts
+    lidt [idt_descriptor]
+
+    ; Setup segments
     mov ax, GDT_DATA
     mov ds, ax
     mov es, ax
@@ -82,11 +97,17 @@ start_protected_mode:
     mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_BLINKING
 
 ;
+; Default interrupt handler
+interrupt_handler:
+    mov esi, msg_error_fatal + 0x1000
+    call fatal_error
+
+;
 ; Stop execution and show error message
 ; in
 ;  esi: string address
-;  al: text attribute
 fatal_error:
+    mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_BLINKING
 	call terminal_print_string
 	hlt
 .halt:
