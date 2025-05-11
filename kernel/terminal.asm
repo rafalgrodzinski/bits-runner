@@ -1,13 +1,12 @@
 cpu 386
 bits 32
-;org 0x1000
 
 %define ADDRESS_TERMINAL 0xb8000
 
 ;
 ; Data
-terminal_width dw 80
-terminal_height dw 25
+terminal_width dw 0
+terminal_height dw 0
 
 cursor_x dw 0
 cursor_y dw 0
@@ -15,12 +14,14 @@ cursor_y dw 0
 ;
 ; Initialize the terminal
 terminal_init:
-    mov ax, TERMINAL_MODE_80x50
+    mov al, TERMINAL_MODE_80x25
     call terminal_set_mode
+    mov al, TERMINAL_BACKGROUND_BLACK + TERMINAL_FOREGROUND_GRAY
+    call terminal_clear
     ret
 
 ;
-;
+; Change text mode
 ; in
 ;  al: mode
 terminal_set_mode:
@@ -33,8 +34,8 @@ terminal_set_mode:
     cmp dx, 1
     jne .not_80x25
     mov ax, 0x0003
-    mov word [terminal_width], 80
-    mov word [terminal_height], 25
+    mov word [terminal_width + ADDRESS_KERNEL], 80
+    mov word [terminal_height + ADDRESS_KERNEL], 25
     int 0x10
     jmp .done
 
@@ -43,8 +44,8 @@ terminal_set_mode:
     cmp dx, 2
     jne .not_80x50
     mov ax, 0x1112
-    mov word [terminal_width], 80
-    mov word [terminal_height], 50
+    mov word [terminal_width + ADDRESS_KERNEL], 80
+    mov word [terminal_height + ADDRESS_KERNEL], 50
     int 0x10
     jmp .done
 
@@ -52,9 +53,32 @@ terminal_set_mode:
     ; invalid
 
 .done:
-    
     call sys_switch_to_protected_mode
     bits 32
+    popad
+    ret
+
+;
+; Clears the screen with a given attribute
+; in
+;  al: background's attribute
+terminal_clear:
+    pushad
+    mov bl, al
+    shl ebx, 24
+    mov bh, al ; preserve in bx <attrib><empty><attrib><empty>
+
+    mov eax, 0
+    mov ax, [terminal_width + ADDRESS_KERNEL]
+    mul word [terminal_height + ADDRESS_KERNEL]
+    mov ecx, eax
+    shr ecx, 1 ; half of count of chars
+
+    ; copy eax into [edi+ecx]
+    mov eax, ebx
+    mov edi, ADDRESS_TERMINAL
+    rep stosd
+
     popad
     ret
 
@@ -228,12 +252,4 @@ print_hex:
 get_keystroke:
     mov ah, 0x00
     int 0x16
-    ret
-
-terminal_clear_screen:
-    push ax
-    mov ah, 0x00
-    mov al, 0x03
-    int 0x10
-    pop ax
     ret

@@ -164,9 +164,8 @@ dd 0
 
 ;
 ; Messages
-msg_welcome db `Initializing Kernel...\n\0`
+msg_welcome db `Initializing Bits Runner...\n\0`
 msg_error_fatal db `Fatal Error!\n\0`
-msg_all_done db `All done\n\0`
 ;msg_error_invalid_interrupt db `Invalid Interrupt!\n\0`
 ;msg_error_execution db `Max executables reached!\n\0`
 
@@ -197,28 +196,12 @@ bits 32
 
     ; Welcome message
     mov esi, msg_welcome + ADDRESS_KERNEL
-    mov al, TERMINAL_FOREGROUND_BLACK + TERMINAL_BACKGROUND_WHITE
+    mov al, TERMINAL_FOREGROUND_GREEN
     call terminal_print_string
 
-    ;call sys_switch_to_v86_mode
-    ;bits 16
-    ;mov ah, 0x00
-    ;mov al, 0x13
-    ;int 0x10
-
-    ;call sys_switch_to_protected_mode
-    ;bits 32
-
-    ;mov word [0xa0000 + 0], 0x3434
-    ;mov word [0xa0000 + 4000], 0x8787
-    ;mov word [0xa0000 + 15000], 0x1010
-
-    mov esi, msg_welcome + ADDRESS_KERNEL
-    mov al, TERMINAL_FOREGROUND_GRAY + TERMINAL_BACKGROUND_BLUE
-    call terminal_print_string
-
-.l:
-jmp .l
+    ; Should not reach this
+    mov esi, msg_error_fatal + ADDRESS_KERNEL
+    call fatal_error
 
 ;
 ; Initialize 8086 virtual mode
