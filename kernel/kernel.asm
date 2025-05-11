@@ -200,18 +200,18 @@ bits 32
     mov al, TERMINAL_FOREGROUND_BLACK + TERMINAL_BACKGROUND_WHITE
     call terminal_print_string
 
-    call sys_switch_to_v86_mode
-    bits 16
-    mov ah, 0x00
-    mov al, 0x13
+    ;call sys_switch_to_v86_mode
+    ;bits 16
+    ;mov ah, 0x00
+    ;mov al, 0x13
     ;int 0x10
 
-    call sys_switch_to_protected_mode
-    bits 32
+    ;call sys_switch_to_protected_mode
+    ;bits 32
 
-    mov word [0xa0000 + 0], 0x3434
-    mov word [0xa0000 + 4000], 0x8787
-    mov word [0xa0000 + 15000], 0x1010
+    ;mov word [0xa0000 + 0], 0x3434
+    ;mov word [0xa0000 + 4000], 0x8787
+    ;mov word [0xa0000 + 15000], 0x1010
 
     mov esi, msg_welcome + ADDRESS_KERNEL
     mov al, TERMINAL_FOREGROUND_GRAY + TERMINAL_BACKGROUND_BLUE

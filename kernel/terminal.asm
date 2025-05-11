@@ -15,6 +15,47 @@ cursor_y dw 0
 ;
 ; Initialize the terminal
 terminal_init:
+    mov ax, TERMINAL_MODE_80x50
+    call terminal_set_mode
+    ret
+
+;
+;
+; in
+;  al: mode
+terminal_set_mode:
+    pushad
+    mov dx, ax
+    call sys_switch_to_v86_mode
+    bits 16
+
+    ; 80x25
+    cmp dx, 1
+    jne .not_80x25
+    mov ax, 0x0003
+    mov word [terminal_width], 80
+    mov word [terminal_height], 25
+    int 0x10
+    jmp .done
+
+    ; 80x50
+.not_80x25:
+    cmp dx, 2
+    jne .not_80x50
+    mov ax, 0x1112
+    mov word [terminal_width], 80
+    mov word [terminal_height], 50
+    int 0x10
+    jmp .done
+
+.not_80x50:
+    ; invalid
+
+.done:
+    
+    call sys_switch_to_protected_mode
+    bits 32
+    popad
     ret
 
 ; 
