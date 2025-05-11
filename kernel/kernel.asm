@@ -1,22 +1,22 @@
 cpu 386
 
-bits 16
 jmp start
 
 %include "kernel/constants.asm"
 
 ;
-; GDT
+; GDT (Global Descriptor Table)
+; for 32 bit protected mode and 16 bit v86 mode
 gdt:
 dq 0
-gdt_code:
+gdt_code_protected_mode:
 dw 0xffff
 dw 0
 db 0
 db 10011010b
 db 11001111b
 db 0
-gdt_data:
+gdt_data_protected_mode:
 dw 0xffff
 dw 0
 db 0
@@ -42,13 +42,13 @@ gdt_descriptor:
 dw $ - gdt - 1 ; size of GDT - 1
 dd gdt + ADDRESS_KERNEL ; address of GTD + offset to the address of the kernel
 
-%define GDT_CODE gdt_code - gdt
-%define GDT_DATA gdt_data - gdt
+%define GDT_CODE_PROTECTED_MODE gdt_code_protected_mode - gdt
+%define GDT_DATA_PROTECTED_MODE gdt_data_protected_mode - gdt
 %define GDT_CODE_V86_MODE gdt_code_v86_mode - gdt
 %define GDT_DATA_V86_MODE gdt_data_v86_mode - gdt
 
 ;
-; IDT
+; IDT (Interrupt Descriptor Table)
 idt:
 ; 0
 dw interrupt_handler + ADDRESS_KERNEL
@@ -153,7 +153,7 @@ db 0
 db 10001110b
 dw 0
 
-idt_descriptor:
+idt_descriptor_protected_mode:
 dw $ - idt - 1 ; size of IDT
 dd idt + ADDRESS_KERNEL
 
@@ -162,7 +162,7 @@ dw 0x3ff
 dd 0
 
 ;
-; Predefined messages
+; Messages
 msg_welcome db `Initializing Kernel...\n\0`
 msg_error_fatal db `Fatal Error!\n\0`
 msg_all_done db `All done\n\0`
@@ -196,7 +196,7 @@ start:
     mov cr0, eax
 
     ; Long jump to 32 bits
-    jmp GDT_CODE:(start_protected_mode + ADDRESS_KERNEL)
+    jmp GDT_CODE_PROTECTED_MODE:(start_protected_mode + ADDRESS_KERNEL)
 
 bits 32
 
@@ -204,10 +204,10 @@ bits 32
 
 start_protected_mode:
     ; Load interrupts
-    lidt [idt_descriptor]
+    lidt [idt_descriptor_protected_mode + ADDRESS_KERNEL]
 
     ; Setup segments
-    mov ax, GDT_DATA
+    mov ax, GDT_DATA_PROTECTED_MODE
     mov ds, ax
     mov es, ax
     mov fs, ax
@@ -223,19 +223,21 @@ start_protected_mode:
     call terminal_print_string
 
     call sys_switch_to_v86_mode
-
-bits 16
-next:    
+    bits 16
     mov ah, 0x00
     mov al, 0x13
-    int 0x10
+    ;int 0x10
 
-    mov ax, 0xa000
-    mov es, ax
-    mov ax, 0x5387
-    mov es:800, ax
-    mov es:12500, ax
-    mov es:4400, ax
+    call sys_switch_to_protected_mode
+    bits 32
+
+    mov word [0xa0000 + 0], 0x3434
+    mov word [0xa0000 + 4000], 0x8787
+    mov word [0xa0000 + 15000], 0x1010
+
+    ;mov esi, msg_welcome + 0x1000
+    ;mov al, TERMINAL_FOREGROUND_GRAY + TERMINAL_BACKGROUND_BLUE
+    ;call terminal_print_string
 
 .l:
 jmp .l
@@ -281,43 +283,31 @@ bits 16
     sti
     ret
 
-;iret
+bits 16
+sys_switch_to_protected_mode:
     cli
-    ;lgdt [gdt_descriptor]
+    ; Enable protected mode
     mov eax, cr0
     or eax, 1
     mov cr0, eax
-    jmp GDT_CODE:(back + ADDRESS_KERNEL)
-    .l2:
-    jmp .l2
-
+    ; Long jump to 32 bits
+    jmp GDT_CODE_PROTECTED_MODE:(.init_data_segment + ADDRESS_KERNEL)
 
 bits 32
-back:
-    mov ax, GDT_DATA
+.init_data_segment:
+    ; Set protected mode 32 bit data segment
+    mov ax, GDT_DATA_PROTECTED_MODE
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    ;lgdt [gdt_descriptor]
-    lidt [idt_descriptor + ADDRESS_KERNEL]
 
-    ;mov esp, ADDRESS_STACK
-    ;sti
+    ; Enable protected mode interrupts
+    lidt [idt_descriptor_protected_mode + ADDRESS_KERNEL]
+    sti
+    ret
 
-    mov esi, msg_all_done + ADDRESS_KERNEL
-    mov al, TERMINAL_FOREGROUND_BROWN
-    call terminal_print_string
-
-    ;mov esi, msg_welcome + 0x1000
-    ;mov al, TERMINAL_FOREGROUND_BLUE + TERMINAL_BACKGROUND_RED
-    ;call terminal_print_string
-
-    ;int 13
-
-    .l:
-    jmp .l
 ;
 ; Default interrupt handler
 interrupt_handler:
