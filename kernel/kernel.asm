@@ -1,8 +1,9 @@
 cpu 386
 
-jmp start
-
 %include "kernel/constants.asm"
+
+bits 16
+jmp 0:start + ADDRESS_KERNEL ; Sets CS to 0
 
 ;
 ; GDT (Global Descriptor Table)
@@ -177,48 +178,25 @@ msg_all_done db `All done\n\0`
 ; Allocated data
 ;segment_app_shell resw 1
 
+bits 16
 start:
-    ; Setup data segment
     cli
-    mov ax, cs
+    ; Setup segments
+    mov ax, 0
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
     mov ss, ax
     mov sp, ADDRESS_STACK
-
-    ; Load global descriptor table
-    lgdt [gdt_descriptor]
-
-    mov eax, cr0
-    or eax, 1
-    mov cr0, eax
-
-    ; Long jump to 32 bits
-    jmp GDT_CODE_PROTECTED_MODE:(start_protected_mode + ADDRESS_KERNEL)
+    lgdt [gdt_descriptor + ADDRESS_KERNEL]
+    call sys_switch_to_protected_mode
 
 bits 32
-
-
-
-start_protected_mode:
-    ; Load interrupts
-    lidt [idt_descriptor_protected_mode + ADDRESS_KERNEL]
-
-    ; Setup segments
-    mov ax, GDT_DATA_PROTECTED_MODE
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
-    sti
-
     call terminal_init
 
     ; Welcome message
-    mov esi, msg_welcome + 0x1000
+    mov esi, msg_welcome + ADDRESS_KERNEL
     mov al, TERMINAL_FOREGROUND_BLACK + TERMINAL_BACKGROUND_WHITE
     call terminal_print_string
 
@@ -235,9 +213,9 @@ start_protected_mode:
     mov word [0xa0000 + 4000], 0x8787
     mov word [0xa0000 + 15000], 0x1010
 
-    ;mov esi, msg_welcome + 0x1000
-    ;mov al, TERMINAL_FOREGROUND_GRAY + TERMINAL_BACKGROUND_BLUE
-    ;call terminal_print_string
+    mov esi, msg_welcome + ADDRESS_KERNEL
+    mov al, TERMINAL_FOREGROUND_GRAY + TERMINAL_BACKGROUND_BLUE
+    call terminal_print_string
 
 .l:
 jmp .l
