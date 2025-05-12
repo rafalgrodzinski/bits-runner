@@ -150,69 +150,21 @@ terminal_print_character:
 ;  al: text attribute
 terminal_print_string:
     pushad
-    mov bh, al ; keep attribute
+    mov bl, al ; keep attribute
 
 .loop:
     lodsb
-    mov bl, al ; keep loaded char
 
     ; End of string ?
-    cmp bl, `\0`
+    cmp al, `\0`
     jz .end
 
-    ; New line ?
-    cmp bl, `\n`
-    jnz .not_new_line
-    mov word [cursor_x + 0x1000], 0
-    inc word [cursor_y + 0x1000]
-    jmp .loop
-
-.not_new_line:
-    mov eax, 0
-    mov word ax, [cursor_y + 0x1000]
-    mul word [terminal_width + 0x1000]
-    add word ax, [cursor_x + 0x1000]
-    shl ax, 1 ; two bytes per char
-    mov byte [TERMINAL_BUFFER + eax], bl
-    mov byte [TERMINAL_BUFFER + eax + 1], bh
-
-    ; End of line?
-    inc word [cursor_x + 0x1000]
-    mov word ax, [cursor_x + 0x1000]
-    cmp word ax, [terminal_width + 0x1000]
-    jb .loop
-    
-    mov word [cursor_x + 0x1000], 0
-    inc word [cursor_y + 0x1000]
-
+    mov ah, al
+    mov al, bl
+    call terminal_print_character
     jmp .loop
 
 .end:
-    ; Move cursor
-    mov eax, 0
-    mov word ax, [cursor_y + 0x1000]
-    mul word [terminal_width + 0x1000]
-    add word ax, [cursor_x + 0x1000]
-    mov bx, ax
-
-    ; Move high byte
-    mov dx, 0x03d4
-    mov al, 0x0e
-    out dx, al
-
-    mov dx, 0x03d5
-    mov al, bh
-    out dx, al
-
-    ; Move low byte
-    mov dx, 0x03d4
-    mov al, 0x0f
-    out dx, al
-
-    mov dx, 0x03d5
-    mov al, bl
-    out dx, al
-
     popad
     ret
 
