@@ -80,6 +80,8 @@ start:
 bits 32
     call terminal_init
 
+    call interrupt_init_protected_mode
+
     ; Welcome message
     mov esi, msg_welcome + ADDRESS_KERNEL
     mov al, TERMINAL_FOREGROUND_GREEN
@@ -148,7 +150,7 @@ bits 32
     mov gs, ax
     mov ss, ax
 
-    call interrupt_init_protected_mode
+    ;call interrupt_init_protected_mode
     ret
 
 bits 32
@@ -194,4 +196,3 @@ sys_execute:
 %include "kernel/interrupt.asm"
 %include "kernel/terminal.asm"
 ;%include "kernel/memory_manager.asm"
-

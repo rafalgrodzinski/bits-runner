@@ -1,7 +1,7 @@
 cpu 386
 bits 32
 
-%define ADDRESS_TERMINAL 0xb8000
+%define TERMINAL_BUFFER 0xb8000
 
 ;
 ; Data
@@ -76,14 +76,75 @@ terminal_clear:
 
     ; copy eax into [edi+ecx]
     mov eax, ebx
-    mov edi, ADDRESS_TERMINAL
+    mov edi, TERMINAL_BUFFER
     rep stosd
 
     popad
     ret
 
+;
+; Print a single character to terminal at current position
+; in
+;  ah: ASCII character to print
+;  al: attribute
+terminal_print_character:
+    pusha
+
+    ; New line ?
+    cmp ah, `\n`
+    jnz .not_new_line
+    mov word [cursor_x + ADDRESS_KERNEL], 0
+    inc word [cursor_y + ADDRESS_KERNEL]
+    jmp .move_cursor
+
+.not_new_line:
+    mov bx, ax ; preserve
+    movzx word ax, [cursor_y + ADDRESS_KERNEL]
+    mul word [terminal_width + ADDRESS_KERNEL]
+    add word ax, [cursor_x + ADDRESS_KERNEL]
+    shl ax, 1 ; two bytes per char
+    mov byte [TERMINAL_BUFFER + eax], bh
+    mov byte [TERMINAL_BUFFER + eax + 1], bl
+
+    ; End of line?
+    inc word [cursor_x + ADDRESS_KERNEL]
+    mov word ax, [cursor_x + ADDRESS_KERNEL]
+    cmp word ax, [terminal_width + ADDRESS_KERNEL]
+    jb .move_cursor
+    
+    mov word [cursor_x + ADDRESS_KERNEL], 0
+    inc word [cursor_y + ADDRESS_KERNEL]
+
+.move_cursor:
+    ; Move cursor
+    movzx word ax, [cursor_y + ADDRESS_KERNEL]
+    mul word [terminal_width + ADDRESS_KERNEL]
+    add word ax, [cursor_x + ADDRESS_KERNEL]
+    mov bx, ax
+
+    ; Move high byte
+    mov dx, 0x03d4
+    mov al, 0x0e
+    out dx, al
+
+    mov dx, 0x03d5
+    mov al, bh
+    out dx, al
+
+    ; Move low byte
+    mov dx, 0x03d4
+    mov al, 0x0f
+    out dx, al
+
+    mov dx, 0x03d5
+    mov al, bl
+    out dx, al
+
+    popa
+    ret
+
 ; 
-; Print a `\0` terminated string
+; Print a `\0` terminated string at current position
 ; in
 ;  esi: string address
 ;  al: text attribute
@@ -112,9 +173,8 @@ terminal_print_string:
     mul word [terminal_width + 0x1000]
     add word ax, [cursor_x + 0x1000]
     shl ax, 1 ; two bytes per char
-    ;add eax, ADDRESS_TERMINAL
-    mov byte [ADDRESS_TERMINAL + eax], bl
-    mov byte [ADDRESS_TERMINAL + eax + 1], bh
+    mov byte [TERMINAL_BUFFER + eax], bl
+    mov byte [TERMINAL_BUFFER + eax + 1], bh
 
     ; End of line?
     inc word [cursor_x + 0x1000]
@@ -157,17 +217,6 @@ terminal_print_string:
     ret
 
 ;
-; Print a single character to terminal
-; in
-;  ah: ASCII character to print
-print_character:
-    pusha
-    mov ah, 0x0e
-    int 0x10
-    popa
-    ret
-
-;
 ; Print an unsigned integer
 ; in
 ;  ax - Value
@@ -198,58 +247,55 @@ print_uint:
 	ret
 
 ;
-; Print value in hexadeciaml format
+; Print value in hexadeciaml format at current position
 ; in
-;  ax - Value
-print_hex:
+;  al: text attribute
+;  ebx: value to print 
+terminal_print_hex:
     pusha
-    mov cx, 0 ; Count number of digits
+    xchg eax, ebx ; preserve attrib in ebx
+    mov ecx, 0 ; Count number of digits
 
 .loop_process_digit:
-    inc cx
-    mov dx, 0
-    mov bx, 16 ; 
-    div bx
+    inc ecx
+    mov edx, 0
+    mov esi, 16
+    div esi
 
-    cmp dx, 10 ; Check if we should add `0` or `A`
+    cmp edx, 10 ; Check if we should add `0` or `A`
     jae .above_9
-    add dx, `0`
+    add edx, `0`
     jmp .digit_converted
 
 .above_9:
-    add dx, `a` - 10
+    add edx, `a` - 10
 
 .digit_converted:
-    push dx ; Place converted digit on stack
+    push edx ; Place converted digit on stack
 
-    cmp ax, 0 ; Check if we're out of digits
+    cmp eax, 0 ; Check if we're out of digits
 	jnz .loop_process_digit
 
-    mov ah, 0x0e
+    movzx eax, bl ; restore preserved attribute
     ; First print the prefix
-    mov al, `0`
-	int 0x10
-    mov al, `x`
-    int 0x10
-
+    mov ah, `0`
+    call terminal_print_character
+    mov ah, `x`
+    call terminal_print_character
     ; Check if we have even numbr of digits, if not append one
     test cx, 0x01
     je .loop_print_digit
-    mov al, `0`
-    int 0x10
+    mov ah, `0`
+    call terminal_print_character
 
 .loop_print_digit:
-    pop ax
-    mov ah, 0x0e
-	int 0x10
+    pop eax
+    mov ah, al
+    mov al, bl
+    call terminal_print_character
 
-    dec cx
+    dec ecx
     jnz .loop_print_digit
 
     popa
-    ret
-
-get_keystroke:
-    mov ah, 0x00
-    int 0x16
     ret
