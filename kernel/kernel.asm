@@ -49,120 +49,6 @@ dd gdt + ADDRESS_KERNEL ; address of GTD + offset to the address of the kernel
 %define GDT_DATA_V86_MODE gdt_data_v86_mode - gdt
 
 ;
-; IDT (Interrupt Descriptor Table)
-idt:
-; 0
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 1
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 2
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 3
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 4
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 5
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 6
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 7
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 8
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 9
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 10
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 11
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 12
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 13
-dw interrupt_handler_gpf + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 14
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 15
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-; 16
-dw interrupt_handler + ADDRESS_KERNEL
-dw 0x08
-db 0
-db 10001110b
-dw 0
-
-idt_descriptor_protected_mode:
-dw $ - idt - 1 ; size of IDT
-dd idt + ADDRESS_KERNEL
-
-idt_descriptor_v86_mode:
-dw 0x3ff
-dd 0
-
-;
 ; Messages
 msg_welcome db `Initializing Bits Runner...\n\0`
 msg_error_fatal db `Fatal Error!\n\0`
@@ -201,7 +87,7 @@ bits 32
 
     ; Should not reach this
     mov esi, msg_error_fatal + ADDRESS_KERNEL
-    call fatal_error
+    call sys_fatal_error
 
 ;
 ; Initialize 8086 virtual mode
@@ -239,9 +125,7 @@ bits 16
     mov gs, ax
     mov ss, ax
 
-    ; Load and enable 16 bit interrupts
-    lidt [idt_descriptor_v86_mode + ADDRESS_KERNEL]
-    sti
+    call interrupt_init_v86_mode
     ret
 
 bits 16
@@ -264,37 +148,16 @@ bits 32
     mov gs, ax
     mov ss, ax
 
-    ; Enable protected mode interrupts
-    lidt [idt_descriptor_protected_mode + ADDRESS_KERNEL]
-    sti
+    call interrupt_init_protected_mode
     ret
 
-;
-; Default interrupt handler
-interrupt_handler:
-    mov esi, msg_error_fatal + 0x1000
-    call fatal_error
-
-msg_gpf db `GPF Handler\n\0`
-interrupt_handler_gpf:
-    ;mov esi, msg_gpf + ADDRESS_KERNEL
-    ;mov al, TERMINAL_FOREGROUND_CYAN
-    ;call terminal_print_string
-    ;lidt [idt16 + ADDRESS_KERNEL]
-    ; mov ah, 0x00
-    ;mov al, 0x13
-    ;int 0x10
-    ;iret
-.j:
-    jmp .j
-    iretd
-
 bits 32
+
 ;
 ; Stop execution and show error message
 ; in
 ;  esi: string address
-fatal_error:
+sys_fatal_error:
     mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_BLINKING
 	call terminal_print_string
 	hlt
@@ -328,7 +191,7 @@ sys_execute:
     ret
 
 ;%include "kernel/fat12.asm"
-;%include "kernel/interrupt.asm"
+%include "kernel/interrupt.asm"
 %include "kernel/terminal.asm"
 ;%include "kernel/memory_manager.asm"
 
