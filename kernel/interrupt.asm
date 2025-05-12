@@ -1,6 +1,11 @@
 cpu 386
 bits 32
 
+%define PIC1_CMD_PORT 0x20
+%define PIC1_DATA_PORT 0x21
+%define PIC2_CMD_PORT 0xa0
+%define PIC2_DATA_PORT 0xa1
+
 ;
 ; IDT (Interrupt Descriptor Table)
 
@@ -93,11 +98,6 @@ interrupt_init_v86_mode:
 bits 32
 interrupt_init_protected_mode:
     cli
-
-    %define PIC1_CMD_PORT 0x20
-    %define PIC1_DATA_PORT 0x21
-    %define PIC2_CMD_PORT 0xa0
-    %define PIC2_DATA_PORT 0xa1
 
     ; ICW1, initialize
     mov al, 0x11
@@ -376,21 +376,66 @@ interrupt_handler_2f:
 ;
 ; Aggregated handler for all interrupts
 interrupt_handler:
+    pop ebx
+    pop ecx
+
+    ; IRQ0 - timer
+    cmp ebx, 0x20
+    jne .not_timer
+    call interrupt_handle_timer
+    jmp .end
+
+.not_timer:
+    ; IRQ1 - keyboard
+    cmp ebx, 0x21
+    jne .not_keyboard
+    call interrupt_handle_keyboard
+    jmp .end
+
+.not_keyboard:
+    ; Unhandled interrupt
     mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_LIGHT
 
     mov esi, msg_error_unhandled_0 + ADDRESS_KERNEL
     call terminal_print_string
 
-    pop ebx
     call terminal_print_hex
 
     mov esi, msg_error_unhandled_1 + ADDRESS_KERNEL
     call terminal_print_string
 
-    pop ebx
+    mov ebx, ecx
     call terminal_print_hex
 
     mov esi, msg_error_unhandled_2 + ADDRESS_KERNEL
     call terminal_print_string
 
+.end:
     iret
+
+interrupt_handle_timer:
+    mov al, 0x20
+    out PIC1_CMD_PORT, al
+    ret
+
+%define KEYBOARD_CMD_PORT 0x64
+%define KEYBOARD_DATA_PORT 0x60
+interrupt_handle_keyboard:
+    mov al, 0x20
+    out PIC1_CMD_PORT, al
+
+    in al, KEYBOARD_CMD_PORT
+    cmp al, 0
+    jz .no_data
+
+    in al, KEYBOARD_DATA_PORT
+    movzx ebx, al
+    mov al, TERMINAL_FOREGROUND_GRAY
+    call terminal_print_hex
+
+    mov ah, ` `
+    call terminal_print_character
+
+.no_data:
+
+    ret
