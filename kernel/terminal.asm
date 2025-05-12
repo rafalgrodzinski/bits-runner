@@ -83,6 +83,45 @@ terminal_clear:
     ret
 
 ;
+; Scroll down by one line
+terminal_scroll_down:
+    pushad
+    mov bl, al ; preserve
+
+    movzx ax, [terminal_height + ADDRESS_KERNEL]
+    sub eax, 1
+    mul word [terminal_width + ADDRESS_KERNEL]
+    shr eax, 1 ; half of count of chars
+    mov ecx, eax
+
+    ; destination = buffer
+    mov edi, TERMINAL_BUFFER
+    ; source = buffer +1 line
+    movzx si, [terminal_width + ADDRESS_KERNEL]
+    shl esi, 1
+    add esi, TERMINAL_BUFFER
+    rep movsd ; move the data
+
+    ; clear bottom line
+    movzx ax, [terminal_height + ADDRESS_KERNEL]
+    sub eax, 1
+    mul word [terminal_width + ADDRESS_KERNEL]
+    shl eax, 1
+    add eax, TERMINAL_BUFFER
+    mov edi, eax
+
+    movzx cx, [terminal_width + ADDRESS_KERNEL]
+    shr ecx, 1
+    mov ax, TERMINAL_FOREGROUND_GRAY | TERMINAL_BACKGROUND_BLACK
+    shl eax, 24
+    mov ax, TERMINAL_FOREGROUND_GRAY | TERMINAL_BACKGROUND_BLACK
+    shl eax, 8
+    rep stosd
+
+    popad
+    ret
+
+;
 ; Print a single character to terminal at current position
 ; in
 ;  ah: ASCII character to print
@@ -116,6 +155,15 @@ terminal_print_character:
     inc word [cursor_y + ADDRESS_KERNEL]
 
 .move_cursor:
+    ; Check if we've overscrolled
+    movzx ax, [cursor_y + ADDRESS_KERNEL]
+    cmp word ax, [terminal_height + ADDRESS_KERNEL]
+    jb .not_overscrolled
+
+    call terminal_scroll_down
+    dec word [cursor_y + ADDRESS_KERNEL]
+
+.not_overscrolled:
     ; Move cursor
     movzx word ax, [cursor_y + ADDRESS_KERNEL]
     mul word [terminal_width + ADDRESS_KERNEL]

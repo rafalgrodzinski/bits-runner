@@ -87,9 +87,9 @@ bits 32
     mov al, TERMINAL_FOREGROUND_GREEN
     call terminal_print_string
 
-    ; Should not reach this
-    mov esi, msg_error_fatal + ADDRESS_KERNEL
-    call sys_fatal_error
+.halt:
+    hlt
+    jmp .halt
 
 ;
 ; Initialize 8086 virtual mode
