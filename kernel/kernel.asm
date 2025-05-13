@@ -52,16 +52,6 @@ dd gdt + ADDRESS_KERNEL ; address of GTD + offset to the address of the kernel
 ; Messages
 msg_welcome db `Initializing Bits Runner...\n\0`
 msg_error_fatal db `Fatal Error!\n\0`
-;msg_error_invalid_interrupt db `Invalid Interrupt!\n\0`
-;msg_error_execution db `Max executables reached!\n\0`
-
-;
-; Data
-;shell_file_name db `SHELL   BIN`
-
-;
-; Allocated data
-;segment_app_shell resw 1
 
 bits 16
 start:
@@ -79,8 +69,6 @@ start:
 
 bits 32
     call terminal_init
-
-    call interrupt_init_protected_mode
 
     ; Welcome message
     mov esi, msg_welcome + ADDRESS_KERNEL
@@ -150,7 +138,7 @@ bits 32
     mov gs, ax
     mov ss, ax
 
-    ;call interrupt_init_protected_mode
+    call interrupt_init_protected_mode
     ret
 
 bits 32
@@ -160,10 +148,11 @@ bits 32
 ; in
 ;  esi: string address
 sys_fatal_error:
+    cli
     mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_BLINKING
 	call terminal_print_string
-	hlt
 .halt:
+	hlt
 	jmp .halt
 
 ;
@@ -171,28 +160,7 @@ sys_fatal_error:
 reboot:
     jmp 0xffff:0
 
-;
-; Execute a binary 
-; in
-;  es: Segment with loaded executable
-sys_execute:
-    pusha
-
-    ; Setup segments
-    cli
-    mov ax, es
-    mov ds, ax
-    sti
-
-    ; Make a far jumpt to es:0
-    push es
-    push 0
-    retf
-
-    popa
-    ret
-
 ;%include "kernel/fat12.asm"
 %include "kernel/interrupt.asm"
 %include "kernel/terminal.asm"
-;%include "kernel/memory_manager.asm"
+%include "kernel/memory_manager.asm"

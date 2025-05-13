@@ -437,5 +437,4 @@ interrupt_handle_keyboard:
     call terminal_print_character
 
 .no_data:
-
     ret
