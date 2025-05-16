@@ -88,10 +88,27 @@ bits 32
 
     mov esi, file_shell + ADDRESS_KERNEL
     call fat_file_entry
+    mov ecx, edi
 
+    mov esi, edi
+    call fat_file_size
+
+    mov ebx, eax
+    mov al, TERMINAL_FOREGROUND_GRAY
+    call terminal_print_hex
+
+    mov ah, ' '
+    call terminal_print_character
+
+    call memory_allocate
     mov ebx, edi
     mov al, TERMINAL_FOREGROUND_GRAY
     call terminal_print_hex
+
+    mov ah, ' '
+    call terminal_print_character
+    mov esi, ecx
+    call fat_load_file
 
 .halt:
     hlt

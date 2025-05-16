@@ -134,7 +134,6 @@ bits 32
 ;  esi: file name address
 ; out
 ;  edi: found file address
-db "BANANA"
 fat_file_entry:
 	push eax
 	push ebx
@@ -169,96 +168,55 @@ fat_file_entry:
 	ret
 
 ;
-; Try getting file size for given file name
+; Try getting file size for given file entry
 ; in
-;  si: file name address
+;  esi: file entry address
 ; out
-;  ax: size in bytes
-;fat_file_size:
-;	push bx
-;	push cx
-;	push si
-;	push di
-;
-;	mov bx, si ; preserve
-;
-;	mov ax, [segment_root_dir]
-;	mov es, ax
-;	mov di, 0
-;
-;	mov ax, 0 ; current entry count
-;
-;.loop:
-;	mov si, bx
-;	mov cx, 11 ; 11 chars in file name
-;	push di
-;	repe cmpsb ; Try matching file names
-;	pop di
-;	je .found_file
-;
-;	; Try next entry
-;	add di, FAT_BYTES_PER_ENTRY
-;	inc ax
-;	cmp ax, FAT_ROOT_DIR_ENTRIES_COUNT
-;	jl .loop
-;
-;	; Gone through all file entries, nothing found
-;	mov ax, 0
-;	jmp .not_found
-;
-;.found_file:
-;	mov word ax, es:[di + FAT_ENTRY_FILE_SIZE_OFFSET]
-;
-;.not_found:
-;	pop di
-;	pop si
-;	pop cx
-;	pop bx
-;	ret
+;  eax: size in bytes
+fat_file_size:
+	mov eax, [esi + FAT_ENTRY_FILE_SIZE_OFFSET]
+	ret
 
 ;
-; Load file into memory starting with given cluster number
+; Load file into memory for given file entry
 ; in
-;  ax: fat cluster number
-;  es: target segment address
-;fat_load_file:
-;	pusha
-;	push es
-;	
-;.loop:
-;	; Load sector pointed by cluster into memory
-;	pusha
-;	add ax, FAT_FIRST_DATA_SECTOR ; sector
-;	mov bx, 1 ; count
-;	call read_floppy_data
-;	popa
-;	mov cx, es
-;	add cx, FAT_BYTES_PER_SECTOR >> 4
-;	mov es, cx
-;
-;	; Load next next fat cluster
-;	mov si, 3
-;	mul si
-;	mov si, 2
-;	div si ; Divide by 1.5 since we're extracting 12 bits (1.5 byte)
-;	
-;	mov gs, [segment_fat]
-;	mov si, ax
-;	mov ax, gs:[si]
-;
-;	; Adjust 12 bit to 16 bit
-;	or dx, dx
-;	jz .even
-;.odd:
-;	shr ax, 4
-;	jmp .next_cluster
-;.even:
-;	and ax, 0x0fff
-;
-;.next_cluster:		
-;	cmp ax, FAT_EOF ; range 0x0ff8 - 0x0fff marks last fat cluster
-;	jb .loop
-;
-;	pop es
-;	popa
-;	ret
+;  esi: fat entry address
+;  edi: target segment address
+fat_load_file:
+	pusha
+	
+	movzx word ax, [esi + FAT_ENTRY_CLUSTER_OFFSET]
+.loop:
+	; Load sector pointed by cluster into memory
+	push eax
+	add eax, FAT_FIRST_DATA_SECTOR ; sector
+	mov ebx, 1 ; count
+	call read_floppy_data
+	pop eax
+	add edi, FAT_BYTES_PER_SECTOR ; move to next sector
+
+	; Load next next fat cluster
+	mov ebx, 3
+	mul ebx
+	mov ebx, 2
+	div ebx ; Divide by 1.5 since we're extracting 12 bits (1.5 byte)
+	
+	mov ebx, [address_fat]
+	add ebx, eax
+	mov eax, [ebx]
+
+	; Adjust 12 bit to 16 bit
+	or edx, edx
+	jz .even
+.odd:
+	shr eax, 4
+	jmp .next_cluster
+.even:
+	and eax, 0x0fff
+
+.next_cluster:		
+	cmp eax, FAT_EOF ; range 0x0ff8 - 0x0fff marks last fat cluster
+	jb .loop
+
+	popa
+	ret
