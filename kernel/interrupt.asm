@@ -76,6 +76,7 @@ IDT_ENTRY interrupt_handler_2c + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; IRQ c
 IDT_ENTRY interrupt_handler_2d + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; IRQ d
 IDT_ENTRY interrupt_handler_2e + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; IRQ e
 IDT_ENTRY interrupt_handler_2f + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; IRQ f
+IDT_ENTRY interrupt_handler_30 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; SYS
 idt_protected_mode_end:
 
 ;
@@ -405,6 +406,11 @@ interrupt_handler_2f:
     push  0x2f
     jmp interrupt_handler
 
+interrupt_handler_30:
+    push  0
+    push  0x30
+    jmp interrupt_handler
+
 ;
 ; Aggregated handler for all interrupts
 interrupt_handler:
@@ -425,6 +431,13 @@ interrupt_handler:
     jmp .end
 
 .not_keyboard:
+    ; SYS
+    cmp ebx, SYS_INT
+    jne .not_sys
+    call interrupt_handle_sys
+    jmp .end
+
+.not_sys:
     ; Unhandled interrupt
     mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_LIGHT
 
@@ -469,4 +482,14 @@ interrupt_handle_keyboard:
     call terminal_print_character
 
 .no_data:
+    ret
+
+;
+; Handle syscall
+interrupt_handle_sys:
+    cmp ah, SYS_INT_PRINT_STRING
+    jne .end
+    call terminal_print_string
+
+.end:
     ret

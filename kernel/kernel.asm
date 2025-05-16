@@ -86,29 +86,21 @@ bits 32
     mov al, TERMINAL_FOREGROUND_GREEN
     call terminal_print_string
 
+    ; Load shell
     mov esi, file_shell + ADDRESS_KERNEL
-    call fat_file_entry
-    mov ecx, edi
-
+    call fat_file_entry ; Get file entry into edi
+    mov ebx, edi ; preserve
+    
     mov esi, edi
-    call fat_file_size
+    call fat_file_size ; Get size into eax
+   
+    call memory_allocate  ; Allocate memory into edi
 
-    mov ebx, eax
-    mov al, TERMINAL_FOREGROUND_GRAY
-    call terminal_print_hex
-
-    mov ah, ' '
-    call terminal_print_character
-
-    call memory_allocate
-    mov ebx, edi
-    mov al, TERMINAL_FOREGROUND_GRAY
-    call terminal_print_hex
-
-    mov ah, ' '
-    call terminal_print_character
-    mov esi, ecx
+    mov eax, 0 
+    mov esi, ebx ; restore entry address
     call fat_load_file
+
+    jmp edi ; start shell
 
 .halt:
     hlt

@@ -5,7 +5,7 @@
 %define ADDRESS_STACK 0xFFFF 
 %define SEGMENT_KERNEL 0x1000 >> 4
 
-%define SYS_INT 0xff
+%define SYS_INT 0x30
 %define SYS_INT_PRINT_CHAR 0x00
 %define SYS_INT_PRINT_STRING 0x01
 %define SYS_INT_PRINT_HEX 0x02

@@ -1,5 +1,5 @@
 cpu 386
-bits 16
+bits 32
 
 jmp start
 
@@ -16,6 +16,14 @@ msg_welcome db `Shell started\n\0`
 command_reboot db `reboot`
 
 start:
+    mov ah, SYS_INT_PRINT_STRING
+    mov esi, msg_welcome
+    add esi, edi
+    mov al, TERMINAL_FOREGROUND_GRAY
+    int SYS_INT
+.l:
+    jmp .l
+
     mov ax, ds
     mov es, ax
 
