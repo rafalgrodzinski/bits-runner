@@ -89,6 +89,36 @@ msg_error_unhandled_2: db `\n\0`
 bits 16
 interrupt_init_v86_mode:
     cli
+    push ax
+
+    ; ICW1, initialize
+    mov al, 0x11
+    out PIC1_CMD_PORT, al
+    out PIC2_CMD_PORT, al
+
+    ; ICW2, set IDT offsets
+    mov al, 0x08 ; IDT offset
+    out PIC1_DATA_PORT, al
+    mov al, 0x70 ; IDT offset
+    out PIC2_DATA_PORT, al
+
+    ; ICW3
+    mov al, 0x04 ; accept PIC2 on IRQ2
+    out PIC1_DATA_PORT, al
+    mov al, 0x02 ; mark as secondary
+    out PIC2_DATA_PORT, al
+
+    ; ICW4, set 8086 mode
+    mov al, 0x01
+    out PIC1_DATA_PORT, al
+    out PIC2_DATA_PORT, al
+
+    ; unmask IRQs
+    mov al, 0x00
+    out PIC1_DATA_PORT, al
+    out PIC2_DATA_PORT, al
+
+    pop ax
     lidt [idt_descriptor_v86_mode + ADDRESS_KERNEL]
     sti
     ret
@@ -98,6 +128,7 @@ interrupt_init_v86_mode:
 bits 32
 interrupt_init_protected_mode:
     cli
+    push ax
 
     ; ICW1, initialize
     mov al, 0x11
@@ -126,6 +157,7 @@ interrupt_init_protected_mode:
     out PIC1_DATA_PORT, al
     out PIC2_DATA_PORT, al
 
+    pop ax
     lidt [idt_descriptor_protected_mode + ADDRESS_KERNEL]
     sti
     ret

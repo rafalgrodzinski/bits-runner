@@ -12,9 +12,9 @@ memory_init:
 ;
 ; Allocate memory
 ; in
-;  eax - Requested amount in bytes
+;  eax: Requested amount in bytes
 ; out
-;  edi - Reserved region
+;  edi: Reserved region
 memory_allocate:
     mov edi, [heap_pointer]
     add [heap_pointer], eax
