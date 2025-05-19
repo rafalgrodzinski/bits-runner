@@ -132,6 +132,18 @@ bits 32
     pop ax
 
     call interrupt_init_protected_mode
+
+    ; re-enable paging if already set up
+    push eax
+    mov eax, cr3
+    cmp eax, 0
+    je .skip_paging
+    mov eax, cr0
+    or eax, 0x80000000
+    mov cr0, eax
+
+.skip_paging:
+    pop eax
     ret
 bits 32
 

@@ -208,7 +208,6 @@ interrupt_handler_07:
     push  0x07
     jmp interrupt_handler
 
-db "GPROT"
 interrupt_handler_08:
     ; error info pushed by CPU
     push  0x08
@@ -239,7 +238,6 @@ interrupt_handler_0d:
     push  0x0d
     jmp interrupt_handler
 
-db "PAGEF"
 interrupt_handler_0e:
     ; error info pushed by CPU
     push  0x0e
@@ -417,7 +415,6 @@ interrupt_handler_30:
 
 ;
 ; Aggregated handler for all interrupts
-db "INTER"
 interrupt_handler:
 cli
     pop ebx
