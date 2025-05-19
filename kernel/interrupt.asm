@@ -85,6 +85,9 @@ msg_error_unhandled_0: db `Unhandled interrupt: \0`
 msg_error_unhandled_1: db `, error: \0`
 msg_error_unhandled_2: db `\n\0`
 
+msg_error_page_fault_0: db `Page fault accessing memroy at: \0`
+msg_error_page_fault_1: db ` !!!\n\0`
+
 ;
 ; Initialize the interrupt service for v86 mode
 bits 16
@@ -205,7 +208,7 @@ interrupt_handler_07:
     push  0x07
     jmp interrupt_handler
 
-db "APPLE"
+db "GPROT"
 interrupt_handler_08:
     ; error info pushed by CPU
     push  0x08
@@ -236,6 +239,7 @@ interrupt_handler_0d:
     push  0x0d
     jmp interrupt_handler
 
+db "PAGEF"
 interrupt_handler_0e:
     ; error info pushed by CPU
     push  0x0e
@@ -413,10 +417,19 @@ interrupt_handler_30:
 
 ;
 ; Aggregated handler for all interrupts
+db "INTER"
 interrupt_handler:
+cli
     pop ebx
     pop ecx
 
+    ; Page fault
+    cmp ebx, 0x0e
+    jne .not_page_fault
+    call interrupt_handle_page_fault
+    jmp .end
+    
+.not_page_fault:
     ; IRQ0 - timer
     cmp ebx, 0x20
     jne .not_timer
@@ -457,6 +470,23 @@ interrupt_handler:
 
 .end:
     iret
+
+;
+; Page fault
+interrupt_handle_page_fault:
+    mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_BLINKING
+    mov esi, msg_error_page_fault_0 + ADDRESS_KERNEL
+    call terminal_print_string
+
+    mov ebx, cr2
+    call terminal_print_hex
+
+    mov esi, msg_error_page_fault_1 + ADDRESS_KERNEL
+    call terminal_print_string
+.halt:
+    hlt
+    jmp .halt
+
 
 interrupt_handle_timer:
     mov al, 0x20

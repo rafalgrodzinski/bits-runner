@@ -138,17 +138,17 @@ terminal_print_character:
 
 .not_new_line:
     mov bx, ax ; preserve
-    movzx word ax, [cursor_y + ADDRESS_KERNEL]
+    movzx eax, word [cursor_y + ADDRESS_KERNEL]
     mul word [terminal_width + ADDRESS_KERNEL]
-    add word ax, [cursor_x + ADDRESS_KERNEL]
-    shl ax, 1 ; two bytes per char
-    mov byte [TERMINAL_BUFFER + eax], bh
-    mov byte [TERMINAL_BUFFER + eax + 1], bl
+    add ax, [cursor_x + ADDRESS_KERNEL]
+    shl eax, 1 ; two bytes per char
+    mov [TERMINAL_BUFFER + eax], bh
+    mov [TERMINAL_BUFFER + eax + 1], bl
 
     ; End of line?
     inc word [cursor_x + ADDRESS_KERNEL]
-    mov word ax, [cursor_x + ADDRESS_KERNEL]
-    cmp word ax, [terminal_width + ADDRESS_KERNEL]
+    movzx eax, word [cursor_x + ADDRESS_KERNEL]
+    cmp ax, [terminal_width + ADDRESS_KERNEL]
     jb .move_cursor
     
     mov word [cursor_x + ADDRESS_KERNEL], 0
@@ -156,8 +156,8 @@ terminal_print_character:
 
 .move_cursor:
     ; Check if we've overscrolled
-    movzx ax, [cursor_y + ADDRESS_KERNEL]
-    cmp word ax, [terminal_height + ADDRESS_KERNEL]
+    movzx eax, word [cursor_y + ADDRESS_KERNEL]
+    cmp ax, [terminal_height + ADDRESS_KERNEL]
     jb .not_overscrolled
 
     call terminal_scroll_down
@@ -165,10 +165,10 @@ terminal_print_character:
 
 .not_overscrolled:
     ; Move cursor
-    movzx word ax, [cursor_y + ADDRESS_KERNEL]
+    movzx eax, word [cursor_y + ADDRESS_KERNEL]
     mul word [terminal_width + ADDRESS_KERNEL]
-    add word ax, [cursor_x + ADDRESS_KERNEL]
-    mov bx, ax
+    add ax, [cursor_x + ADDRESS_KERNEL]
+    mov bx, ax ; keep position
 
     ; Move high byte
     mov dx, 0x03d4

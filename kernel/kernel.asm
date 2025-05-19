@@ -90,10 +90,9 @@ bits 32
     mov esi, file_shell + ADDRESS_KERNEL
     call fat_file_entry ; Get file entry into edi
     mov ebx, edi ; preserve
-    
+
     mov esi, edi
     call fat_file_size ; Get size into eax
-   
     call memory_allocate  ; Allocate memory into edi
 
     mov eax, 0 
