@@ -137,6 +137,24 @@ terminal_print_character:
     jmp .move_cursor
 
 .not_new_line:
+    ; Backspace ?
+    cmp ah, `\b`
+    jnz .not_backspace
+    
+    cmp word [cursor_x + ADDRESS_KERNEL], 0
+    jna .not_overscrolled ; Already in first position
+
+    mov bx, ax ; preserve
+    dec word [cursor_x + ADDRESS_KERNEL]
+    movzx eax, word [cursor_y + ADDRESS_KERNEL]
+    mul word [terminal_width + ADDRESS_KERNEL]
+    add ax, [cursor_x + ADDRESS_KERNEL]
+    shl eax, 1 ; two bytes per char
+    mov byte [TERMINAL_BUFFER + eax], 0
+    mov [TERMINAL_BUFFER + eax + 1], bl
+    jmp .not_overscrolled
+
+.not_backspace:
     mov bx, ax ; preserve
     movzx eax, word [cursor_y + ADDRESS_KERNEL]
     mul word [terminal_width + ADDRESS_KERNEL]

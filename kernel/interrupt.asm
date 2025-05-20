@@ -1,3 +1,5 @@
+%include "drivers/keyboard.asm"
+
 cpu 386
 bits 32
 
@@ -437,7 +439,11 @@ cli
     ; IRQ1 - keyboard
     cmp ebx, 0x21
     jne .not_keyboard
-    call interrupt_handle_keyboard
+
+    mov al, 0x20
+    out PIC1_CMD_PORT, al
+    call keyboard_interrupt_handler
+
     jmp .end
 
 .not_keyboard:
@@ -488,27 +494,6 @@ interrupt_handle_page_fault:
 interrupt_handle_timer:
     mov al, 0x20
     out PIC1_CMD_PORT, al
-    ret
-
-%define KEYBOARD_CMD_PORT 0x64
-%define KEYBOARD_DATA_PORT 0x60
-interrupt_handle_keyboard:
-    mov al, 0x20
-    out PIC1_CMD_PORT, al
-
-    in al, KEYBOARD_CMD_PORT
-    cmp al, 0
-    jz .no_data
-
-    in al, KEYBOARD_DATA_PORT
-    movzx ebx, al
-    mov al, TERMINAL_FOREGROUND_GRAY
-    call terminal_print_hex
-
-    mov ah, ` `
-    call terminal_print_character
-
-.no_data:
     ret
 
 ;
