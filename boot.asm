@@ -1,4 +1,5 @@
 org 0x7c00
+
 cpu 386
 bits 16
 
@@ -21,7 +22,8 @@ nop
 
 %define FAT_EOF 0x0ff8
 
-%define BUFFER_KERNEL 0x1000 ; 4KiB
+%define BOOT_SECTOR_ID_OFFSET 0x7dfe
+%define ADDRESS_KERNEL 0x1000 ; 4KiB
 
 ; FAT12 header
 ; BPB (BIOS Parameter Block)
@@ -50,14 +52,15 @@ start:
 	; Setup segments
 	mov ax, cs
 	mov ds, ax
-	mov es, ax
 	mov ss, ax
 	mov sp, 0x7c00
 
-	; Show welcome message
-	mov ax, msg_welcome
-	call print
-	call print_new_line
+	; Show loading message
+	mov si, msg_loading
+	call print_string
+
+	; Enable A20 line
+	call enable_a20
 
 	; Read root directory
 	mov ax, FAT_ROOT_DIR_OFFSET
@@ -73,7 +76,7 @@ start:
 	jnz .kernel_found
 
 	; Kernel not found
-	mov ax, msg_kernel_file_not_found
+	mov si, msg_kernel_file_not_found
 	call fatal_error
 	
 .kernel_found:
@@ -88,62 +91,102 @@ start:
 	; Load kernel file
 	pop ax ; restore cluster number
 	mov bx, buffer ; fat buffer
-	mov cx, BUFFER_KERNEL
+	mov cx, ADDRESS_KERNEL
 	call load_file
 
 	; Kernel loaded, start execution
-	mov ax, msg_loaded
-	call print
-	call print_new_line
-	jmp (BUFFER_KERNEL >> 4):0
+	jmp (ADDRESS_KERNEL >> 4):0
 
-	; Should not reach this point
-	mov ax, msg_bootstrap_failed
-	call fatal_error
-
+;
 ; Stop execution and show message
 ; in
-;  ax: message address
+;  si: message address
 fatal_error:
-	call print
+	call print_string
 	hlt
 .halt:
 	jmp .halt
 
-; Print new line
-print_new_line:
-	pusha
+;
+; Try enabling A20 gate so we can access 16MiB of RAM
+enable_a20:
+	push ax
+	cli
 
-	mov ah, 0x0e
-	mov al, 0x0d ; CR
-	int 0x10
-	mov al, 0x0a ; LF
-	int 0x10
-	
-	popa
+	call is_a20_enabled
+	jne .end
+
+	; fast a20 gate
+	in al, 0x92
+	or al, 2
+	out 0x92, al
+
+	call is_a20_enabled
+	cmp ax, 1
+	jne .end
+
+	; failed
+	mov si, msg_error_a20
+	call fatal_error
+
+.end:
+	sti
+	pop ax
 	ret
 
+;
+; Check if A20 line is enabled
+; out
+; zf: 0 - enabled, 1 - disabled
+;  ax: is enabled
+is_a20_enabled:
+	push ds
+	push es
+
+	mov ax, 0xffff
+	mov es, ax
+	mov ax, [es:BOOT_SECTOR_ID_OFFSET]
+	cmp ax, [ds:BOOT_SECTOR_ID_OFFSET]
+
+	; if happens to be the same chang value and check once more
+	shl ax, 1
+	mov [es:BOOT_SECTOR_ID_OFFSET], ax
+	mov ax, [es:BOOT_SECTOR_ID_OFFSET]
+	cmp ax, [ds:BOOT_SECTOR_ID_OFFSET]
+
+.end:
+	pop es
+	pop ds
+	ret
+
+;
 ; Print string
 ; in
-;  ax: message address
-print:	
+;  si: message address
+print_string:
 	pusha
 
-	mov si, ax
 	mov bx, 0
 	mov ah, 0x0e
 
 .loop:
 	lodsb
 	cmp al, 0
-	jz .string_finished ; if al == 0
+	jz .string_finished ; if al = 0
 	int 0x10
 	jmp .loop
 
 .string_finished:
+	; print new line
+	mov al, 0x0d ; CR
+	int 0x10
+	mov al, 0x0a ; LF
+	int 0x10
+
 	popa
 	ret
-	
+
+;
 ; Converts LBA to CHS addressing
 ; in
 ;  ax: LBA address
@@ -166,6 +209,7 @@ lba_to_chs:
 	pop ax
 	ret
 
+;
 ; Read sectors from floppy
 ; in
 ;  ax: LBA addressed sector to read
@@ -190,13 +234,14 @@ read_floppy_data:
 	jnz .loop
 
 	; Read failed
-	mov ax, msg_disk_read_failed
+	mov si, msg_disk_read_failed
 	call fatal_error
 
 .read_successful:
 	popa
 	ret
 
+;
 ; Try finding cluster number for a file of a given name
 ; in
 ;  ax: root dir buffer address
@@ -238,6 +283,7 @@ find_cluster_number:
 	pop bx
 	ret
 
+;
 ; Load file into memory starting with given cluster number
 ; in
 ;  ax: fat cluster number
@@ -282,13 +328,15 @@ load_file:
 	popa
 	ret
 
-kernel_file_name db "KERNEL  BIN", 0
-msg_welcome db "Booting Dummy OS...", 0
-msg_loaded db "Kernel loaded, starting...", 0
-msg_bootstrap_failed db "Boot failed!", 0
-msg_disk_read_failed db "Failed to read disk!", 0
-msg_kernel_file_not_found db "KERNEL.BIN not found!"
-times 510 - ($ - $$) db 0
-db 0x55, 0xaa
+; Messages
+kernel_file_name: db `KERNEL  BIN\0`
+msg_loading: db `Loading kernel...\0`
+
+msg_error_a20: db `Failed to enable A20 gate!\0`
+msg_disk_read_failed: db `Failed to read disk!\0`
+msg_kernel_file_not_found: db `KERNEL.BIN not found!\0`
+
+times 510 - ($ - $$) db 0 ; padding
+db 0x55, 0xaa ; magic number
 
 buffer:
