@@ -1,0 +1,13 @@
+@module terminal
+
+printCharRaw raw<"i, i">: character u32, attribute u32
+    mov ah, 0
+    mov dl, $0
+    mov al, $1
+    int 0x30
+;
+
+@export printChar fun: character u32, attribute u32
+    //printCharRaw(character, attribute)
+    printCharRaw('A', 0x02)
+;

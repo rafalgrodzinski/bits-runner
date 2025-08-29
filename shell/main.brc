@@ -1,0 +1,7 @@
+@import terminal
+
+start fun
+    @terminal.printChar('B', 0x01)
+    @terminal.printChar('R', 0x02)
+    @terminal.printChar('C', 0x03)
+;

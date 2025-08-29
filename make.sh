@@ -8,7 +8,7 @@ function check {
     fi
 }
 
-VOLUME_NAME="DUMMY OS"
+VOLUME_NAME="BITS RUNNER"
 
 # Compile code
 nasm -f bin -o boot.bin boot.asm
@@ -30,6 +30,8 @@ dd if=boot.bin of=${DISK}
 diskutil eject ${DISK}
 # Mount and copy a file into it
 DISK=`hdiutil attach floppy.img`
-cp kernel.bin /Volumes/"${VOLUME_NAME}"/
-cp shell.bin /Volumes/"${VOLUME_NAME}"/
+#cp kernel.bin /Volumes/"${VOLUME_NAME}"/
+#cp shell.bin /Volumes/"${VOLUME_NAME}"/
+cp kernel.bin /Volumes/NO\ NAME/
+cp shell.bin /Volumes/NO\ NAME/
 diskutil eject ${DISK}

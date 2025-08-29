@@ -499,9 +499,19 @@ interrupt_handle_timer:
 ;
 ; Handle syscall
 interrupt_handle_sys:
+    ; Print char
+    cmp ah, SYS_INT_PRINT_CHAR
+    jne .not_print_char
+    mov ah, dl
+    call terminal_print_character
+
+.not_print_char:
+    ; Print string
     cmp ah, SYS_INT_PRINT_STRING
-    jne .end
+    jne .not_print_string
     call terminal_print_string
+
+.not_print_string:
 
 .end:
     ret
