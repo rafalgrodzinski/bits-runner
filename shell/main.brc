@@ -1,7 +1,11 @@
 @import terminal
 
 start fun
-    @terminal.printChar('B', 0x01)
-    @terminal.printChar('R', 0x02)
-    @terminal.printChar('C', 0x03)
+    ascii u32 <- 0
+    rep:
+        ascii <- @terminal.readPressedAscii()
+        if ascii != 0:
+            @terminal.printChar(ascii, 0x07)
+        ;
+    ;
 ;

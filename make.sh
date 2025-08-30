@@ -8,7 +8,8 @@ function check {
     fi
 }
 
-VOLUME_NAME="BITS RUNNER"
+#VOLUME_NAME="BITS RUNNER"
+VOLUME_NAME="NO NAME"
 
 # Compile code
 nasm -f bin -o boot.bin boot.asm
@@ -17,8 +18,8 @@ check "Failed to compile source"
 nasm -f bin -o kernel.bin kernel/kernel.asm
 check "Failed to compile source"
 
-nasm -f bin -o shell.bin apps/shell.asm
-check "Failed to compile source"
+# Build shell
+./shell/build.sh
 
 # Generate empty image file
 dd if=/dev/zero bs=512 count=2880 of=floppy.img
@@ -30,8 +31,6 @@ dd if=boot.bin of=${DISK}
 diskutil eject ${DISK}
 # Mount and copy a file into it
 DISK=`hdiutil attach floppy.img`
-#cp kernel.bin /Volumes/"${VOLUME_NAME}"/
-#cp shell.bin /Volumes/"${VOLUME_NAME}"/
-cp kernel.bin /Volumes/NO\ NAME/
-cp shell.bin /Volumes/NO\ NAME/
-diskutil eject ${DISK}
+cp kernel.bin /Volumes/"${VOLUME_NAME}"/
+cp shell.bin /Volumes/"${VOLUME_NAME}"/
+diskutil eject "${VOLUME_NAME}"

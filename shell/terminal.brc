@@ -1,13 +1,33 @@
 @module terminal
 
-printCharRaw raw<"i, i">: character u32, attribute u32
-    mov ah, 0
-    mov dl, $0
+printCharRaw raw<"m, m">: character u32, attribute u32
+    mov ah, 0x00
+    mov bl, $0
     mov al, $1
     int 0x30
 ;
 
+printHexRaw raw<"m, m">: number u32, attribute u32
+    mov ah, 0x02
+    mov ebx, $0
+    mov al, $1
+    int 0x30
+;
+
+readPressedAsciiRaw raw<"=r"> -> u32
+    mov ah, 0x07
+    int 0x30
+    mov $0, ebx
+;
+
 @export printChar fun: character u32, attribute u32
-    //printCharRaw(character, attribute)
-    printCharRaw('A', 0x02)
+    printCharRaw(character, attribute)
+;
+
+@export printHex fun: number u32, attribute u32
+    printHexRaw(number, attribute)
+;
+
+@export readPressedAscii fun -> u32
+    ret readPressedAsciiRaw()
 ;

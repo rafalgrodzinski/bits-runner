@@ -331,13 +331,15 @@ interrupt_handler_1f:
     jmp interrupt_handler
 
 interrupt_handler_20:
-    push  0
-    push  0x20
+    push 0
+    push eax
+    mov eax, 0x20
     jmp interrupt_handler
 
 interrupt_handler_21:
-    push  0
-    push  0x21
+    push 0
+    push eax
+    mov eax, 0x21
     jmp interrupt_handler
 
 interrupt_handler_22:
@@ -411,49 +413,57 @@ interrupt_handler_2f:
     jmp interrupt_handler
 
 interrupt_handler_30:
-    push  0
-    push  0x30
+    push 0
+    push eax
+    mov eax, 0x30
     jmp interrupt_handler
 
 ;
 ; Aggregated handler for all interrupts
 interrupt_handler:
 cli
-    pop ebx
-    pop ecx
+    ; Acknowledge interrupt
+    push eax
+    mov al, 0x20
+    out PIC1_CMD_PORT, al
+    pop eax
 
     ; Page fault
-    cmp ebx, 0x0e
+    cmp eax, 0x0e
     jne .not_page_fault
+
     call interrupt_handle_page_fault
-    jmp .end
+    ; no return
     
 .not_page_fault:
     ; IRQ0 - timer
-    cmp ebx, 0x20
+    cmp eax, 0x20
     jne .not_timer
+
     call interrupt_handle_timer
-    jmp .end
+    pop eax
+    jmp .interrupt_handled
 
 .not_timer:
     ; IRQ1 - keyboard
-    cmp ebx, 0x21
+    cmp eax, 0x21
     jne .not_keyboard
 
-    mov al, 0x20
-    out PIC1_CMD_PORT, al
     call keyboard_interrupt_handler
-
-    jmp .end
+    pop eax
+    jmp .interrupt_handled
 
 .not_keyboard:
     ; SYS
-    cmp ebx, SYS_INT
+    cmp eax, SYS_INT
     jne .not_sys
+
+    pop eax
     call interrupt_handle_sys
-    jmp .end
+    jmp .interrupt_handled
 
 .not_sys:
+    ; TODO: Fix this!
     ; Unhandled interrupt
     mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_LIGHT
 
@@ -465,13 +475,19 @@ cli
     mov esi, msg_error_unhandled_1 + ADDRESS_KERNEL
     call terminal_print_string
 
-    mov ebx, ecx
+    ;mov ebx, ecx
+    pop ebx
     call terminal_print_hex
 
     mov esi, msg_error_unhandled_2 + ADDRESS_KERNEL
     call terminal_print_string
+    jmp .end
+
+.interrupt_handled:
+    add esp, 4 ; Pop error code
 
 .end:
+    sti
     iret
 
 ;
@@ -492,8 +508,6 @@ interrupt_handle_page_fault:
 
 
 interrupt_handle_timer:
-    mov al, 0x20
-    out PIC1_CMD_PORT, al
     ret
 
 ;
@@ -502,16 +516,35 @@ interrupt_handle_sys:
     ; Print char
     cmp ah, SYS_INT_PRINT_CHAR
     jne .not_print_char
-    mov ah, dl
+    push eax
+    mov ah, bl
     call terminal_print_character
+    pop eax
+    jmp .end
 
 .not_print_char:
     ; Print string
     cmp ah, SYS_INT_PRINT_STRING
     jne .not_print_string
     call terminal_print_string
+    jmp .end
 
 .not_print_string:
+    ; Print hex
+    cmp ah, SYS_INT_PRINT_HEX
+    jne .not_print_hex
+    call terminal_print_hex
+    jmp .end
+
+.not_print_hex:
+    ; Get pressed ascii
+    cmp ah, SYS_INT_GET_PRESSED_ASCII
+    jne .not_get_pressed_ascii
+    movzx ebx, byte [pressedAcii]
+    mov byte [pressedAcii], 0
+    jmp .end
+
+.not_get_pressed_ascii:
 
 .end:
     ret

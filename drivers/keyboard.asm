@@ -8,6 +8,7 @@ bits 32
 %define KEY_R_SHIFT 0x36
 
 keyboard_status: times 128 db 0
+pressedAcii: db 0
 
 keyboard_ascii_map:
 db 0 ; 0x00 unused
@@ -134,12 +135,13 @@ db ` ` ; 0x39
 keyboard_interrupt_handler:
     ; check if we have data
     in al, KEYBOARD_CMD_PORT
-    cmp al, 0
-    jz .end
+    test al, 00000010b
+    jnz .end
 
     in al, KEYBOARD_DATA_PORT
     test al, 0x80 ; is pressed ?
     je .pressed
+
 .released:
     and eax, 0x7f
     cmp byte [keyboard_status + eax], 1
@@ -153,6 +155,10 @@ keyboard_interrupt_handler:
     jne .end ; no state change
     mov byte [keyboard_status + eax], 1
 
+    ; Check if we're in map's range
+    cmp eax, keyboard_shifted_ascii_map - keyboard_ascii_map
+    jg .end
+
     ; Convert to ASCII
     cmp byte [keyboard_status + KEY_L_SHIFT], 1
     je .shifted
@@ -163,18 +169,18 @@ keyboard_interrupt_handler:
 .shifted:
     mov ah, [keyboard_shifted_ascii_map + eax + ADDRESS_KERNEL]
     cmp ah, 0
-    jne .print
+    jne .converted
     jmp .end
 
 .not_shifted:
     mov ah, [keyboard_ascii_map + eax + ADDRESS_KERNEL]
     cmp ah, 0
-    jne .print
+    jne .converted
     jmp .end
 
-.print:
-    mov al, TERMINAL_FOREGROUND_GRAY
-    call terminal_print_character
+.converted:
+    ; Store calculated ASCII value
+    mov [pressedAcii], ah
 
 .end:
     ret
