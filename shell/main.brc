@@ -1,9 +1,8 @@
 @import terminal
 
 start fun
-    ascii u32 <- 0
     rep:
-        ascii <- @terminal.readPressedAscii()
+        ascii u32 <- @terminal.readPressedAscii()
         if ascii != 0:
             @terminal.printChar(ascii, 0x07)
         ;
