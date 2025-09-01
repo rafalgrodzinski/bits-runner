@@ -32,32 +32,6 @@ readPressedAsciiRaw raw<"=r"> -> u32
     ret readPressedAsciiRaw()
 ;
 
-@export readLine fun -> data<u32, 16>
-    buffer data<u32, 16>
-    count u32 <- 0
-    character u32 <- 0
-
-    rep character != '\n':
-        character <- readPressedAscii()
-        /*if character = '\b' and count > 0:
-            count <- count - 1
-            printChar(character, 0x07)
-        ;*/
-        if character != '\n' and character != '\b' and character != 0 and count < 15:
-            buffer[count] <- character
-            count <- count + 1
-            printChar(character, 0x07)
-        ;
-        /*if character != 0:
-            printChar(character, 0x07)
-        ;*/
-    ;
-    printChar('\n', 0x07)
-    buffer[count] <- 0
-
-    ret buffer
-;
-
 @export print fun: text data<u32, 16>, attribute u32
     i u32 <- 0
     rep i < 16 and text[i] != 0:

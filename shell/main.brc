@@ -1,10 +1,57 @@
 @import terminal
+@import sys
+
+isEqual fun: first data<u32, 16>, second data<u32, 16> -> bool
+    i u32 <- 0
+    rep i < 16 and first[i] = second[i] and first[i] != 0 and second[i] != 0:
+        i <- i + 1
+    ;
+
+    ret first[i] = second[i]
+;
 
 start fun
+    buffer data<u32, 16>
+    count u32 <- 0
+    character u32 <- 0
+
     rep:
-        ascii u32 <- @terminal.readPressedAscii()
-        if ascii != 0:
-            @terminal.printChar(ascii, 0x07)
+        rep character != '\n':
+            character <- @terminal.readPressedAscii()
+            if character = '\b' and count > 0:
+                count <- count - 1
+                @terminal.printChar(character, 0x07)
+            ;
+            if character != '\n' and character != '\b' and character != 0 and count < 15:
+                buffer[count] <- character
+                count <- count + 1
+                @terminal.printChar(character, 0x07)
+            ;
+        ;
+        buffer[count] <- 0
+        count <- 0
+        character <- 0
+        @terminal.printChar('\n', 0x07)
+
+        if isEqual(buffer, "reboot\0\0\0\0\0\0\0\0\0\0"):
+            @terminal.printChar('R', 0x07)
+            @terminal.printChar('e', 0x07)
+            @terminal.printChar('b', 0x07)
+            @terminal.printChar('o', 0x07)
+            @terminal.printChar('o', 0x07)
+            @terminal.printChar('t', 0x07)
+            @terminal.printChar('i', 0x07)
+            @terminal.printChar('n', 0x07)
+            @terminal.printChar('g', 0x07)
+            @terminal.printChar('\n', 0x07)
+            @sys.reboot()
+        else
+            @terminal.printChar('D', 0x07)
+            @terminal.printChar('u', 0x07)
+            @terminal.printChar('n', 0x07)
+            @terminal.printChar('n', 0x07)
+            @terminal.printChar('o', 0x07)
+            @terminal.printChar('\n', 0x07)
         ;
     ;
 ;

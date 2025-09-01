@@ -1,0 +1,10 @@
+@module sys
+
+rebootRaw raw<"">
+    mov ah, 0x05
+    int 0x30
+;
+
+@export reboot fun
+    rebootRaw()
+;

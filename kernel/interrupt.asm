@@ -545,6 +545,12 @@ interrupt_handle_sys:
     jmp .end
 
 .not_get_pressed_ascii:
+    ; Reboot
+    cmp ah, SYS_INT_REBOOT
+    jne .not_reboot
+    call reboot
+
+.not_reboot:
 
 .end:
     ret
