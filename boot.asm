@@ -45,7 +45,7 @@ db 0 ; drive number
 db 0 ; unused
 db 0x29 ; boot signature
 dd 0 ; serial number
-db "NO NAME    " ; volume label (11 bytes)
+db "BITS RUNNER" ; volume label (11 bytes)
 db "FAT12   " ; file system type (8 bytes)
 
 start:

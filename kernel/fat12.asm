@@ -203,7 +203,7 @@ fat_load_file:
 	
 	mov ebx, [address_fat]
 	add ebx, eax
-	mov eax, [ebx]
+	movzx eax, word [ebx]
 
 	; Adjust 12 bit to 16 bit
 	or edx, edx

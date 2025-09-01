@@ -206,6 +206,8 @@ sys_fatal_error:
 ;
 ; Reboot the system
 reboot:
+    call sys_switch_to_v86_mode
+bits 16
     jmp 0xffff:0
 
 %include "kernel/fat12.asm"

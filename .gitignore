@@ -1,3 +1,15 @@
-.DS_Store
+# Build artifacts
+*.o
 *.bin
 *.img
+
+# Merge artifacts
+*.swp
+*.orig
+*_LOCAL_*
+*_REMOTE_*
+*_BASE_*
+
+# Other
+.DS_Store
+.vscode/settings.json
