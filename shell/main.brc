@@ -45,6 +45,10 @@ start fun
             @terminal.printChar('g', 0x07)
             @terminal.printChar('\n', 0x07)
             @sys.reboot()
+        else if isEqual(buffer, "div\0\0\0\0\0\0\0\0\0\0\0\0\0"):
+            num1 u32 <- 5
+            num2 u32 <- 0
+            res u32 <- num1 / num2
         else
             @terminal.printChar('D', 0x07)
             @terminal.printChar('u', 0x07)
