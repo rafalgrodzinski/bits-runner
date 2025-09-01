@@ -8,19 +8,32 @@ function check {
     fi
 }
 
-#VOLUME_NAME="BITS RUNNER"
-VOLUME_NAME="NO NAME"
+VOLUME_NAME="BITS RUNNER"
+#VOLUME_NAME="NO NAME"
 
 # Compile code
+echo "🛠️ Building bootloader..."
 nasm -f bin -o boot.bin boot.asm
-check "Failed to compile source"
+check "Failed to build bootloader"
 
+echo
+
+# Kernel
+echo "🛠️ Building kernel..."
 nasm -f bin -o kernel.bin kernel/kernel.asm
-check "Failed to compile source"
+check "Failed to build kernel"
 
-# Build shell
+echo
+
+# Shell
+echo "🛠️ Building shell..."
 ./shell/build.sh
+check "Failed to build shell"
 
+echo
+
+# Disk Image
+echo "🛠️ Building disk image..."
 # Generate empty image file
 dd if=/dev/zero bs=512 count=2880 of=floppy.img
 # Attach and format the file
@@ -30,7 +43,7 @@ newfs_msdos -F 12 -v "${VOLUME_NAME}" ${DISK}
 dd if=boot.bin of=${DISK}
 diskutil eject ${DISK}
 # Mount and copy a file into it
-DISK=`hdiutil attach floppy.img`
-cp kernel.bin /Volumes/"${VOLUME_NAME}"/
-cp shell.bin /Volumes/"${VOLUME_NAME}"/
-diskutil eject "${VOLUME_NAME}"
+MOUNT_POINT=$(hdiutil attach floppy.img | grep -o '\/Volumes\/.*')
+cp kernel.bin "${MOUNT_POINT}/"
+cp shell.bin "${MOUNT_POINT}/"
+hdiutil eject "${MOUNT_POINT}"
