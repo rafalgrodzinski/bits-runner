@@ -9,7 +9,6 @@ function check {
 }
 
 VOLUME_NAME="BITS RUNNER"
-#VOLUME_NAME="NO NAME"
 
 # Compile code
 echo "🛠️ Building bootloader..."
