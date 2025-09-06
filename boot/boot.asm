@@ -23,7 +23,7 @@ nop
 %define FAT_EOF 0x0ff8
 
 %define BOOT_SECTOR_ID_OFFSET 0x7dfe
-%define ADDRESS_KERNEL 0x1000 ; 4KiB
+%define ADDRESS_BIOS_SERVICE 0x1000 ; 4KiB
 
 ; FAT12 header
 ; BPB (BIOS Parameter Block)
@@ -68,18 +68,18 @@ start:
 	mov cx, FAT_ROOT_DIR_SECTORS_COUNT
 	call read_floppy_data
 
-	; Find fat cluster number for kernel file
+	; Find fat cluster number for bios service file
 	mov ax, buffer
-	mov bx, kernel_file_name
+	mov bx, bios_service_file_name
 	call find_cluster_number
 	cmp ax, 0
-	jnz .kernel_found
+	jnz .file_found
 
-	; Kernel not found
-	mov si, msg_kernel_file_not_found
+	; File not found
+	mov si, msg_bios_service_file_not_found
 	call fatal_error
 	
-.kernel_found:
+.file_found:
 	push ax ; preserve found cluster number
 
 	; Read first fat entry
@@ -88,14 +88,14 @@ start:
 	mov cx, BPB_SECTORS_PER_FAT
 	call read_floppy_data
 	
-	; Load kernel file
+	; Load file
 	pop ax ; restore cluster number
 	mov bx, buffer ; fat buffer
-	mov cx, ADDRESS_KERNEL
+	mov cx, ADDRESS_BIOS_SERVICE
 	call load_file
 
-	; Kernel loaded, start execution
-	jmp (ADDRESS_KERNEL >> 4):0
+	; File loaded, start execution
+	jmp (ADDRESS_BIOS_SERVICE >> 4):0
 
 ;
 ; Stop execution and show message
@@ -329,12 +329,12 @@ load_file:
 	ret
 
 ; Messages
-kernel_file_name: db `KERNEL  BIN\0`
-msg_loading: db `Loading kernel...\0`
+bios_service_file_name: db `BIOS_SVCBIN\0`
+msg_loading: db `Loading BIOS Service...\0`
 
 msg_error_a20: db `Failed to enable A20 gate!\0`
 msg_disk_read_failed: db `Failed to read disk!\0`
-msg_kernel_file_not_found: db `KERNEL.BIN not found!\0`
+msg_bios_service_file_not_found: db `BIOS_SVC.BIN not found!\0`
 
 times 510 - ($ - $$) db 0 ; padding
 db 0x55, 0xaa ; magic number
