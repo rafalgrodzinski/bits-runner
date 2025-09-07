@@ -48,7 +48,13 @@ dd gdt ; address of GTD + offset to the address of the kernel
 %define GDT_CODE_V86_MODE gdt_code_v86_mode - gdt
 %define GDT_DATA_V86_MODE gdt_data_v86_mode - gdt
 
-%define RAM_MIN 0x1000000
+%define RAM_MIN 0x1000000 ; 16MiB
+
+%define BUFFER_ADR 0x2000
+%define KERNEL_ADR 0x200000 ; 1MiB
+
+kernel_file_name: db `KERNEL  BIN`
+kernel_size: dd 0
 
 ;
 ; Messages
@@ -77,6 +83,7 @@ start:
     mov si, msg_error_memory_low
     call print_string
     call print_new_line
+
 .h:
     jmp .h
 
@@ -99,8 +106,28 @@ start:
     call switch_to_protected_mode
 
 bits 32
-l:
-    jmp l
+    ; Load kernel
+    mov edi, BUFFER_ADR + 512 ; 0x10f2
+    call fat_init
+
+    mov esi, kernel_file_name
+    call fat_file_entry  ; Get file entry into edi
+    mov ebx, edi ; preserve
+
+    mov esi, edi
+    call fat_file_size ; Get size into eax
+    mov [kernel_size], eax
+
+    mov esi, ebx ; restore entry address
+    mov edi, KERNEL_ADR
+    mov edx, BUFFER_ADR
+    call fat_load_file
+
+    jmp KERNEL_ADR
+
+.halt:
+    hlt
+    jmp .halt
 
 ;
 ; Initialize memory maps and get memory size
@@ -279,18 +306,15 @@ process_digit:
 	jnz process_digit
 
 print_digit:
-	dec ecx
 	mov esi, esp
 	call print_string
-	pop ax
-    ;add sp, 2
-	cmp ecx, 0
-	jnz print_digit
+    add sp, 2
+    loop print_digit
 
 	popa
 	ret
 
-;%include "boot/terminal.asm"
+%include "boot/fat12.asm"
 
 memory_size: dd 0
 memory_map_entries: db 0
