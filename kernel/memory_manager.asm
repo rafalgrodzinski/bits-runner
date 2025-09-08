@@ -11,11 +11,11 @@ page_table: times 1024 dd 0
 ; Initialize memory manager
 memory_init:
 
-    mov dword [heap_pointer], heap + ADDRESS_KERNEL
+    mov dword [heap_pointer], heap
 
     ; Setup first page table
     mov ecx, 0
-    mov edi, page_table + ADDRESS_KERNEL
+    mov edi, page_table
     mov eax, 0
 .loop:
     mov ebx, eax
@@ -31,13 +31,13 @@ memory_init:
     jb .loop
 
     ; setup page directory
-    mov eax, page_table + ADDRESS_KERNEL
+    mov eax, page_table
     and eax, 0xfffff000
     or eax, 3
-    mov [page_directory + ADDRESS_KERNEL], eax
+    mov [page_directory], eax
 
     ; Enable paging
-    mov eax, page_directory + ADDRESS_KERNEL
+    mov eax, page_directory
     mov cr3, eax
 
     mov eax, cr0

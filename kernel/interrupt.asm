@@ -542,13 +542,13 @@ cli
 ; Page fault
 interrupt_handle_page_fault:
     mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_BLINKING
-    mov esi, msg_error_page_fault_0 + ADDRESS_KERNEL
+    mov esi, msg_error_page_fault_0
     call terminal_print_string
 
     mov ebx, cr2
     call terminal_print_hex
 
-    mov esi, msg_error_page_fault_1 + ADDRESS_KERNEL
+    mov esi, msg_error_page_fault_1
     call terminal_print_string
 .halt:
     hlt
