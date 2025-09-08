@@ -406,22 +406,39 @@ set_video_mode:
     call switch_to_v86_mode
 
 bits 16
-    cmp al, 0x01
+    ; text 80x25
+    cmp al, BIOS_SERVICE_TEXT_MODE_80x25
     jne .not_80x25
     mov ax, 0x0003
     mov bl, 0
     int 0x10
     jmp .end
-
 .not_80x25:
 
-    cmp al, 0x02
+    ; text 80x50
+    cmp al, BIOS_SERVICE_TEXT_MODE_80x50
     jne .not_80x50
     mov ax, 0x1112
     mov bl, 0
     int 0x10
     jmp .end
 .not_80x50:
+
+    ;graphics 320x200x8
+    cmp al, BIOS_SERVICE_GPXS_MODE_320x200x8
+    jne .not_320x200x8
+    mov ax, 0x0013
+    int 0x10
+    jmp .end
+.not_320x200x8:
+
+    ;graphics 640x480x4
+    cmp al, BIOS_SERVICE_GPXS_MODE_640x480x4
+    jne .not_640x480x4
+    mov ax, 0x0012
+    int 0x10
+    jmp .end
+.not_640x480x4:
 
 .end:
     call switch_to_protected_mode

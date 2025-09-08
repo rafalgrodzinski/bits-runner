@@ -2,6 +2,8 @@ org 0x200000
 cpu 386
 bits 32
 
+%include "boot/bios_service_header.asm"
+
 %define TERMINAL_BUFFER 0xb8000
 
 ;
@@ -33,8 +35,8 @@ terminal_set_mode:
     jne .not_80x25
     mov word [terminal_width], 80
     mov word [terminal_height], 25
-    mov ah, 0x01
-    mov al, 0x01
+    mov ah, BIOS_SERVICE_SET_VIDEO_MODE
+    mov al, BIOS_SERVICE_TEXT_MODE_80x25
     call [bios_service]
     jmp .end
 .not_80x25:
@@ -44,8 +46,8 @@ terminal_set_mode:
     jne .not_80x50
     mov word [terminal_width], 80
     mov word [terminal_height], 50
-    mov ah, 0x01
-    mov al, 0x02
+    mov ah, BIOS_SERVICE_SET_VIDEO_MODE
+    mov al, BIOS_SERVICE_TEXT_MODE_80x50
     call [bios_service]
     jmp .end
 .not_80x50:

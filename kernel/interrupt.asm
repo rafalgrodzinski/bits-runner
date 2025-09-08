@@ -3,6 +3,7 @@ cpu 386
 bits 32
 
 %include "drivers/keyboard.asm"
+%include "drivers/serial.asm"
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
