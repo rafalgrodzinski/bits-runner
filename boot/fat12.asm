@@ -1,3 +1,4 @@
+org 0x1000
 cpu 386
 bits 32
 

@@ -1,7 +1,11 @@
-cpu 386
 org 0x1000
+cpu 386
 
 %include "boot/bios_service_header.asm"
+
+%define RAM_MIN 0x1000000 ; 16MiB
+%define BUFFER_ADR 0x2000
+%define KERNEL_ADR 0x200000 ; 2MiB
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
@@ -70,11 +74,6 @@ dd 0
 %define GDT_CODE_V86_MODE gdt_code_v86_mode - gdt
 %define GDT_DATA_V86_MODE gdt_data_v86_mode - gdt
 
-%define RAM_MIN 0x1000000 ; 16MiB
-
-%define BUFFER_ADR 0x2000
-%define KERNEL_ADR 0x200000 ; 1MiB
-
 kernel_file_name: db `KERNEL  BIN`
 kernel_size: dd 0
 
@@ -83,8 +82,8 @@ kernel_size: dd 0
 msg_memory_detected0 db `RAM Detected: \0`
 msg_memory_detected1 db ` Bytes\0`
 msg_initializing db `Loading Kernel...\0`
-msg_error_memory_low db `Error! At least 16MiB of RAM is required!\0`
-msg_error_fatal db `Fatal Error!\0`
+msg_error_memory_low db `Fatal Error! At least 16MiB of RAM is required!\0`
+msg_error_kernel_not_found db `Fatal Error! KERNEL.BIN not found!\0`
 
 bits 16
 start:
@@ -103,11 +102,7 @@ start:
     cmp dword [memory_size], RAM_MIN
     jge .ram_size_ok
     mov si, msg_error_memory_low
-    call print_string
-    call print_new_line
-
-.h:
-    jmp .h
+    call fatal_error ; Too little RAM!
 
 .ram_size_ok:
     ; Initialization message
@@ -134,6 +129,15 @@ bits 32
 
     mov esi, kernel_file_name
     call fat_file_entry  ; Get file entry into edi
+    cmp edi, 0
+    jne .kernel_file_found
+    call switch_to_v86_mode
+bits 16
+    mov si, msg_error_kernel_not_found
+    call fatal_error
+
+bits 32
+.kernel_file_found:
     mov ebx, edi ; preserve
 
     mov esi, edi
@@ -423,6 +427,25 @@ bits 16
     call switch_to_protected_mode
 bits 32
     ret
+
+;
+; Stop execution and show error message
+; in
+;  si: string address
+fatal_error:
+    cli
+
+    mov ah, 0x0e
+.loop:
+	lodsb
+	cmp al, 0
+	jz .halt ; if al = 0
+	int 0x10
+	jmp .loop
+
+.halt:
+    hlt
+    jmp .halt
 
 ;
 ; Print string
