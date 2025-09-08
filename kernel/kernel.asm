@@ -1,5 +1,5 @@
-cpu 386
 org 0x200000
+cpu 386
 bits 32
 
 %include "kernel/constants.asm"
@@ -61,6 +61,7 @@ msg_error_fatal db `Fatal Error!\n\0`
 
 ;bits 16
 start:
+    call interrupt_init_protected_mode
 ;    cli
 ;    ; Setup segments
 ;    mov ax, 0
@@ -214,6 +215,6 @@ start:
 ;    jmp 0xffff:0
 
 ;%include "kernel/fat12.asm"
-;%include "kernel/interrupt.asm"
+%include "kernel/interrupt.asm"
 %include "kernel/terminal.asm"
 ;%include "kernel/memory_manager.asm"

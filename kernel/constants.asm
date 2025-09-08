@@ -1,6 +1,7 @@
 ; Kernel at 4KiB
 ;%define ADDRESS_KERNEL 0x1000
 %define ADDRESS_KERNEL 0
+;%define ADDRESS_KERNEL 0x200000
 ; Stack goes down from 640KiB
 ;%define ADDRESS_STACK 0x7FFFF 
 %define ADDRESS_STACK 0xFFFF 

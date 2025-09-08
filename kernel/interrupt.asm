@@ -1,84 +1,81 @@
-%include "drivers/keyboard.asm"
-
+org 0x200000
 cpu 386
 bits 32
+
+%include "drivers/keyboard.asm"
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
 %define PIC2_CMD_PORT 0xa0
 %define PIC2_DATA_PORT 0xa1
 
+%define GDT_CODE_PROTECTED_MODE 0x08
+%define ISR_OFFSET_HIGH 0x200000 >> 16
+
 ;
 ; IDT (Interrupt Descriptor Table)
-
-; IDT v86 mode (maps to BIOS IVT)
-idt_descriptor_v86_mode:
-dw 0x3ff
-dd 0
-
-; IDT protected mode
 idt_descriptor_protected_mode:
-dw idt_protected_mode_end - idt_protected_mode - 1 ; size of IDT
-dd idt_protected_mode + ADDRESS_KERNEL
+dw idt_protected_mode_end - idt_protected_mode - 1 ; size of IDT - 1
+dd idt_protected_mode ; address of IDT
 
-%macro IDT_ENTRY 2
-    dw %1 ; offset, low s
-    dw %2 ; segment
+%macro IDT_ENTRY 3
+    dw %1 ; ISR offset low bits <0-15>
+    dw %2 ; gdt segment selector
     db 0 ; reserved
-    db 10001110b ; <7 P><5:6 DPL>4 0<3 D><0:2 Type> P - is active, DPL - priviledge, D - is 32bit, Type - 110 interrupt
-    dw 0 ; offset, high s
+    db 10001110b ; <7: P> <6-5: DPL> <4: 0> <3: D> <2-0: Gate Type>, P: is active, DPL: priviledge, D: is 32bit, Gate Type: 110 interrupt
+    dw %3 ; ISR offset high bits <16-31>
 %endmacro
 
 idt_protected_mode:
-IDT_ENTRY interrupt_handler_00 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x00 divide error
-IDT_ENTRY interrupt_handler_01 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x01 debug exception
-IDT_ENTRY interrupt_handler_02 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x02 nmi interrupt
-IDT_ENTRY interrupt_handler_03 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x03 breakpoint
-IDT_ENTRY interrupt_handler_04 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x04 overflow
-IDT_ENTRY interrupt_handler_05 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x05 bound range
-IDT_ENTRY interrupt_handler_06 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x06 invalid opcode
-IDT_ENTRY interrupt_handler_07 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x07 no math coprocessor
-IDT_ENTRY interrupt_handler_08 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x08 double fault
-IDT_ENTRY interrupt_handler_09 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x09 coprocessor segment overrun
-IDT_ENTRY interrupt_handler_0a + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x0a invalid tss
-IDT_ENTRY interrupt_handler_0b + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x0b segment not present
-IDT_ENTRY interrupt_handler_0c + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x0c stack-segment fault
-IDT_ENTRY interrupt_handler_0d + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x0d general protection
-IDT_ENTRY interrupt_handler_0e + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x0e page fault
-IDT_ENTRY 0, 0 ; 0x0f
-IDT_ENTRY interrupt_handler_10 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x10 fpu fault
-IDT_ENTRY interrupt_handler_11 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x11 alignment check
-IDT_ENTRY interrupt_handler_12 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x12 machine check
-IDT_ENTRY interrupt_handler_13 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x13 simd exception
-IDT_ENTRY interrupt_handler_14 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x14 virtualization exception
-IDT_ENTRY interrupt_handler_15 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x15 control protection exception
-IDT_ENTRY 0, 0 ; 0x16 reserved
-IDT_ENTRY 0, 0 ; 0x17 reserved
-IDT_ENTRY 0, 0 ; 0x18 reserved
-IDT_ENTRY 0, 0 ; 0x19 reserved
-IDT_ENTRY 0, 0 ; 0x1a reserved
-IDT_ENTRY 0, 0 ; 0x1b reserved
-IDT_ENTRY 0, 0 ; 0x1c reserved
-IDT_ENTRY 0, 0 ; 0x1d reserved
-IDT_ENTRY 0, 0 ; 0x1e reserved
-IDT_ENTRY 0, 0 ; 0x1f reserved
-IDT_ENTRY interrupt_handler_20 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x20 IRQ 0
-IDT_ENTRY interrupt_handler_21 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x21 IRQ 1
-IDT_ENTRY interrupt_handler_22 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x22 IRQ 2
-IDT_ENTRY interrupt_handler_23 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x23 IRQ 3
-IDT_ENTRY interrupt_handler_24 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x24 IRQ 4
-IDT_ENTRY interrupt_handler_25 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x25 IRQ 5
-IDT_ENTRY interrupt_handler_26 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x26 IRQ 6
-IDT_ENTRY interrupt_handler_27 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x27 IRQ 7
-IDT_ENTRY interrupt_handler_28 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x28 IRQ 8
-IDT_ENTRY interrupt_handler_29 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x29 IRQ 9
-IDT_ENTRY interrupt_handler_2a + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x2a IRQ a
-IDT_ENTRY interrupt_handler_2b + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x2b IRQ b
-IDT_ENTRY interrupt_handler_2c + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x2c IRQ c
-IDT_ENTRY interrupt_handler_2d + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x2d IRQ d
-IDT_ENTRY interrupt_handler_2e + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x2e IRQ e
-IDT_ENTRY interrupt_handler_2f + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x2f IRQ f
-IDT_ENTRY interrupt_handler_30 + ADDRESS_KERNEL, GDT_CODE_PROTECTED_MODE ; 0x30 SYS
+IDT_ENTRY interrupt_handler_00, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x00 divide error
+IDT_ENTRY interrupt_handler_01, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x01 debug exception
+IDT_ENTRY interrupt_handler_02, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x02 nmi interrupt
+IDT_ENTRY interrupt_handler_03, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x03 breakpoint
+IDT_ENTRY interrupt_handler_04, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x04 overflow
+IDT_ENTRY interrupt_handler_05, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x05 bound range
+IDT_ENTRY interrupt_handler_06, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x06 invalid opcode
+IDT_ENTRY interrupt_handler_07, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x07 no math coprocessor
+IDT_ENTRY interrupt_handler_08, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x08 double fault
+IDT_ENTRY interrupt_handler_09, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x09 coprocessor segment overrun
+IDT_ENTRY interrupt_handler_0a, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x0a invalid tss
+IDT_ENTRY interrupt_handler_0b, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x0b segment not present
+IDT_ENTRY interrupt_handler_0c, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x0c stack-segment fault
+IDT_ENTRY interrupt_handler_0d, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x0d general protection
+IDT_ENTRY interrupt_handler_0e, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x0e page fault
+IDT_ENTRY 0, 0, 0 ; 0x0f
+IDT_ENTRY interrupt_handler_10, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x10 fpu fault
+IDT_ENTRY interrupt_handler_11, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x11 alignment check
+IDT_ENTRY interrupt_handler_12, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x12 machine check
+IDT_ENTRY interrupt_handler_13, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x13 simd exception
+IDT_ENTRY interrupt_handler_14, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x14 virtualization exception
+IDT_ENTRY interrupt_handler_15, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x15 control protection exception
+IDT_ENTRY 0, 0, 0 ; 0x16 reserved
+IDT_ENTRY 0, 0, 0 ; 0x17 reserved
+IDT_ENTRY 0, 0, 0 ; 0x18 reserved
+IDT_ENTRY 0, 0, 0 ; 0x19 reserved
+IDT_ENTRY 0, 0, 0 ; 0x1a reserved
+IDT_ENTRY 0, 0, 0 ; 0x1b reserved
+IDT_ENTRY 0, 0, 0 ; 0x1c reserved
+IDT_ENTRY 0, 0, 0 ; 0x1d reserved
+IDT_ENTRY 0, 0, 0 ; 0x1e reserved
+IDT_ENTRY 0, 0, 0 ; 0x1f reserved
+IDT_ENTRY interrupt_handler_20, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x20 IRQ 0
+IDT_ENTRY interrupt_handler_21, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x21 IRQ 1
+IDT_ENTRY interrupt_handler_22, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x22 IRQ 2
+IDT_ENTRY interrupt_handler_23, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x23 IRQ 3
+IDT_ENTRY interrupt_handler_24, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x24 IRQ 4
+IDT_ENTRY interrupt_handler_25, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x25 IRQ 5
+IDT_ENTRY interrupt_handler_26, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x26 IRQ 6
+IDT_ENTRY interrupt_handler_27, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x27 IRQ 7
+IDT_ENTRY interrupt_handler_28, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x28 IRQ 8
+IDT_ENTRY interrupt_handler_29, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x29 IRQ 9
+IDT_ENTRY interrupt_handler_2a, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x2a IRQ a
+IDT_ENTRY interrupt_handler_2b, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x2b IRQ b
+IDT_ENTRY interrupt_handler_2c, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x2c IRQ c
+IDT_ENTRY interrupt_handler_2d, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x2d IRQ d
+IDT_ENTRY interrupt_handler_2e, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x2e IRQ e
+IDT_ENTRY interrupt_handler_2f, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x2f IRQ f
+IDT_ENTRY interrupt_handler_30, GDT_CODE_PROTECTED_MODE, ISR_OFFSET_HIGH ; 0x30 SYS
 idt_protected_mode_end:
 
 ;
@@ -91,47 +88,7 @@ msg_error_page_fault_0: db `Page fault accessing memroy at: \0`
 msg_error_page_fault_1: db ` !!!\n\0`
 
 ;
-; Initialize the interrupt service for v86 mode
-bits 16
-interrupt_init_v86_mode:
-    cli
-    push ax
-
-    ; ICW1, initialize
-    mov al, 0x11
-    out PIC1_CMD_PORT, al
-    out PIC2_CMD_PORT, al
-
-    ; ICW2, set IDT offsets
-    mov al, 0x08 ; IDT offset
-    out PIC1_DATA_PORT, al
-    mov al, 0x70 ; IDT offset
-    out PIC2_DATA_PORT, al
-
-    ; ICW3
-    mov al, 0x04 ; accept PIC2 on IRQ2
-    out PIC1_DATA_PORT, al
-    mov al, 0x02 ; mark as secondary
-    out PIC2_DATA_PORT, al
-
-    ; ICW4, set 8086 mode
-    mov al, 0x01
-    out PIC1_DATA_PORT, al
-    out PIC2_DATA_PORT, al
-
-    ; unmask IRQs
-    mov al, 0x00
-    out PIC1_DATA_PORT, al
-    out PIC2_DATA_PORT, al
-
-    pop ax
-    lidt [idt_descriptor_v86_mode + ADDRESS_KERNEL]
-    sti
-    ret
-
-;
 ; Intialize the interrupt service for protected mode
-bits 32
 interrupt_init_protected_mode:
     cli
     push ax
@@ -164,9 +121,10 @@ interrupt_init_protected_mode:
     out PIC2_DATA_PORT, al
 
     pop ax
-    lidt [idt_descriptor_protected_mode + ADDRESS_KERNEL]
+    lidt [idt_descriptor_protected_mode]
     sti
     ret
+    db 0xDE, 0xAD, 0xBE, 0xEF
 
 ;
 ; ISR for each interrupt, puts together error, int number and passes it on
@@ -533,7 +491,7 @@ cli
     cmp eax, 0x21
     jne .not_keyboard
 
-    call keyboard_interrupt_handler
+    ;call keyboard_interrupt_handler
     pop eax
     jmp .interrupt_handled
 
@@ -543,7 +501,7 @@ cli
     jne .not_sys
 
     pop eax
-    call interrupt_handle_sys
+    ;call interrupt_handle_sys
     jmp .interrupt_handled
 
 .not_sys:
@@ -553,18 +511,18 @@ cli
     mov ebx, eax
     mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_LIGHT
 
-    mov esi, msg_error_unhandled_0 + ADDRESS_KERNEL
+    mov esi, msg_error_unhandled_0
     call terminal_print_string
 
     call terminal_print_hex
 
-    mov esi, msg_error_unhandled_1 + ADDRESS_KERNEL
+    mov esi, msg_error_unhandled_1
     call terminal_print_string
 
     mov ebx, [esp + 12]
     call terminal_print_hex
 
-    mov esi, msg_error_unhandled_2 + ADDRESS_KERNEL
+    mov esi, msg_error_unhandled_2
     call terminal_print_string
 
     pop esi
@@ -636,11 +594,11 @@ interrupt_handle_sys:
 
 .not_get_pressed_ascii:
     ; Reboot
-    cmp ah, SYS_INT_REBOOT
-    jne .not_reboot
-    call reboot
-
-.not_reboot:
+;    cmp ah, SYS_INT_REBOOT
+;    jne .not_reboot
+;    call reboot
+;
+;.not_reboot:
 
 .end:
     ret

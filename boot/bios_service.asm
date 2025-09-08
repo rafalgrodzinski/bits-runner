@@ -1,6 +1,11 @@
 cpu 386
 org 0x1000
 
+%define PIC1_CMD_PORT 0x20
+%define PIC1_DATA_PORT 0x21
+%define PIC2_CMD_PORT 0xa0
+%define PIC2_DATA_PORT 0xa1
+
 ; Jump over data into strt point
 bits 16
 jmp 0:start ; Sets CS to 0
@@ -42,6 +47,21 @@ db 0
 gdt_descriptor:
 dw $ - gdt - 1 ; size of GDT - 1
 dd gdt ; address of GTD + offset to the address of the kernel
+
+; Already initialized protected mode IDT
+idt_descriptor_protected_mode:
+dw 0
+dd 0
+
+; IDT v86 mode (maps to BIOS IVT)
+idt_descriptor_v86_mode:
+dw 0x3ff
+dd 0
+
+; Used for checking current state
+idt_descriptor_current:
+dw 0
+dd 0
 
 %define GDT_CODE_PROTECTED_MODE gdt_code_protected_mode - gdt
 %define GDT_DATA_PROTECTED_MODE gdt_data_protected_mode - gdt
@@ -190,24 +210,77 @@ bits 32
     mov ss, ax
     pop ax
 
-    ;call interrupt_init_protected_mode
+    call restore_protected_mode_interrupts
 
     ; re-enable paging if already set up
-    push eax
-    mov eax, cr3
-    cmp eax, 0
-    je .skip_paging
-    mov eax, cr0
-    or eax, 0x80000000
-    mov cr0, eax
+    ;push eax
+    ;mov eax, cr3
+    ;cmp eax, 0
+    ;je .skip_paging
+    ;mov eax, cr0
+    ;or eax, 0x80000000
+    ;mov cr0, eax
+    ;pop eax
 
 .skip_paging:
-    pop eax
     ret
+
+;
+; Restore interrupts for protected mode
 bits 32
+restore_protected_mode_interrupts:
+    cli
+
+    ; Check if protected mode interrupts are initialized
+    cmp dword [idt_descriptor_protected_mode + 2], 0
+    je .end ; if not, skip the restore
+
+    push eax
+
+    ;call print_new_line
+    movzx eax, word [idt_descriptor_protected_mode]
+    call print_int
+    call print_new_line
+
+    ; ICW1, initialize
+    mov al, 0x11
+    out PIC1_CMD_PORT, al
+    out PIC2_CMD_PORT, al
+
+    ; ICW2, set IDT offsets
+    mov al, 0x20 ; IDT offset
+    out PIC1_DATA_PORT, al
+    mov al, 0x28 ; IDT offset
+    out PIC2_DATA_PORT, al
+
+    ; ICW3
+    mov al, 0x04 ; accept PIC2 on IRQ2
+    out PIC1_DATA_PORT, al
+    mov al, 0x02 ; mark as secondary
+    out PIC2_DATA_PORT, al
+
+    ; ICW4, set 8086 mode
+    mov al, 0x01
+    out PIC1_DATA_PORT, al
+    out PIC2_DATA_PORT, al
+
+    ; unmask IRQs
+    mov al, 0x00
+    out PIC1_DATA_PORT, al
+    out PIC2_DATA_PORT, al
+
+    pop eax
+    ;.ll:
+    ;;jmp .ll
+    lidt [idt_descriptor_protected_mode]
+    sti
+
+.end:
+    ret
 
 ;
 ; Initialize 16 bit 8086 virtual mode
+db 0xDE, 0xAD, 0xBE, 0xEF
 bits 32
 switch_to_v86_mode:
     ; clear interrupts and set real mode code segment
@@ -246,7 +319,65 @@ bits 16
     mov ss, ax
     pop ax
 
-    ;call interrupt_init_v86_mode
+    call restore_v86_mode_interrupts
+    ret
+
+;
+; Restore interrupts for v86 mode
+bits 16
+restore_v86_mode_interrupts:
+    cli
+
+    ; Check currently active interrupts descriptor
+    sidt [idt_descriptor_current]
+    ;cmp word [idt_descriptor_current], 0x3ff
+    ;je .end ; if v86 is already active, do nothing
+    cmp dword [idt_descriptor_current + 2], 0
+    je .end 
+    sidt [idt_descriptor_protected_mode] ; otherwise store it as protected mode
+    
+    push eax
+    ;mov ax, word [idt_descriptor_current]
+    ;mov word [idt_descriptor_protected_mode], ax
+    ;mov eax, [idt_descriptor_current + 2]
+    ;mov [idt_descriptor_protected_mode + 2], eax
+
+    movzx eax, word [idt_descriptor_current]
+    call print_int
+    call print_new_line
+
+    ; ICW1, initialize
+    mov al, 0x11
+    out PIC1_CMD_PORT, al
+    out PIC2_CMD_PORT, al
+
+    ; ICW2, set IDT offsets
+    mov al, 0x08 ; IDT offset
+    out PIC1_DATA_PORT, al
+    mov al, 0x70 ; IDT offset
+    out PIC2_DATA_PORT, al
+
+    ; ICW3
+    mov al, 0x04 ; accept PIC2 on IRQ2
+    out PIC1_DATA_PORT, al
+    mov al, 0x02 ; mark as secondary
+    out PIC2_DATA_PORT, al
+
+    ; ICW4, set 8086 mode
+    mov al, 0x01
+    out PIC1_DATA_PORT, al
+    out PIC2_DATA_PORT, al
+
+    ; unmask IRQs
+    mov al, 0x00
+    out PIC1_DATA_PORT, al
+    out PIC2_DATA_PORT, al
+
+    pop eax
+    lidt [idt_descriptor_v86_mode]
+    sti
+
+.end:
     ret
 
 ;
