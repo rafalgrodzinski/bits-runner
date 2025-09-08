@@ -53,6 +53,8 @@ jmp start
 
 ;file_shell: db `SHELL   BIN`
 
+bios_service: dd 0
+
 ;
 ; Messages
 msg_initializing db `Initializing Bits Runner...\n\0`
@@ -61,6 +63,7 @@ msg_error_fatal db `Fatal Error!\n\0`
 
 ;bits 16
 start:
+    mov [bios_service], eax ; To use services provided by BIOS
     call interrupt_init_protected_mode
 ;    cli
 ;    ; Setup segments

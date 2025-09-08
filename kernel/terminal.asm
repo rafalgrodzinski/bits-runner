@@ -26,39 +26,33 @@ terminal_init:
 ; in
 ;  al: mode
 terminal_set_mode:
-    ;pushad
-    ;mov dx, ax
-    ;call sys_switch_to_v86_mode
-    ;bits 16
+    push eax
 
     ; 80x25
-    ;cmp dx, 1
     cmp al, 1
     jne .not_80x25
-    ;mov ax, 0x0003
     mov word [terminal_width], 80
     mov word [terminal_height], 25
-    ;int 0x10
-    jmp .done
+    mov ah, 0x01
+    mov al, 0x01
+    call [bios_service]
+    jmp .end
+.not_80x25:
 
     ; 80x50
-.not_80x25:
-    ;cmp dx, 2
     cmp al, 2
     jne .not_80x50
-    ;mov ax, 0x1112
     mov word [terminal_width], 80
     mov word [terminal_height], 50
-    ;int 0x10
-    jmp .done
-
+    mov ah, 0x01
+    mov al, 0x02
+    call [bios_service]
+    jmp .end
 .not_80x50:
-    ; invalid
 
-.done:
-    ;call sys_switch_to_protected_mode
-    ;bits 32
-    ;popad
+    ; invalid
+.end:
+    pop eax
     ret
 
 ;

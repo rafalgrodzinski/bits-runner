@@ -476,8 +476,8 @@ cli
 
     call interrupt_handle_page_fault
     ; no return
-    
 .not_page_fault:
+
     ; IRQ0 - timer
     cmp eax, 0x20
     jne .not_timer
@@ -485,17 +485,16 @@ cli
     call interrupt_handle_timer
     pop eax
     jmp .interrupt_handled
-
 .not_timer:
+
     ; IRQ1 - keyboard
     cmp eax, 0x21
     jne .not_keyboard
-
     ;call keyboard_interrupt_handler
     pop eax
     jmp .interrupt_handled
-
 .not_keyboard:
+
     ; SYS
     cmp eax, SYS_INT
     jne .not_sys
@@ -503,8 +502,8 @@ cli
     pop eax
     ;call interrupt_handle_sys
     jmp .interrupt_handled
-
 .not_sys:
+
     ; Unhandled interrupt
     push ebx
     push esi

@@ -1,6 +1,8 @@
 cpu 386
 org 0x1000
 
+%include "boot/bios_service_header.asm"
+
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
 %define PIC2_CMD_PORT 0xa0
@@ -143,6 +145,7 @@ bits 32
     mov edx, BUFFER_ADR
     call fat_load_file
 
+    mov eax, bios_service
     jmp KERNEL_ADR
 
 .halt:
@@ -201,14 +204,14 @@ switch_to_protected_mode:
 bits 32
 .init_data_segment:
     ; Set protected mode 32 bit data segment
-    push ax
+    push eax
     mov ax, GDT_DATA_PROTECTED_MODE
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    pop ax
+    pop eax
 
     call restore_protected_mode_interrupts
 
@@ -236,11 +239,6 @@ restore_protected_mode_interrupts:
     je .end ; if not, skip the restore
 
     push eax
-
-    ;call print_new_line
-    movzx eax, word [idt_descriptor_protected_mode]
-    call print_int
-    call print_new_line
 
     ; ICW1, initialize
     mov al, 0x11
@@ -270,8 +268,6 @@ restore_protected_mode_interrupts:
     out PIC2_DATA_PORT, al
 
     pop eax
-    ;.ll:
-    ;;jmp .ll
     lidt [idt_descriptor_protected_mode]
     sti
 
@@ -280,7 +276,6 @@ restore_protected_mode_interrupts:
 
 ;
 ; Initialize 16 bit 8086 virtual mode
-db 0xDE, 0xAD, 0xBE, 0xEF
 bits 32
 switch_to_v86_mode:
     ; clear interrupts and set real mode code segment
@@ -330,21 +325,11 @@ restore_v86_mode_interrupts:
 
     ; Check currently active interrupts descriptor
     sidt [idt_descriptor_current]
-    ;cmp word [idt_descriptor_current], 0x3ff
-    ;je .end ; if v86 is already active, do nothing
     cmp dword [idt_descriptor_current + 2], 0
     je .end 
     sidt [idt_descriptor_protected_mode] ; otherwise store it as protected mode
     
     push eax
-    ;mov ax, word [idt_descriptor_current]
-    ;mov word [idt_descriptor_protected_mode], ax
-    ;mov eax, [idt_descriptor_current + 2]
-    ;mov [idt_descriptor_protected_mode + 2], eax
-
-    movzx eax, word [idt_descriptor_current]
-    call print_int
-    call print_new_line
 
     ; ICW1, initialize
     mov al, 0x11
@@ -378,6 +363,65 @@ restore_v86_mode_interrupts:
     sti
 
 .end:
+    ret
+
+;
+; BIOS Services
+; in
+;  ah: service code
+bits 32
+bios_service:
+    ; Reboot
+    cmp ah, BIOS_SERVICE_REBOOT
+    jne .not_reboot
+    call reboot
+.not_reboot:
+
+    ; Video mode
+    cmp ah, BIOS_SERVICE_SET_VIDEO_MODE
+    jne .not_set_video_mode
+    call set_video_mode
+.not_set_video_mode:
+
+    ret
+
+;
+; Reboot the system
+bits 32
+reboot:
+    call switch_to_v86_mode
+bits 16
+    jmp 0xffff:0
+
+;
+; Change video mode
+; in
+;  al: video mode
+bits 32
+set_video_mode:
+    call switch_to_v86_mode
+
+bits 16
+    cmp al, 0x01
+    jne .not_80x25
+    mov ax, 0x0003
+    mov bl, 0
+    int 0x10
+    jmp .end
+
+.not_80x25:
+
+    cmp al, 0x02
+    jne .not_80x50
+    mov ax, 0x1112
+    mov bl, 0
+    int 0x10
+    jmp .end
+.not_80x50:
+
+.end:
+    call switch_to_protected_mode
+bits 32
     ret
 
 ;
@@ -418,7 +462,7 @@ print_new_line:
     popa
     ret
 
-
+;
 ; Print integer
 ;  eax: integer to print
 bits 16
