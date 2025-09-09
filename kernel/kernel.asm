@@ -1,4 +1,4 @@
-org 0x200000
+org 0x80000000
 cpu 386
 bits 32
 
@@ -30,10 +30,6 @@ start:
     mov esi, msg_ready
     mov al, TERMINAL_FOREGROUND_GREEN
     call terminal_print_string
-
-    mov ah, BIOS_SERVICE_SET_VIDEO_MODE
-    mov al, BIOS_SERVICE_GPXS_MODE_640x480x4
-    call [bios_service]
 
 .halt:
     hlt

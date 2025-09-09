@@ -1,4 +1,4 @@
-org 0x200000
+org 0x80000000
 cpu 386
 bits 32
 
@@ -11,7 +11,7 @@ bits 32
 %define PIC2_DATA_PORT 0xa1
 
 %define GDT_CODE_PROTECTED_MODE 0x08
-%define ISR_OFFSET_HIGH 0x200000 >> 16
+%define ISR_OFFSET_HIGH 0x80000000 >> 16
 
 ;
 ; IDT (Interrupt Descriptor Table)

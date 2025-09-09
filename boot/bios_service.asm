@@ -4,8 +4,9 @@ cpu 386
 %include "boot/bios_service_header.asm"
 
 %define RAM_MIN 0x1000000 ; 16MiB
-%define BUFFER_ADR 0x2000
-%define KERNEL_ADR 0x200000 ; 2MiB
+%define BUFFER_ADR 0x6000
+;%define KERNEL_ADR 0x200000 ; 2MiB
+%define KERNEL_ADR 0x80000000
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
@@ -145,12 +146,15 @@ bits 32
     mov [kernel_size], eax
 
     mov esi, ebx ; restore entry address
-    mov edi, KERNEL_ADR
+    mov edi, 0x200000
     mov edx, BUFFER_ADR
     call fat_load_file
 
-    mov eax, bios_service
-    jmp KERNEL_ADR
+    ; Enable paging
+    call memory_init ; 0x115e
+
+    mov eax, bios_service ; 0x1163
+    jmp KERNEL_ADR ; 0x1168
 
 .halt:
     hlt
@@ -206,7 +210,7 @@ switch_to_protected_mode:
     jmp GDT_CODE_PROTECTED_MODE:(.init_data_segment)
 
 bits 32
-.init_data_segment:
+.init_data_segment: ;; 11ca
     ; Set protected mode 32 bit data segment
     push eax
     mov ax, GDT_DATA_PROTECTED_MODE
@@ -215,21 +219,19 @@ bits 32
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    pop eax
-
-    call restore_protected_mode_interrupts
 
     ; re-enable paging if already set up
-    ;push eax
-    ;mov eax, cr3
-    ;cmp eax, 0
-    ;je .skip_paging
-    ;mov eax, cr0
-    ;or eax, 0x80000000
-    ;mov cr0, eax
-    ;pop eax
+    mov eax, cr3
+    cmp eax, 0
+    je .skip_paging
+    mov eax, cr0
+    or eax, 0x80000000
+    mov cr0, eax
 
 .skip_paging:
+    call restore_protected_mode_interrupts
+    pop eax
+
     ret
 
 ;
@@ -530,6 +532,7 @@ print_digit:
 	ret
 
 %include "boot/fat12.asm"
+%include "kernel/memory_manager.asm"
 
 memory_size: dd 0
 memory_map_entries: db 0

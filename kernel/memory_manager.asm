@@ -1,40 +1,57 @@
+org 0x1000
 cpu 386
 bits 32
 
 heap_pointer: dd 0
 
 align 4096
+; <31-12: table adr> <11-8: ?> <7: PS(0)> <6: ?> <5: A> <4: PCD> <3: PWT> <2: US> <1: RW> <0: P>
+; PS: page size, 0 for 4KiB, A: accessed, PCD: cache disabled, PWT: write through, US: users/supervisor, RW: read/write, P: present
 page_directory: times 1024 dd 0
-page_table: times 1024 dd 0
+; <31-12: mem adr> <11-9: ?> <8: G> <7: PAT> <6: D> <5: A> <4: PCD> <3: PWT> <2: US> <1: RW> <0: P>
+; G: global (don't invalidate upon mov to cr3), PAT: caching type, D: dirty, A: accessed, PCD: cache disabled, PWT: write through, US: user/supervisor, RW: read/write, P: present
+page_table_0: times 1024 dd 0 ; 0x0000 0000 - 0x0040 0000 (0 - 4MiB)
+page_table_512: times 1024 dd 0 ; 0x8000 0000 - 0x8040 0000 (2048 - 2052 MiB)
 
 ;
 ; Initialize memory manager
+db `BANANA`
 memory_init:
-
-    mov dword [heap_pointer], heap
-
-    ; Setup first page table
-    mov ecx, 0
-    mov edi, page_table
-    mov eax, 0
-.loop:
-    mov ebx, eax
-    and ebx, 0xfffff000
-    or ebx, 3
-
-    mov [edi], ebx
-
-    add eax, 4096
-    add edi, 4
-    inc ecx
-    cmp ecx, 1024
-    jb .loop
-
     ; setup page directory
-    mov eax, page_table
+    mov eax, page_table_0
     and eax, 0xfffff000
     or eax, 3
     mov [page_directory], eax
+
+    mov eax, page_table_512
+    and eax, 0xfffff000
+    or eax, 3
+    mov [page_directory + 512 * 4], eax
+
+    ; Identity map the first MiB
+    mov ecx, 0
+.loop_0:
+    mov eax, 0x1000
+    mul ecx
+    or eax, 0x03 ; RW & P
+    mov [page_table_0 + ecx * 4], eax
+
+    inc ecx
+    cmp ecx, 256
+    jb .loop_0
+
+    ; Map kernel memory
+    mov ecx, 0
+.loop_512:
+    mov eax, 0x1000
+    mul ecx
+    add eax, 0x200000
+    or eax, 0x03 ; RW & P
+    mov [page_table_512 + ecx * 4], eax
+
+    inc ecx
+    cmp ecx, 1024
+    jb .loop_512
 
     ; Enable paging
     mov eax, page_directory
@@ -45,16 +62,3 @@ memory_init:
     mov cr0, eax
 
     ret
-
-;
-; Allocate memory
-; in
-;  eax: Requested amount in bytes
-; out
-;  edi: Reserved region
-memory_allocate:
-    mov edi, [heap_pointer]
-    add [heap_pointer], eax
-    ret
-
-heap:
