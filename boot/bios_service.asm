@@ -5,7 +5,7 @@ cpu 386
 
 %define RAM_MIN 0x1000000 ; 16MiB
 %define BUFFER_ADR 0x6000
-;%define KERNEL_ADR 0x200000 ; 2MiB
+%define KERNEL_PHY_ADR 0x100000 ; 1MiB
 %define KERNEL_ADR 0x80000000
 
 %define PIC1_CMD_PORT 0x20
@@ -83,11 +83,33 @@ kernel_size: dd 0
 msg_memory_detected0 db `RAM Detected: \0`
 msg_memory_detected1 db ` Bytes\0`
 msg_initializing db `Loading Kernel...\0`
+msg_a20_enabled db `A20 line enabled\0`
 msg_error_memory_low db `Fatal Error! At least 16MiB of RAM is required!\0`
 msg_error_kernel_not_found db `Fatal Error! KERNEL.BIN not found!\0`
+msg_error_a20_not_enabled db `Fatal Error! A20 line not enabled!\0`
 
 bits 16
 start:
+    ; Enable line A20 so memory above 1MiB behaves correctly
+    call enable_a20
+    call is_a20_enabled
+    cmp ax, 0x00
+    je .a20_not_enabled
+
+    mov si, msg_a20_enabled
+    mov bl, 0
+    call print_string
+    call print_new_line
+    jmp .after_a20_check
+
+.a20_not_enabled:
+    mov si, msg_error_a20_not_enabled
+    mov bl, 0
+    call fatal_error
+
+.after_a20_check:
+
+    ; Get memory size and layout
     call scan_memory
 
     ; Report memory detected
@@ -125,7 +147,7 @@ start:
 
 bits 32
     ; Load kernel
-    mov edi, BUFFER_ADR + 512 ; 0x10f2
+    mov edi, BUFFER_ADR + 512
     call fat_init
 
     mov esi, kernel_file_name
@@ -146,19 +168,66 @@ bits 32
     mov [kernel_size], eax
 
     mov esi, ebx ; restore entry address
-    mov edi, 0x200000
+    mov edi, KERNEL_PHY_ADR
     mov edx, BUFFER_ADR
     call fat_load_file
 
     ; Enable paging
-    call memory_init ; 0x115e
+    call memory_init
 
-    mov eax, bios_service ; 0x1163
-    jmp KERNEL_ADR ; 0x1168
+    mov eax, bios_service
+    jmp KERNEL_ADR
 
 .halt:
     hlt
     jmp .halt
+
+;
+; Try enabling A20 gate so we can access 16MiB of RAM
+bits 16
+enable_a20:
+	cli
+	push ax
+
+	call is_a20_enabled
+    cmp ax, 0x01
+	je .end
+
+	; fast a20 gate
+	in al, 0x92
+	or al, 2
+	out 0x92, al
+
+.end:
+	pop ax
+	sti
+	ret
+
+;
+; Check if A20 line is enabled
+; out
+;  ax: 1 - enabled, 0 - disabled
+bits 16
+is_a20_enabled:
+	push es
+
+	mov ax, 0xffff
+	mov es, ax
+    ; boot sector indicator is loaded at 0x0000:0x7e0e
+    ; check if it's wrapped at 0xffff:0x7e0e
+    mov ax, [es:0x7e0e]
+    cmp ax, 0xaa55
+    jne .enabled
+
+    mov ax, 0x00
+    jmp .end
+
+.enabled:
+    mov ax, 0x01
+
+.end:
+	pop es
+	ret
 
 ;
 ; Initialize memory maps and get memory size

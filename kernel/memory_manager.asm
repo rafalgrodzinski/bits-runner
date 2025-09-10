@@ -45,7 +45,7 @@ memory_init:
 .loop_512:
     mov eax, 0x1000
     mul ecx
-    add eax, 0x200000
+    add eax, 0x100000
     or eax, 0x03 ; RW & P
     mov [page_table_512 + ecx * 4], eax
 
