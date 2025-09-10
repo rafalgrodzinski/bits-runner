@@ -1,9 +1,6 @@
-; Kernel at 4KiB
-%define ADDRESS_KERNEL 0x1000
 ; Stack goes down from 640KiB
 ;%define ADDRESS_STACK 0x7FFFF 
 %define ADDRESS_STACK 0xFFFF 
-%define SEGMENT_KERNEL 0x1000 >> 4
 
 %define SYS_INT 0x30
 %define SYS_INT_PRINT_CHAR 0x00

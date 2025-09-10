@@ -23,7 +23,7 @@ nop
 %define FAT_EOF 0x0ff8
 
 %define BOOT_SECTOR_ID_OFFSET 0x7dfe
-%define ADDRESS_KERNEL 0x1000 ; 4KiB
+%define ADDRESS_BIOS_SERVICE 0x1000 ; 4KiB
 
 ; FAT12 header
 ; BPB (BIOS Parameter Block)
@@ -59,27 +59,24 @@ start:
 	mov si, msg_loading
 	call print_string
 
-	; Enable A20 line
-	call enable_a20
-
 	; Read root directory
 	mov ax, FAT_ROOT_DIR_OFFSET
 	mov bx, buffer
 	mov cx, FAT_ROOT_DIR_SECTORS_COUNT
 	call read_floppy_data
 
-	; Find fat cluster number for kernel file
+	; Find fat cluster number for bios service file
 	mov ax, buffer
-	mov bx, kernel_file_name
+	mov bx, bios_service_file_name
 	call find_cluster_number
 	cmp ax, 0
-	jnz .kernel_found
+	jnz .file_found
 
-	; Kernel not found
-	mov si, msg_kernel_file_not_found
+	; File not found
+	mov si, msg_bios_service_file_not_found
 	call fatal_error
 	
-.kernel_found:
+.file_found:
 	push ax ; preserve found cluster number
 
 	; Read first fat entry
@@ -88,14 +85,14 @@ start:
 	mov cx, BPB_SECTORS_PER_FAT
 	call read_floppy_data
 	
-	; Load kernel file
+	; Load file
 	pop ax ; restore cluster number
 	mov bx, buffer ; fat buffer
-	mov cx, ADDRESS_KERNEL
+	mov cx, ADDRESS_BIOS_SERVICE
 	call load_file
 
-	; Kernel loaded, start execution
-	jmp (ADDRESS_KERNEL >> 4):0
+	; File loaded, start execution
+	jmp (ADDRESS_BIOS_SERVICE >> 4):0
 
 ;
 ; Stop execution and show message
@@ -106,58 +103,6 @@ fatal_error:
 	hlt
 .halt:
 	jmp .halt
-
-;
-; Try enabling A20 gate so we can access 16MiB of RAM
-enable_a20:
-	push ax
-	cli
-
-	call is_a20_enabled
-	jne .end
-
-	; fast a20 gate
-	in al, 0x92
-	or al, 2
-	out 0x92, al
-
-	call is_a20_enabled
-	cmp ax, 1
-	jne .end
-
-	; failed
-	mov si, msg_error_a20
-	call fatal_error
-
-.end:
-	sti
-	pop ax
-	ret
-
-;
-; Check if A20 line is enabled
-; out
-; zf: 0 - enabled, 1 - disabled
-;  ax: is enabled
-is_a20_enabled:
-	push ds
-	push es
-
-	mov ax, 0xffff
-	mov es, ax
-	mov ax, [es:BOOT_SECTOR_ID_OFFSET]
-	cmp ax, [ds:BOOT_SECTOR_ID_OFFSET]
-
-	; if happens to be the same chang value and check once more
-	shl ax, 1
-	mov [es:BOOT_SECTOR_ID_OFFSET], ax
-	mov ax, [es:BOOT_SECTOR_ID_OFFSET]
-	cmp ax, [ds:BOOT_SECTOR_ID_OFFSET]
-
-.end:
-	pop es
-	pop ds
-	ret
 
 ;
 ; Print string
@@ -329,12 +274,11 @@ load_file:
 	ret
 
 ; Messages
-kernel_file_name: db `KERNEL  BIN\0`
-msg_loading: db `Loading kernel...\0`
+bios_service_file_name: db `BIOS_SVCBIN\0`
+msg_loading: db `Loading BIOS Service...\0`
 
-msg_error_a20: db `Failed to enable A20 gate!\0`
 msg_disk_read_failed: db `Failed to read disk!\0`
-msg_kernel_file_not_found: db `KERNEL.BIN not found!\0`
+msg_bios_service_file_not_found: db `BIOS_SVC.BIN not found!\0`
 
 times 510 - ($ - $$) db 0 ; padding
 db 0x55, 0xaa ; magic number

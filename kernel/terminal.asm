@@ -1,5 +1,8 @@
+org 0x80000000
 cpu 386
 bits 32
+
+%include "boot/bios_service_header.asm"
 
 %define TERMINAL_BUFFER 0xb8000
 
@@ -25,37 +28,33 @@ terminal_init:
 ; in
 ;  al: mode
 terminal_set_mode:
-    pushad
-    mov dx, ax
-    call sys_switch_to_v86_mode
-    bits 16
+    push eax
 
     ; 80x25
-    cmp dx, 1
+    cmp al, 1
     jne .not_80x25
-    mov ax, 0x0003
-    mov word [terminal_width + ADDRESS_KERNEL], 80
-    mov word [terminal_height + ADDRESS_KERNEL], 25
-    int 0x10
-    jmp .done
+    mov word [terminal_width], 80
+    mov word [terminal_height], 25
+    mov ah, BIOS_SERVICE_SET_VIDEO_MODE
+    mov al, BIOS_SERVICE_TEXT_MODE_80x25
+    call [bios_service]
+    jmp .end
+.not_80x25:
 
     ; 80x50
-.not_80x25:
-    cmp dx, 2
+    cmp al, 2
     jne .not_80x50
-    mov ax, 0x1112
-    mov word [terminal_width + ADDRESS_KERNEL], 80
-    mov word [terminal_height + ADDRESS_KERNEL], 50
-    int 0x10
-    jmp .done
-
+    mov word [terminal_width], 80
+    mov word [terminal_height], 50
+    mov ah, BIOS_SERVICE_SET_VIDEO_MODE
+    mov al, BIOS_SERVICE_TEXT_MODE_80x50
+    call [bios_service]
+    jmp .end
 .not_80x50:
-    ; invalid
 
-.done:
-    call sys_switch_to_protected_mode
-    bits 32
-    popad
+    ; invalid
+.end:
+    pop eax
     ret
 
 ;
@@ -69,8 +68,8 @@ terminal_clear:
     mov bh, al ; preserve in bx <attrib><empty><attrib><empty>
 
     mov eax, 0
-    mov ax, [terminal_width + ADDRESS_KERNEL]
-    mul word [terminal_height + ADDRESS_KERNEL]
+    mov ax, [terminal_width]
+    mul word [terminal_height]
     mov ecx, eax
     shr ecx, 1 ; half of count of chars
 
@@ -88,33 +87,33 @@ terminal_scroll_down:
     pushad
     mov bl, al ; preserve
 
-    movzx ax, [terminal_height + ADDRESS_KERNEL]
+    movzx eax, word [terminal_height]
     sub eax, 1
-    mul word [terminal_width + ADDRESS_KERNEL]
+    mul word [terminal_width]
     shr eax, 1 ; half of count of chars
     mov ecx, eax
 
     ; destination = buffer
     mov edi, TERMINAL_BUFFER
     ; source = buffer +1 line
-    movzx si, [terminal_width + ADDRESS_KERNEL]
+    movzx esi, word [terminal_width]
     shl esi, 1
     add esi, TERMINAL_BUFFER
     rep movsd ; move the data
 
     ; clear bottom line
-    movzx ax, [terminal_height + ADDRESS_KERNEL]
+    movzx eax, word [terminal_height]
     sub eax, 1
-    mul word [terminal_width + ADDRESS_KERNEL]
+    mul word [terminal_width]
     shl eax, 1
     add eax, TERMINAL_BUFFER
     mov edi, eax
 
-    movzx cx, [terminal_width + ADDRESS_KERNEL]
+    movzx ecx, word [terminal_width]
     shr ecx, 1
-    mov ax, TERMINAL_FOREGROUND_GRAY | TERMINAL_BACKGROUND_BLACK
+    mov eax, TERMINAL_FOREGROUND_GRAY | TERMINAL_BACKGROUND_BLACK
     shl eax, 24
-    mov ax, TERMINAL_FOREGROUND_GRAY | TERMINAL_BACKGROUND_BLACK
+    mov eax, TERMINAL_FOREGROUND_GRAY | TERMINAL_BACKGROUND_BLACK
     shl eax, 8
     rep stosd
 
@@ -132,8 +131,8 @@ terminal_print_character:
     ; New line ?
     cmp ah, `\n`
     jnz .not_new_line
-    mov word [cursor_x + ADDRESS_KERNEL], 0
-    inc word [cursor_y + ADDRESS_KERNEL]
+    mov word [cursor_x], 0
+    inc word [cursor_y]
     jmp .move_cursor
 
 .not_new_line:
@@ -141,14 +140,14 @@ terminal_print_character:
     cmp ah, `\b`
     jnz .not_backspace
     
-    cmp word [cursor_x + ADDRESS_KERNEL], 0
+    cmp word [cursor_x], 0
     jna .not_overscrolled ; Already in first position
 
     mov bx, ax ; preserve
-    dec word [cursor_x + ADDRESS_KERNEL]
-    movzx eax, word [cursor_y + ADDRESS_KERNEL]
-    mul word [terminal_width + ADDRESS_KERNEL]
-    add ax, [cursor_x + ADDRESS_KERNEL]
+    dec word [cursor_x]
+    movzx eax, word [cursor_y]
+    mul word [terminal_width]
+    add ax, [cursor_x]
     shl eax, 1 ; two bytes per char
     mov byte [TERMINAL_BUFFER + eax], 0
     mov [TERMINAL_BUFFER + eax + 1], bl
@@ -156,36 +155,36 @@ terminal_print_character:
 
 .not_backspace:
     mov bx, ax ; preserve
-    movzx eax, word [cursor_y + ADDRESS_KERNEL]
-    mul word [terminal_width + ADDRESS_KERNEL]
-    add ax, [cursor_x + ADDRESS_KERNEL]
+    movzx eax, word [cursor_y]
+    mul word [terminal_width]
+    add ax, [cursor_x]
     shl eax, 1 ; two bytes per char
     mov [TERMINAL_BUFFER + eax], bh
     mov [TERMINAL_BUFFER + eax + 1], bl
 
     ; End of line?
-    inc word [cursor_x + ADDRESS_KERNEL]
-    movzx eax, word [cursor_x + ADDRESS_KERNEL]
-    cmp ax, [terminal_width + ADDRESS_KERNEL]
+    inc word [cursor_x]
+    movzx eax, word [cursor_x]
+    cmp ax, [terminal_width]
     jb .move_cursor
     
-    mov word [cursor_x + ADDRESS_KERNEL], 0
-    inc word [cursor_y + ADDRESS_KERNEL]
+    mov word [cursor_x], 0
+    inc word [cursor_y]
 
 .move_cursor:
     ; Check if we've overscrolled
-    movzx eax, word [cursor_y + ADDRESS_KERNEL]
-    cmp ax, [terminal_height + ADDRESS_KERNEL]
+    movzx eax, word [cursor_y]
+    cmp ax, [terminal_height]
     jb .not_overscrolled
 
     call terminal_scroll_down
-    dec word [cursor_y + ADDRESS_KERNEL]
+    dec word [cursor_y]
 
 .not_overscrolled:
     ; Move cursor
-    movzx eax, word [cursor_y + ADDRESS_KERNEL]
-    mul word [terminal_width + ADDRESS_KERNEL]
-    add ax, [cursor_x + ADDRESS_KERNEL]
+    movzx eax, word [cursor_y]
+    mul word [terminal_width]
+    add ax, [cursor_x]
     mov bx, ax ; keep position
 
     ; Move high byte

@@ -1,3 +1,4 @@
+org 0x80000000
 cpu 386
 bits 32
 
@@ -167,13 +168,13 @@ keyboard_interrupt_handler:
     jmp .not_shifted
 
 .shifted:
-    mov ah, [keyboard_shifted_ascii_map + eax + ADDRESS_KERNEL]
+    mov ah, [keyboard_shifted_ascii_map + eax]
     cmp ah, 0
     jne .converted
     jmp .end
 
 .not_shifted:
-    mov ah, [keyboard_ascii_map + eax + ADDRESS_KERNEL]
+    mov ah, [keyboard_ascii_map + eax]
     cmp ah, 0
     jne .converted
     jmp .end
