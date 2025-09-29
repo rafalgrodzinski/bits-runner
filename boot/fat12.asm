@@ -29,6 +29,9 @@ address_root_dir: dd 0
 
 ;
 ; Initialize fat file system
+; in
+;  edi: fat buffer address
+;  dl: drive number
 fat_init:
 	pusha
 
@@ -39,7 +42,7 @@ fat_init:
 
 	mov eax, FAT_RESERVED_SECTORS_COUNT
 	mov ebx, FAT_SECTORS_PER_FAT
-	call read_floppy_data
+	call read_sectors
 
 	; load root directory
 	;;mov eax, FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY
@@ -49,7 +52,7 @@ fat_init:
 
 	mov eax, FAT_ROOT_DIR_OFFSET
 	mov ebx, FAT_ROOT_DIR_SECTORS_COUNT
-	call read_floppy_data
+	call read_sectors
 
 	popa
 	ret
@@ -84,13 +87,15 @@ lba_to_chs:
 ;
 ; Read sectors from floppy
 ; in
-;  eax: LBA addressed sector to read
+;  eax: LBA address of the first sector
 ;  ebx: number of sectors to read
 ;  edi: target address
-read_floppy_data:
+;  dl: drive number
+read_sectors:
 	pusha
 
 	; convert linear address in eax into es:bx
+	push edx ; preserve disk number
 	push eax ; preserve lba address
 	mov eax, edi
 	mov edx, 0
@@ -99,9 +104,9 @@ read_floppy_data:
 	mov edi, edx ; preserve address offset
 	mov es, ax ; keep address segment
 	pop eax
+	pop edx
 
 	call lba_to_chs ; convert eax into ch, dh, cl
-	mov dl, 0 ; drive number
 	mov al, bl ; number of sectors to read
 	mov bx, di ; target address from division reminder
 
@@ -186,11 +191,14 @@ fat_file_size:
 ; in
 ;  esi: fat entry address
 ;  edi: target address
-;  edx: 16 bit buffer address
+;  ebx: 16 bit buffer address
+;  dl: drive number
 fat_load_file:
-	pusha ; 0x131d
+	pusha
 	
 	movzx word ax, [esi + FAT_ENTRY_CLUSTER_OFFSET]
+	mov esi, edx ; preserve drive number
+	mov edx, ebx
 .loop:
 	; Load sector pointed by cluster into memory
 	push eax
@@ -198,10 +206,11 @@ fat_load_file:
 	mov ebx, 1 ; count
 	push edi
 	mov edi, edx
-	call read_floppy_data
+	push edx ; dl should contain drive number
+	mov edx, esi
+	call read_sectors
+	pop edx
 	pop edi
-	;pop eax
-	;add edi, FAT_BYTES_PER_SECTOR ; move to next sector
 
 	; move to target address if different from temporary buffer
 	cmp edi, edx

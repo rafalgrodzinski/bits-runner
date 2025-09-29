@@ -58,7 +58,7 @@ start:
 	mov ss, ax
 	mov sp, 0x7c00
 
-	; store drive number
+	; store boot drive number
 	mov [boot_drive_number], dl
 	
 	; Show loading message
@@ -100,6 +100,7 @@ start:
 	call load_file
 
 	; File loaded, start execution
+	mov dl, [boot_drive_number] ; also pass boot disk number
 	jmp (ADDRESS_BIOS_SERVICE >> 4):0
 
 ;
@@ -165,7 +166,7 @@ lba_to_chs:
 ;
 ; Read sectors from a device
 ; in
-;  ax: LBA addressed sector to read
+;  ax: LBA address of the first sector
 ;  bx: buffer address
 ;  cx: number of sectors to read
 ;  dl: drive number
