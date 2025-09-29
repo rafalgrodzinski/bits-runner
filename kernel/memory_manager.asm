@@ -15,7 +15,6 @@ page_table_512: times 1024 dd 0 ; 0x8000 0000 - 0x8040 0000 (2048 - 2052 MiB)
 
 ;
 ; Initialize memory manager
-db `BANANA`
 memory_init:
     ; setup page directory
     mov eax, page_table_0

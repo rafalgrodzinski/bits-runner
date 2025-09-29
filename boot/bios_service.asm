@@ -75,6 +75,7 @@ dd 0
 %define GDT_CODE_V86_MODE gdt_code_v86_mode - gdt
 %define GDT_DATA_V86_MODE gdt_data_v86_mode - gdt
 
+boot_drive_number: db 0
 kernel_file_name: db `KERNEL  BIN`
 kernel_size: dd 0
 
@@ -90,6 +91,9 @@ msg_error_a20_not_enabled db `Fatal Error! A20 line not enabled!\0`
 
 bits 16
 start:
+	; store boot drive number
+	mov [boot_drive_number], dl
+
     ; Enable line A20 so memory above 1MiB behaves correctly
     call enable_a20
     call is_a20_enabled
@@ -106,7 +110,6 @@ start:
     mov si, msg_error_a20_not_enabled
     mov bl, 0
     call fatal_error
-
 .after_a20_check:
 
     ; Get memory size and layout
@@ -134,6 +137,10 @@ start:
     call print_new_line
 
     cli
+    ; Mark paging as uninitialized
+    mov eax, 0x00
+    mov cr3, eax
+    
     ; Setup segments
     mov ax, 0
     mov ds, ax
@@ -148,6 +155,7 @@ start:
 bits 32
     ; Load kernel
     mov edi, BUFFER_ADR + 512
+    mov dl, [boot_drive_number]
     call fat_init
 
     mov esi, kernel_file_name
@@ -169,7 +177,8 @@ bits 32
 
     mov esi, ebx ; restore entry address
     mov edi, KERNEL_PHY_ADR
-    mov edx, BUFFER_ADR
+    mov ebx, BUFFER_ADR
+    mov dl, [boot_drive_number]
     call fat_load_file
 
     ; Enable paging
@@ -275,11 +284,12 @@ switch_to_protected_mode:
     or eax, 1
     mov cr0, eax
     pop eax
+
     ; Long jump to 32 bits
     jmp GDT_CODE_PROTECTED_MODE:(.init_data_segment)
 
 bits 32
-.init_data_segment: ;; 11ca
+.init_data_segment:
     ; Set protected mode 32 bit data segment
     push eax
     mov ax, GDT_DATA_PROTECTED_MODE
