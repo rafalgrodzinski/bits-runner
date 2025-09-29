@@ -106,7 +106,6 @@ start:
     mov si, msg_error_a20_not_enabled
     mov bl, 0
     call fatal_error
-
 .after_a20_check:
 
     ; Get memory size and layout
@@ -134,6 +133,10 @@ start:
     call print_new_line
 
     cli
+    ; Mark paging as uninitialized
+    mov eax, 0x00
+    mov cr3, eax
+    
     ; Setup segments
     mov ax, 0
     mov ds, ax
@@ -275,11 +278,12 @@ switch_to_protected_mode:
     or eax, 1
     mov cr0, eax
     pop eax
+
     ; Long jump to 32 bits
     jmp GDT_CODE_PROTECTED_MODE:(.init_data_segment)
 
 bits 32
-.init_data_segment: ;; 11ca
+.init_data_segment:
     ; Set protected mode 32 bit data segment
     push eax
     mov ax, GDT_DATA_PROTECTED_MODE
