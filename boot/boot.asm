@@ -48,13 +48,19 @@ dd 0 ; serial number
 db "BITS RUNNER" ; volume label (11 bytes)
 db "FAT12   " ; file system type (8 bytes)
 
+boot_drive_number: db 0
+
 start:
 	; Setup segments
 	mov ax, cs
 	mov ds, ax
+	mov es, ax
 	mov ss, ax
 	mov sp, 0x7c00
 
+	; store drive number
+	mov [boot_drive_number], dl
+	
 	; Show loading message
 	mov si, msg_loading
 	call print_string
@@ -63,7 +69,8 @@ start:
 	mov ax, FAT_ROOT_DIR_OFFSET
 	mov bx, buffer
 	mov cx, FAT_ROOT_DIR_SECTORS_COUNT
-	call read_floppy_data
+	mov dl, [boot_drive_number]
+	call read_sectors
 
 	; Find fat cluster number for bios service file
 	mov ax, buffer
@@ -83,7 +90,8 @@ start:
 	mov ax, BPB_RESERVED_SECTORS_COUNT
 	mov bx, buffer
 	mov cx, BPB_SECTORS_PER_FAT
-	call read_floppy_data
+	mov dl, [boot_drive_number]
+	call read_sectors
 	
 	; Load file
 	pop ax ; restore cluster number
@@ -155,18 +163,18 @@ lba_to_chs:
 	ret
 
 ;
-; Read sectors from floppy
+; Read sectors from a device
 ; in
 ;  ax: LBA addressed sector to read
 ;  bx: buffer address
 ;  cx: number of sectors to read
-read_floppy_data:
+;  dl: drive number
+read_sectors:
 	pusha
 	
-	push cx ; preserve source address
+	push cx ; preserve sectors count (cx overriten by lba_to_chs)
 	call lba_to_chs
-	mov dl, 0 ; drive number
-	pop ax ; restore source address
+	pop ax ; restore sectors count
 
 	; try reading 3 times
 	mov di, 3
@@ -243,7 +251,8 @@ load_file:
 	add ax, FAT_FIRST_DATA_SECTOR
 	mov bx, cx
 	mov cx, 1
-	call read_floppy_data
+	mov dl, [boot_drive_number]
+	call read_sectors
 	popa
 	add cx, BPB_BYTES_PER_SECTOR
 
