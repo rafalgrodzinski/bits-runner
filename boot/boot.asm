@@ -65,6 +65,16 @@ start:
 	mov si, msg_loading
 	call print_string
 
+	; Read drive CHS geometry if HDD
+	cmp dl, 0x80 ; first hard disk number
+	jb .skip_chs_detection
+	mov ah, 0x08
+	int 0x13
+	mov [bpb_sectors_per_track], cl
+	mov [bpb_heads_count], dh
+	inc byte [bpb_heads_count]
+.skip_chs_detection:
+
 	; Read root directory
 	mov ax, FAT_ROOT_DIR_OFFSET
 	mov bx, buffer
