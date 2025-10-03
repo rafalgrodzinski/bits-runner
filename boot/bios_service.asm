@@ -610,6 +610,57 @@ print_digit:
 	popa
 	ret
 
+;
+; Print hexadeciaml value
+; in
+;  eax: integer to print
+bits 16
+print_hex:
+    pusha
+
+    mov ecx, 0 ; Count number of digits
+.loop_process_digit:
+    inc ecx
+    mov edx, 0
+    mov esi, 16
+    div esi
+
+    cmp dx, 10 ; Check if we should add `0` or `A`
+    jae .above_9
+    add dx, `0`
+    jmp .digit_converted
+
+.above_9:
+    add dx, `a` - 10
+
+.digit_converted:
+    push dx ; Place converted digit on stack
+
+    cmp eax, 0 ; Check if we're out of digits
+	jnz .loop_process_digit
+
+    ; Check if we have even numbr of digits, if not append one
+    test cx, 0x01
+    je .print_pref
+	push 0x0030
+	inc cx
+
+.print_pref:
+	push 0x0000
+	push 0x7830
+	mov si, sp
+	call print_string
+	add sp, 4
+
+.loop_print_digit:
+	mov si, sp
+	call print_string
+	add sp, 2
+	loop .loop_print_digit
+
+    popa
+    ret
+
 %include "boot/fat12.asm"
 %include "kernel/memory_manager.asm"
 

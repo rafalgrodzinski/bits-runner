@@ -24,6 +24,8 @@ msg_error_disk_read_failed db `Failed to read disk!\n\0`
 
 ;
 ; Allocated data
+sectors_per_track: db FAT_SECTORS_PER_TRACK
+heads_count: db FAT_HEADS_COUNT
 address_fat: dd 0
 address_root_dir: dd 0
 
@@ -35,18 +37,33 @@ address_root_dir: dd 0
 fat_init:
 	pusha
 
-	; load fat
-	;mov eax, FAT_SECTORS_PER_FAT * FAT_BYTES_PER_SECTOR
-	;call memory_allocate
 	mov [address_fat], edi
 
+	; Read drive CHS geometry if HDD
+	cmp dl, 0x80 ; first hard disk number
+	jb .skip_chs_detection
+	push edx
+	call switch_to_v86_mode
+bits 16
+	mov ah, 0x08
+	int 0x13
+	and cl, 0x3f ; only bits 5-0 are used (7-6 are used fore cylinders)
+	mov [sectors_per_track], cl
+	mov [heads_count], dh
+	inc byte [heads_count]
+
+	call switch_to_protected_mode
+bits 32
+	pop edx
+.skip_chs_detection:
+
+	; load fat
+	mov edi, [address_fat]
 	mov eax, FAT_RESERVED_SECTORS_COUNT
 	mov ebx, FAT_SECTORS_PER_FAT
 	call read_sectors
 
 	; load root directory
-	;;mov eax, FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY
-	;call memory_allocate
 	add edi, FAT_SECTORS_PER_FAT * FAT_BYTES_PER_SECTOR
 	mov [address_root_dir], edi
 
@@ -69,13 +86,13 @@ lba_to_chs:
 	push eax
 	push bx
 	
-    mov bx, FAT_SECTORS_PER_TRACK
+    mov bx, [sectors_per_track]
 	div bl
 	mov cl, ah
 	add cl, 1 ; sector, lba % sectors per track + 1
 	
 	mov ah, 0
-    mov bx, FAT_HEADS_COUNT
+    mov bx, [heads_count]
 	div bl
 	mov dh, ah ; head, (lba / secttors per track) % heads
 	mov ch, al ; cylinder, (lba / secttors per track) / heads
@@ -196,7 +213,7 @@ fat_file_size:
 fat_load_file:
 	pusha
 	
-	movzx word ax, [esi + FAT_ENTRY_CLUSTER_OFFSET]
+	movzx eax, word [esi + FAT_ENTRY_CLUSTER_OFFSET]
 	mov esi, edx ; preserve drive number
 	mov edx, ebx
 .loop:
