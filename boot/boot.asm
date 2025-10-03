@@ -70,6 +70,7 @@ start:
 	jb .skip_chs_detection
 	mov ah, 0x08
 	int 0x13
+	and cl, 0x3f ; only bits 5-0 are used (7-6 are used fore cylinders)
 	mov [bpb_sectors_per_track], cl
 	mov [bpb_heads_count], dh
 	inc byte [bpb_heads_count]
