@@ -34,7 +34,7 @@ readPressedAsciiRaw raw<"=r"> -> u32
 
 @export print fun: text data<u32, 16>, attribute u32
     i u32 <- 0
-    rep i < 16 and text[i] != 0:
+    rep i < 16 and text[i] != 0
         printChar(text[i], attribute)
     ;
 ;

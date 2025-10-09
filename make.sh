@@ -32,9 +32,9 @@ check "Failed to build kernel"
 echo
 
 # Shell
-#echo "🛠️ Building shell..."
-#./shell/build.sh
-#check "Failed to build shell"
+echo "🛠️ Building shell..."
+./shell/build.sh
+check "Failed to build shell"
 
 #echo
 
@@ -52,5 +52,5 @@ diskutil eject ${DISK}
 MOUNT_POINT=$(hdiutil attach floppy.img | grep -o '\/Volumes\/.*')
 cp bios_svc.bin "${MOUNT_POINT}/"
 cp kernel.bin "${MOUNT_POINT}/"
-#cp shell.bin "${MOUNT_POINT}/"
+cp shell.bin "${MOUNT_POINT}/"
 hdiutil eject "${MOUNT_POINT}"

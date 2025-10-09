@@ -3,7 +3,7 @@
 
 isEqual fun: first data<u32, 16>, second data<u32, 16> -> bool
     i u32 <- 0
-    rep i < 16 and first[i] = second[i] and first[i] != 0 and second[i] != 0:
+    rep i < 16 and first[i] = second[i] and first[i] != 0 and second[i] != 0
         i <- i + 1
     ;
 
@@ -15,14 +15,14 @@ start fun
     count u32 <- 0
     character u32 <- 0
 
-    rep:
-        rep character != '\n':
+    rep
+        rep character != '\n'
             character <- @terminal.readPressedAscii()
-            if character = '\b' and count > 0:
+            if character = '\b' and count > 0
                 count <- count - 1
                 @terminal.printChar(character, 0x07)
             ;
-            if character != '\n' and character != '\b' and character != 0 and count < 15:
+            if character != '\n' and character != '\b' and character != 0 and count < 15
                 buffer[count] <- character
                 count <- count + 1
                 @terminal.printChar(character, 0x07)
@@ -33,7 +33,7 @@ start fun
         character <- 0
         @terminal.printChar('\n', 0x07)
 
-        if isEqual(buffer, "reboot\0\0\0\0\0\0\0\0\0\0"):
+        if isEqual(buffer, "reboot")
             @terminal.printChar('R', 0x07)
             @terminal.printChar('e', 0x07)
             @terminal.printChar('b', 0x07)
@@ -45,7 +45,7 @@ start fun
             @terminal.printChar('g', 0x07)
             @terminal.printChar('\n', 0x07)
             @sys.reboot()
-        else if isEqual(buffer, "div\0\0\0\0\0\0\0\0\0\0\0\0\0"):
+        else if isEqual(buffer, "div")
             num1 u32 <- 5
             num2 u32 <- 0
             res u32 <- num1 / num2
