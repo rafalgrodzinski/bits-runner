@@ -26,7 +26,7 @@ echo
 
 # Kernel
 echo "🛠️ Building kernel..."
-nasm -f bin -o kernel.bin kernel/kernel.asm
+./kernel/build.sh
 check "Failed to build kernel"
 
 echo

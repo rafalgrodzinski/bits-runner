@@ -1,0 +1,16 @@
+@module mem
+
+MemBitmap blob
+    memSize u32
+    memFrames ptr<u8>
+;
+
+@export heap u32 <- 0xdeadbeef
+pBitmap ptr<blob<MemBitmap>>
+
+@export init fun
+    pBitmap <- { heap.adr}
+
+    dummy u32 <- 0
+    rep: dummy <- dummy + 1
+;
