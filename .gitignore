@@ -1,3 +1,8 @@
+# Ingnore files without extension
+*
+!*.*
+!*/
+
 # Build artifacts
 *.o
 *.bin
