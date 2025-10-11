@@ -34,11 +34,6 @@ start:
 
     call mem.init
 
-    ; Ready message
-    mov esi, msg_ready
-    mov al, TERMINAL_FOREGROUND_GREEN
-    call terminal_print_string
-
 .halt:
     hlt
     jmp .halt

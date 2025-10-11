@@ -1,16 +1,50 @@
 @module mem
 
-MemBitmap blob
-    memSize u32
-    memFrames ptr<u8>
+@extern terminal_print_character fun
+printChar raw<"m,~{eax}">: character u32
+    mov al, 7
+    mov ah, $0
+    call terminal_print_character
 ;
 
-@export heap u32 <- 0xdeadbeef
-pBitmap ptr<blob<MemBitmap>>
+@extern terminal_print_hex fun
+printHexRaw raw<"m,m,~{eax},~{ebx}">: number u32, attribute u32
+    mov ebx, $0
+    mov eax, $1
+    call terminal_print_hex
+;
+
+printHexRaw8 raw<"m,m,~{eax},~{ebx}">: number u8, attribute u32
+    mov ebx, 0
+    mov bl, $0
+    mov eax, $1
+    call terminal_print_hex
+;
+
+
+@export heap u32
+
+Layout blob
+    memSize u32
+    pageSize u32
+    pagesCount u32
+    memPages data<u8>
+;
+pMemLayout ptr<blob<Layout>>
 
 @export init fun
-    pBitmap <- { heap.adr}
+    pMemLayout <- { heap.adr }
+    pMemLayout.val.memPages <- { pMemLayout.val.pagesCount.adr + 4 }
 
-    dummy u32 <- 0
-    rep: dummy <- dummy + 1
+    printHexRaw(pMemLayout.val.memSize, 1)
+    printChar('\n')
+    printHexRaw(pMemLayout.val.pageSize, 1)
+    printChar('\n')
+    printHexRaw(pMemLayout.val.pagesCount, 1)
+    printChar('\n')
+
+    rep i u32 <- 0, i < 320, i <- i + 1
+        printHexRaw8(pMemLayout.val.memPages[i], 7)
+        printChar(' ')
+    ;
 ;

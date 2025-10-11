@@ -124,6 +124,7 @@ terminal_scroll_down:
 ; in
 ;  ah: ASCII character to print
 ;  al: attribute
+global terminal_print_character
 terminal_print_character:
     pusha
 
@@ -266,7 +267,8 @@ print_uint:
 ; Print value in hexadeciaml format at current position
 ; in
 ;  al: text attribute
-;  ebx: value to print 
+;  ebx: value to print
+global terminal_print_hex
 terminal_print_hex:
     pusha
     xchg eax, ebx ; preserve attrib in ebx

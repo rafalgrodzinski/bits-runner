@@ -9,5 +9,5 @@ function check {
     fi
 }
 
-brb -v --triple=i686-unknown-linux-gnu --function-sections -O2 "${SCRIPT_DIR}/mem.brc"
+brb -v --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --static -O2 "${SCRIPT_DIR}/mem.brc"
 check

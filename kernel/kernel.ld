@@ -1,26 +1,11 @@
 OUTPUT_FORMAT(binary)
+phys = 0x80000000;
 SECTIONS {
-    . = 0x80000000;
-
-    .text : {
-        $(.text.start)
-        *(.text)
-        *(.text*)
-    }
-    .rodata : {
-        *(.rodata)
-        *(.rodata*)
-    }
-    .bss : {
-        *(.bss)
-        *(.bss*)
-    }
-    .fake : {
-        . = . + SIZEOF(.bss);
-    }
-    .data : {
-        *(.data)
-        *(.data*)
+    
+    .text phys : AT(phys) {
+        *(.text .text.*)
+        *(.rodata .rodata.*)
+        *(.data .data.*)
         heap = .;
     }
     .shstrtab : {

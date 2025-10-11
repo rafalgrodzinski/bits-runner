@@ -181,6 +181,15 @@ bits 32
     mov dl, [boot_drive_number]
     call fat_load_file
 
+    ; Provide memory information to kernel
+    push memory_map ; memory_map_entries_adr
+    push dword [memory_map_entries] ; memory_map_entries_count
+    push dword 0x1000 ; page_size
+    push dword [memory_size] ; memory_size
+    add edi, [kernel_size]
+    push edi ; layout_data_adr
+    call init_memory_layout
+
     ; Enable paging
     call memory_init
 
@@ -660,6 +669,92 @@ print_hex:
 
     popa
     ret
+
+db `BANANA`
+;
+; Provide memory information to kernel
+; in
+;  layout_data_adr
+;  memory_size
+;  page_size
+;  memory_map_entries_count
+;  memory_map_entries_adr
+%define .layout_data_adr [ebp + 8]
+%define .memory_size [ebp + 12]
+%define .page_size [ebp + 16]
+%define .memory_map_entries_count [ebp + 20]
+%define .memory_map_entries_adr [ebp + 24]
+bits 32
+init_memory_layout:
+    push ebp
+    mov ebp, esp
+
+    sub sp, 8
+    %define .current_map_entry [ebp - 0]
+    %define .pages_count [ebp - 4]
+
+    mov edi, .layout_data_adr
+    mov eax, .memory_size
+    mov [edi], eax ; memSize
+
+    mov ebx, .page_size
+    mov dword [edi + 4], ebx ; pageSize
+
+    mov edx, 0x00
+    div ebx
+    mov [edi + 8], eax ; pagesCount
+    mov .pages_count, eax
+
+    mov dword .current_map_entry, 0
+    mov esi, .memory_map_entries_adr
+    mov ecx, 0
+.loop_page_entry:
+    ; Past last entry?
+    mov eax, .current_map_entry
+    cmp eax, .memory_map_entries_count
+    jnb .memory_entry_unmapped
+
+    ; calculate current address
+    mov eax, ecx
+    mul dword .page_size
+
+    ; within current entry?
+    mov ebx, [esi]
+    cmp eax, ebx ; < base?
+    jb .memory_entry_unmapped
+
+    add ebx, [esi + 8]
+    cmp eax, ebx ; >= base + length
+    jnb .try_next_entry
+
+    ; get type from the entry
+    mov al, [esi + 16]
+    mov [edi + 12 + ecx], al
+    jmp .post_condition
+
+.try_next_entry:
+    add esi, 24 ; go to the next entry
+    inc dword .current_map_entry
+    jmp .loop_page_entry
+
+.memory_entry_unmapped:
+    mov byte [edi + 12 + ecx], 0
+
+.post_condition:
+   inc ecx
+   cmp ecx, .pages_count
+   jb .loop_page_entry
+
+    mov esp, ebp
+    pop ebp
+    ret 4 * 5
+%undef .pages_count
+%undef .current_map_entry
+%undef .memory_map_entries_adr
+%undef .memory_map_entries_count
+%undef .page_size
+%undef .memory_size
+%undef .layout_data_adr
 
 %include "boot/fat12.asm"
 %include "kernel/memory_manager.asm"
