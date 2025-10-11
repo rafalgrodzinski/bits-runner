@@ -1,5 +1,7 @@
 @module mem
 
+@import term
+
 @extern terminal_print_character fun
 printChar raw<"m,~{eax}">: character u32
     mov al, 7
@@ -47,4 +49,6 @@ pMemLayout ptr<blob<Layout>>
         printHexRaw8(pMemLayout.val.memPages[i], 7)
         printChar(' ')
     ;
+
+    @term.printCharacter('!', 3)
 ;

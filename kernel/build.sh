@@ -9,8 +9,8 @@ function check {
     fi
 }
 
-"${SCRIPT_DIR}/memory/build.sh"
+brb -v --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --static -O2 "${SCRIPT_DIR}/memory/mem.brc" "${SCRIPT_DIR}/terminal/term.brc"
 check
 nasm  -f elf32 -o kernel.o "${SCRIPT_DIR}/kernel.asm"
 check
-ld.lld -T "${SCRIPT_DIR}/kernel.ld" kernel.o mem.o -o kernel.bin
+ld.lld -T "${SCRIPT_DIR}/kernel.ld" kernel.o mem.o term.o -o kernel.bin

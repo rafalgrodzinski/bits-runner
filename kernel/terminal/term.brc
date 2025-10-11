@@ -1,0 +1,58 @@
+@module term
+
+cursorX u32 <- 0
+cursorY u32 <- 0
+
+termWidth u32
+termHeight u32
+
+//pBuffer ptr<data<u8>> <- { 0x0b8000 }
+
+out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
+    mov dx, $0
+    mov al, $1
+    out dx, al
+;
+
+@export printCharacter fun: character u8, attribute u8
+    dummy u32 <- character
+    if dummy = '\n'
+        cursorX <- 0
+        cursorY <- cursorY + 1
+    else if dummy = '\b' and cursorX > 0
+        adr u32 <- (cursorY * termWidth + cursorX) * 2 // two bytes per char
+        pBuffer ptr<u8> <- { 0x0b8000 + adr }
+        pBuffer.val <- 0
+        pBuffer <- { 0x0b8000 + adr + 1 }
+        pBuffer.val <- attribute
+        //pBuffer.val[adr] <- 0
+        //pBuffer.val[adr + 1] <- attribute
+        cursorX <- cursorX - 1
+    else
+        adr u32 <- (cursorY * termWidth + cursorX) * 2 // two bytes per char
+
+        pBuffer ptr<u8> <- { 0x0b8000 + adr }
+        pBuffer.val <- character
+        pBuffer <- { 0x0b8000 + adr + 1 }
+        pBuffer.val <- attribute
+        //pBuffer.val[adr] <- character
+        //pBuffer.val[adr + 1] <- attribute
+        cursorX <- cursorX + 1
+        if cursorX >= termWidth
+            cursorX <- 0
+            cursorY <- cursorY + 1
+        ;
+    ;
+
+    // check overscroll
+
+    // move cursor
+    /*u32 cursorAdr <- cursorY * termWidth + cursorX
+    // high byte
+    out(0x03d4, 0x0e)
+    out(0x03d5, (cursorAdr >> 8) & 0xff)
+
+    // low byte
+    out(0x03d4, 0x0f)
+    out(0x03d5, cursorAdr & 0xff)*/
+;
