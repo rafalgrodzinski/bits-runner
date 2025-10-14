@@ -2,28 +2,6 @@
 
 @import term
 
-@extern terminal_print_character fun
-printChar raw<"m,~{eax}">: character u32
-    mov al, 7
-    mov ah, $0
-    call terminal_print_character
-;
-
-@extern terminal_print_hex fun
-printHexRaw raw<"m,m,~{eax},~{ebx}">: number u32, attribute u32
-    mov ebx, $0
-    mov eax, $1
-    call terminal_print_hex
-;
-
-printHexRaw8 raw<"m,m,~{eax},~{ebx}">: number u8, attribute u32
-    mov ebx, 0
-    mov bl, $0
-    mov eax, $1
-    call terminal_print_hex
-;
-
-
 @export heap u32
 
 Layout blob
@@ -38,17 +16,17 @@ pMemLayout ptr<blob<Layout>>
     pMemLayout <- { heap.adr }
     pMemLayout.val.memPages <- { pMemLayout.val.pagesCount.adr + 4 }
 
-    printHexRaw(pMemLayout.val.memSize, 1)
-    printChar('\n')
-    printHexRaw(pMemLayout.val.pageSize, 1)
-    printChar('\n')
-    printHexRaw(pMemLayout.val.pagesCount, 1)
-    printChar('\n')
+    @term.printHex(pMemLayout.val.memSize, 1)
+    @term.printNewLine()
+
+    @term.printHex(pMemLayout.val.pageSize, 1)
+    @term.printNewLine()
+
+    @term.printHex(pMemLayout.val.pagesCount, 1)
+    @term.printNewLine()
 
     rep i u32 <- 0, i < 320, i <- i + 1
-        printHexRaw8(pMemLayout.val.memPages[i], 7)
-        printChar(' ')
+        @term.printNumber(pMemLayout.val.memPages[i].s32, 7)
+        @term.printCharacter(' ', 7)
     ;
-
-    @term.printCharacter('!', 3)
 ;
