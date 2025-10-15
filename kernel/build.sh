@@ -9,8 +9,8 @@ function check {
     fi
 }
 
-brb -v --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --reloc=static "${SCRIPT_DIR}/memory/mem.brc" "${SCRIPT_DIR}/terminal/term.brc"
+brb -v --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --reloc=static "${SCRIPT_DIR}/main.brc" "${SCRIPT_DIR}/memory/mem.brc" "${SCRIPT_DIR}/terminal/term.brc"
 check
 nasm  -f elf32 -o kernel.o "${SCRIPT_DIR}/kernel.asm"
 check
-ld.lld -T "${SCRIPT_DIR}/kernel.ld" kernel.o mem.o term.o -o kernel.bin
+ld.lld -T "${SCRIPT_DIR}/kernel.ld" kernel.o main.o mem.o term.o -o kernel.bin

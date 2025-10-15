@@ -14,25 +14,13 @@ msg_initializing db `Initializing Bits Runner...\n\0`
 msg_ready db `All ready, welcome to Bits Runner!\n\0`
 msg_error_fatal db `Fatal Error!\n\0`
 
-extern mem.init
+extern kstart
 
 start:
     mov [bios_service], eax ; To use services provided by BIOS
     call interrupt_init_protected_mode
-    call terminal_init
-    ;call serial_init
-
-    ; Initializing message
-    mov esi, msg_initializing
-    mov al, TERMINAL_FOREGROUND_GRAY
-    call terminal_print_string
-
-    ; Ready message
-    mov esi, msg_ready
-    mov al, TERMINAL_FOREGROUND_GREEN
-    call terminal_print_string
-
-    call mem.init
+    mov eax, [bios_service]
+    call kstart
 
 .halt:
     hlt

@@ -1,10 +1,12 @@
 @module term
 
+@export FOREGROUND_GREEN u32 <- 0x02
+
 cursorX u32 <- 0
 cursorY u32 <- 0
 
-termWidth u32 <- 80
-termHeight u32 <- 25
+termWidth u32 <- 0
+termHeight u32 <- 0
 
 pBuffer ptr<data<u8>> <- { 0x0b8000 }
 
@@ -12,6 +14,26 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
     mov dx, $0
     mov al, $1
     out dx, al
+;
+
+setMode raw<"m, i, i">: biosServiceAdr u32, serviceNum u8, modeNum u8
+    mov ah, $1
+    mov al, $2
+    call $0
+;
+
+@export init fun: biosServiceAdr u32, mode u32
+    if mode = 1
+        termWidth <- 80
+        termHeight <- 50
+        setMode(biosServiceAdr, 1.u8, 1.u8)
+    else
+        termWidth <- 80
+        termHeight <- 25
+        setMode(biosServiceAdr, 1.u8, 0.u8)
+    ;
+
+    clear(7)
 ;
 
 @export clear fun: attribute u8
@@ -88,7 +110,7 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
     if shouldScroll: scrollDown()
 ;
 
-@export printString fun: string data<u8, 32>, attribute u8
+@export printString fun: string data<u8, 64>, attribute u8
     rep i u32 <- 0, i < string.count and string[i] != 0.u8, i <- i + 1
         printCharacter(string[i], attribute)
     ;
