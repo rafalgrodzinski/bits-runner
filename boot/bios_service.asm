@@ -182,6 +182,7 @@ bits 32
     call fat_load_file
 
     ; Provide memory information to kernel
+    push dword [kernel_size]
     push memory_map ; memory_map_entries_adr
     push dword [memory_map_entries] ; memory_map_entries_count
     push dword 0x1000 ; page_size
@@ -670,7 +671,6 @@ print_hex:
     popa
     ret
 
-db `BANANA`
 ;
 ; Provide memory information to kernel
 ; in
@@ -679,11 +679,13 @@ db `BANANA`
 ;  page_size
 ;  memory_map_entries_count
 ;  memory_map_entries_adr
+;  kernel_size
 %define .layout_data_adr [ebp + 8]
 %define .memory_size [ebp + 12]
 %define .page_size [ebp + 16]
 %define .memory_map_entries_count [ebp + 20]
 %define .memory_map_entries_adr [ebp + 24]
+%define .kernel_size [ebp + 28]
 bits 32
 init_memory_layout:
     push ebp
@@ -718,6 +720,30 @@ init_memory_layout:
     mov eax, ecx
     mul dword .page_size
 
+    ; mark real mode memory
+    cmp eax, 0x500 ; 1024 real mode IVT + 256 BDA
+    jb .page_unavailable
+
+    ; mark kernel memory
+    cmp eax, KERNEL_PHY_ADR
+    jb .not_kernel_memory
+    mov ebx, KERNEL_PHY_ADR
+    add ebx, .kernel_size
+    cmp eax, ebx
+    jnb .not_kernel_memory
+    mov al, 1
+    jmp .set_entry
+.not_kernel_memory:
+
+    ; mark bios service
+    cmp eax, 0x1000
+    jb .not_bios_service_memory
+    cmp eax, buffer + 0x200 ; 512 bytes for read/write buffer
+    jnb .not_bios_service_memory
+    mov al, 3
+    jmp .set_entry
+.not_bios_service_memory:
+
     ; within current entry?
     mov ebx, [esi]
     cmp eax, ebx ; < base?
@@ -729,6 +755,13 @@ init_memory_layout:
 
     ; get type from the entry
     mov al, [esi + 16]
+    cmp al, 1
+    jne .page_unavailable
+    mov al, 0
+    jmp .set_entry
+.page_unavailable:
+    mov al, 3
+.set_entry:
     mov [edi + 12 + ecx], al
     jmp .post_condition
 
@@ -738,7 +771,7 @@ init_memory_layout:
     jmp .loop_page_entry
 
 .memory_entry_unmapped:
-    mov byte [edi + 12 + ecx], 0
+    mov byte [edi + 12 + ecx], 3
 
 .post_condition:
    inc ecx
@@ -750,6 +783,7 @@ init_memory_layout:
     ret 4 * 5
 %undef .pages_count
 %undef .current_map_entry
+%undef .kernel_size
 %undef .memory_map_entries_adr
 %undef .memory_map_entries_count
 %undef .page_size
@@ -762,3 +796,4 @@ init_memory_layout:
 memory_size: dd 0
 memory_map_entries: db 0
 memory_map:
+buffer:
