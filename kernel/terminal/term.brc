@@ -14,14 +14,6 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
     out dx, al
 ;
 
-shrOp raw<"=r,r,i">: value u32, bitsCount u8 -> u32
-    shr $0, $2
-;
-
-andOp raw<"=r,r,i">: value u32, mask u32 -> u32
-    and $0, $2
-;
-
 @export clear fun: attribute u8
     rep i u32 <- 0, i < termWidth * termHeight * 2, i <- i + 2
         pBuffer.val[i] <- 0
@@ -49,13 +41,10 @@ andOp raw<"=r,r,i">: value u32, mask u32 -> u32
     cursorAdr u32 <- cursorY * termWidth + cursorX
     // high byte
     out(0x03d4, 0x0e.u8)
-    high u32 <- shrOp(cursorAdr, 8.u8)
-    high <- andOp(high, 0xff)
-    out(0x03d5, high.u8)
+    out(0x03d5, ((cursorAdr >> 8) & 0xff).u8)
     // low byte
     out(0x03d4, 0x0f.u8)
-    low u32 <- andOp(cursorAdr, 0xff)
-    out(0x03d5, low.u8)
+    out(0x03d5, (cursorAdr & 0xff).u8)
 
     ret isOverscrolled
 ;

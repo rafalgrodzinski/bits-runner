@@ -24,7 +24,7 @@ pMemLayout ptr<blob<Layout>>
     @term.printHex(pMemLayout.val.pagesCount, 1)
     @term.printNewLine()
 
-    rep i u32 <- 0, i < 320, i <- i + 1
+    rep i u32 <- 0, i < 256, i <- i + 1
         @term.printNumber(pMemLayout.val.memPages[i].s32, 7)
         @term.printCharacter(' ', 7)
     ;
