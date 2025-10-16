@@ -1,0 +1,13 @@
+@module fs_fat12
+
+@import mem
+
+FATS_COUNT u32 <- 2
+SECTORS_PER_FAT u32 <- 9
+BYTES_PER_SECTOR u32 <- 512
+
+pFatEntry ptr<u8>
+
+@export init fun
+    pFatEntry <- @mem.allocateBytes(SECTORS_PER_FAT * BYTES_PER_SECTOR)
+;

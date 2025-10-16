@@ -36,13 +36,7 @@ heapLayout blob<HeapLayout>
 
     printStats()
     @term.printNewLine()
-    allocateBytes(1478)
-    printStats()
 
-    /*rep i u32 <- 0, i < 512, i <- i + 1
-        @term.printNumber(pMemLayout.val.memPages[i].u32, 7)
-        @term.printCharacter(' ', 7)
-    ;*/
 ;
 
 @export allocatePageBytes fun: bytes u32 -> u32

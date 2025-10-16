@@ -1,5 +1,6 @@
 @import term
 @import mem
+@import fs_fat12
 
 @extern interrupt_init_protected_mode fun
 
@@ -17,6 +18,7 @@ copyEax raw<"=r"> -> u32
 
     interrupt_init_protected_mode()
     @mem.init()
+    @fs_fat12.init()
 
     @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GRAY)
 
