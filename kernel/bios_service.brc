@@ -1,0 +1,31 @@
+@module bios_service
+
+@import term
+
+SERVICE_REBOOT u8 <- 0x00
+SERVICE_SET_VIDEO_MODE u8 <- 0x01
+
+@export VIDEO_MODE_TEXT_80x25 u8 <- 0x00
+@export VIDEO_MODE_TEXT_80x50 u8 <- 0x01
+@export VIDEO_MODE_GPX_320x200x8 u8 <- 0x02
+@export VIDEO_MODE_GPX_640x480x4 u8 <- 0x03
+
+serviceAdr u32
+
+@export init fun: biosServiceAdr u32
+    serviceAdr <- biosServiceAdr
+;
+
+@export readSectors fun: driveNum u32, sectorsCount u32, targetAddress ptr<u8>
+    @term.printHex(serviceAdr, @term.FOREGROUND_RED)
+;
+
+setVideoModeRaw raw<"m, m, m">: biosServiceAdr u32, serviceNum u8, modeNum u8
+    mov ah, $1
+    mov al, $2
+    call $0
+;
+
+@export setVideoMode fun: videoMode u8
+    setVideoModeRaw(serviceAdr, SERVICE_SET_VIDEO_MODE, videoMode)
+;

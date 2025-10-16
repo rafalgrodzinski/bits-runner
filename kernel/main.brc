@@ -1,19 +1,18 @@
 @import term
 @import mem
 @import fs_fat12
+@import bios_service
 
 @extern interrupt_init_protected_mode fun
-
-biosServiceAdr u32
 
 copyEax raw<"=r"> -> u32
     mov eax, eax
 ;
 
 @export start fun
-    biosServiceAdr <- copyEax()
+    @bios_service.init(copyEax())
 
-    @term.init(biosServiceAdr, 0)
+    @term.init(@term.MODE_80x25)
     @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
 
     interrupt_init_protected_mode()
