@@ -1,18 +1,24 @@
 @import term
 @import mem
 
+@extern interrupt_init_protected_mode fun
+
 biosServiceAdr u32
 
 copyEax raw<"=r"> -> u32
     mov eax, eax
 ;
 
-@export kstart fun
+@export start fun
     biosServiceAdr <- copyEax()
+
     @term.init(biosServiceAdr, 0)
-    @term.printString("Initializing Bits Runner...\n", FOREGROUND_GREEN.u8)
+    @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
+
+    interrupt_init_protected_mode()
     @mem.init()
-    @term.printString("All ready, welcome to Bits Runner!\n", 7)
+
+    @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GRAY)
 
     rep
     ;

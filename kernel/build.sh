@@ -11,6 +11,6 @@ function check {
 
 brb -v --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --reloc=static "${SCRIPT_DIR}/main.brc" "${SCRIPT_DIR}/memory/mem.brc" "${SCRIPT_DIR}/terminal/term.brc"
 check
-nasm  -f elf32 -o kernel.o "${SCRIPT_DIR}/kernel.asm"
+nasm  -f elf32 -o int.o "${SCRIPT_DIR}/interrupts/int.asm"
 check
-ld.lld -T "${SCRIPT_DIR}/kernel.ld" kernel.o main.o mem.o term.o -o kernel.bin
+ld.lld -T "${SCRIPT_DIR}/kernel.ld" main.o term.o mem.o int.o -o kernel.bin

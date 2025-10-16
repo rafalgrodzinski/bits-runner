@@ -182,7 +182,7 @@ keyboard_interrupt_handler:
     ; Store calculated ASCII value
     mov [pressedAcii], ah
 
-    call terminal_print_character
+    ;call terminal_print_character
 
 .end:
     ret

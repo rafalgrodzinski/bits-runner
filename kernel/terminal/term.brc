@@ -1,6 +1,25 @@
 @module term
 
-@export FOREGROUND_GREEN u32 <- 0x02
+@export FOREGROUND_BLACK u8 <- 0x00
+@export FOREGROUND_BLUE u8 <- 0x01
+@export FOREGROUND_GREEN u8 <- 0x02
+@export FOREGROUND_CYAN u8 <- 0x03
+@export FOREGROUND_RED u8 <- 0x04
+@export FOREGROUND_MAGENTA u8 <- 0x05
+@export FOREGROUND_BROWN u8 <- 0x06
+@export FOREGROUND_GRAY u8 <- 0x07
+
+@export BACKGROUND_BLACK u8 <- 0x00
+@export BACKGROUND_BLUE u8 <- 0x10
+@export BACKGROUND_GREEN u8 <- 0x20
+@export BACKGROUND_CYAN u8 <- 0x30
+@export BACKGROUND_RED u8 <- 0x40
+@export BACKGROUND_MAGENTA u8 <- 0x50
+@export BACKGROUND_BROWN u8 <- 0x60
+@export BACKGROUND_WHITE u8 <- 0x70
+
+@export ATTRIB_LIGHT u8 <- 0x08
+@export ATTRIB_BLINKING u8 <- 0x80
 
 cursorX u32 <- 0
 cursorY u32 <- 0

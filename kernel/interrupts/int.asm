@@ -3,6 +3,8 @@ bits 32
 
 %include "drivers/keyboard.asm"
 ;%include "drivers/serial.asm"
+%include "kernel/interrupts/constants.asm"
+%include "kernel/interrupts/terminal.asm"
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
@@ -98,6 +100,7 @@ msg_error_page_fault_1: db ` !!!\n\0`
 
 ;
 ; Intialize the interrupt service for protected mode
+global interrupt_init_protected_mode
 interrupt_init_protected_mode:
     cli
     push eax
@@ -644,7 +647,7 @@ interrupt_handle_sys:
     ; Reboot
     cmp ah, SYS_INT_REBOOT
     jne .not_reboot
-    call sys_reboot
+    ;call sys_reboot
 
 .not_reboot:
 

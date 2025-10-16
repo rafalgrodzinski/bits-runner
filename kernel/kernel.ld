@@ -6,7 +6,7 @@ SECTIONS {
         *(.text .text.*)
         *(.rodata .rodata.*)
         *(.data .data.*)
-        heap = .;
+        mem.heap = .;
     }
     .shstrtab : {
         *(.shstrtab)
