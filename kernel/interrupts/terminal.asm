@@ -1,4 +1,3 @@
-org 0x80000000
 cpu 386
 bits 32
 
@@ -16,46 +15,46 @@ cursor_y dw 0
 
 ;
 ; Initialize the terminal
-terminal_init:
-    mov al, TERMINAL_MODE_80x25
-    call terminal_set_mode
-    mov al, TERMINAL_BACKGROUND_BLACK + TERMINAL_FOREGROUND_GRAY
-    call terminal_clear
-    ret
+;terminal_init:
+;    mov al, TERMINAL_MODE_80x25
+;    call terminal_set_mode
+;    mov al, TERMINAL_BACKGROUND_BLACK + TERMINAL_FOREGROUND_GRAY
+;    call terminal_clear
+;    ret
 
 ;
 ; Change text mode
 ; in
 ;  al: mode
-terminal_set_mode:
-    push eax
-
-    ; 80x25
-    cmp al, 1
-    jne .not_80x25
-    mov word [terminal_width], 80
-    mov word [terminal_height], 25
-    mov ah, BIOS_SERVICE_SET_VIDEO_MODE
-    mov al, BIOS_SERVICE_TEXT_MODE_80x25
-    call [bios_service]
-    jmp .end
-.not_80x25:
-
-    ; 80x50
-    cmp al, 2
-    jne .not_80x50
-    mov word [terminal_width], 80
-    mov word [terminal_height], 50
-    mov ah, BIOS_SERVICE_SET_VIDEO_MODE
-    mov al, BIOS_SERVICE_TEXT_MODE_80x50
-    call [bios_service]
-    jmp .end
-.not_80x50:
-
-    ; invalid
-.end:
-    pop eax
-    ret
+;terminal_set_mode:
+;    push eax
+;
+;    ; 80x25
+;    cmp al, 1
+;    jne .not_80x25
+;    mov word [terminal_width], 80
+;    mov word [terminal_height], 25
+;    mov ah, BIOS_SERVICE_SET_VIDEO_MODE
+;    mov al, BIOS_SERVICE_TEXT_MODE_80x25
+;    call [bios_service]
+;    jmp .end
+;.not_80x25:
+;
+;    ; 80x50
+;    cmp al, 2
+;    jne .not_80x50
+;    mov word [terminal_width], 80
+;    mov word [terminal_height], 50
+;    mov ah, BIOS_SERVICE_SET_VIDEO_MODE
+;    mov al, BIOS_SERVICE_TEXT_MODE_80x50
+;    call [bios_service]
+;    jmp .end
+;.not_80x50:
+;
+;    ; invalid
+;.end:
+;    pop eax
+;    ret
 
 ;
 ; Clears the screen with a given attribute
@@ -125,6 +124,7 @@ terminal_scroll_down:
 ; in
 ;  ah: ASCII character to print
 ;  al: attribute
+global terminal_print_character
 terminal_print_character:
     pusha
 
@@ -267,7 +267,8 @@ print_uint:
 ; Print value in hexadeciaml format at current position
 ; in
 ;  al: text attribute
-;  ebx: value to print 
+;  ebx: value to print
+global terminal_print_hex
 terminal_print_hex:
     pusha
     xchg eax, ebx ; preserve attrib in ebx

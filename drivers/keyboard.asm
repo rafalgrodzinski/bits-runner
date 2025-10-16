@@ -1,4 +1,3 @@
-org 0x80000000
 cpu 386
 bits 32
 
@@ -182,6 +181,8 @@ keyboard_interrupt_handler:
 .converted:
     ; Store calculated ASCII value
     mov [pressedAcii], ah
+
+    ;call terminal_print_character
 
 .end:
     ret

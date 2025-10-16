@@ -1,0 +1,176 @@
+@module term
+
+@export FOREGROUND_BLACK u8 <- 0x00
+@export FOREGROUND_BLUE u8 <- 0x01
+@export FOREGROUND_GREEN u8 <- 0x02
+@export FOREGROUND_CYAN u8 <- 0x03
+@export FOREGROUND_RED u8 <- 0x04
+@export FOREGROUND_MAGENTA u8 <- 0x05
+@export FOREGROUND_BROWN u8 <- 0x06
+@export FOREGROUND_GRAY u8 <- 0x07
+
+@export BACKGROUND_BLACK u8 <- 0x00
+@export BACKGROUND_BLUE u8 <- 0x10
+@export BACKGROUND_GREEN u8 <- 0x20
+@export BACKGROUND_CYAN u8 <- 0x30
+@export BACKGROUND_RED u8 <- 0x40
+@export BACKGROUND_MAGENTA u8 <- 0x50
+@export BACKGROUND_BROWN u8 <- 0x60
+@export BACKGROUND_WHITE u8 <- 0x70
+
+@export ATTRIB_LIGHT u8 <- 0x08
+@export ATTRIB_BLINKING u8 <- 0x80
+
+cursorX u32 <- 0
+cursorY u32 <- 0
+
+termWidth u32 <- 0
+termHeight u32 <- 0
+
+pBuffer ptr<data<u8>> <- { 0x0b8000 }
+
+out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
+    mov dx, $0
+    mov al, $1
+    out dx, al
+;
+
+setMode raw<"m, i, i">: biosServiceAdr u32, serviceNum u8, modeNum u8
+    mov ah, $1
+    mov al, $2
+    call $0
+;
+
+@export init fun: biosServiceAdr u32, mode u32
+    if mode = 1
+        termWidth <- 80
+        termHeight <- 50
+        setMode(biosServiceAdr, 1.u8, 1.u8)
+    else
+        termWidth <- 80
+        termHeight <- 25
+        setMode(biosServiceAdr, 1.u8, 0.u8)
+    ;
+
+    clear(7)
+;
+
+@export clear fun: attribute u8
+    rep i u32 <- 0, i < termWidth * termHeight * 2, i <- i + 2
+        pBuffer.val[i] <- 0
+        pBuffer.val[i + 1] <- attribute
+    ;
+    moveCursor(0, 0)
+;
+
+@export moveCursor fun: x u32, y u32 -> bool
+    isOverscrolled bool <- false
+
+    if x >= termWidth
+        x <- 0
+        y <- y + 1
+    ;
+
+    if y >= termHeight
+        y <- termHeight - 1
+        isOverscrolled <- true
+    ;
+
+    cursorX <- x
+    cursorY <- y
+
+    cursorAdr u32 <- cursorY * termWidth + cursorX
+    // high byte
+    out(0x03d4, 0x0e.u8)
+    out(0x03d5, ((cursorAdr >> 8) & 0xff).u8)
+    // low byte
+    out(0x03d4, 0x0f.u8)
+    out(0x03d5, (cursorAdr & 0xff).u8)
+
+    ret isOverscrolled
+;
+
+@export scrollDown fun
+    // Move all lines up
+    rep y u32 <- 0, y < termHeight - 1, y <- y + 1
+        rep x u32 <- 0, x < termWidth * 2, x <- x + 1
+            thisLineAdr u32 <- y * termWidth * 2 + x
+            nextLineAdr u32 <- (y + 1) * termWidth * 2 + x
+            pBuffer.val[thisLineAdr] <- pBuffer.val[nextLineAdr]
+        ;
+    ;
+
+    // Clear the last line
+    rep x u32 <- 0, x < termWidth * 2, x <- x + 2
+        adr u32 <- (termHeight - 1) * termWidth * 2 + x
+        pBuffer.val[adr] <- 0
+        pBuffer.val[adr + 1] <- 7
+    ;
+;
+
+@export printCharacter fun: character u8, attribute u8
+    shouldScroll bool <- false
+
+    if character = '\n'.u8
+        if moveCursor(0, cursorY + 1): shouldScroll <- true
+    else if character = '\b'.u8 and cursorX > 0
+        adr u32 <- (cursorY * termWidth + cursorX) * 2 // two bytes per char
+        pBuffer.val[adr] <- 0
+        pBuffer.val[adr + 1] <- attribute
+        moveCursor(cursorX - 1, cursorY)
+    else
+        adr u32 <- (cursorY * termWidth + cursorX) * 2 // two bytes per char
+
+        pBuffer.val[adr] <- character
+        pBuffer.val[adr + 1] <- attribute
+        if moveCursor(cursorX + 1, cursorY): shouldScroll <- true
+    ;
+
+    if shouldScroll: scrollDown()
+;
+
+@export printString fun: string data<u8, 64>, attribute u8
+    rep i u32 <- 0, i < string.count and string[i] != 0.u8, i <- i + 1
+        printCharacter(string[i], attribute)
+    ;
+;
+
+@export printNumber fun: number s32, attribute u8
+    if number < 0
+        number <- -number
+        printCharacter('-', attribute)
+    ;
+
+    biggest s32 <- 10
+    rep biggest <= number: biggest <- biggest * 10
+    biggest <- biggest / 10
+
+    rep biggest > 0, biggest <- biggest / 10
+        digit s32 <- number / biggest
+        printCharacter(digit.u8 + '0'.u8, attribute)
+        number <- number % biggest
+    ;
+;
+
+@export printHex fun: number u32, attribute u8
+    biggest u64 <- 16
+    digitsCount u32 <- 1
+    rep biggest <= number.u64
+        biggest <- biggest * 16.u64
+        digitsCount <- digitsCount + 1
+    ;
+    biggest <- biggest / 16.u64
+
+    // prefix
+    if digitsCount % 2 = 0: printString("0x", attribute) else: printString("0x0", attribute)
+
+    rep biggest > 0.u64, biggest <- biggest / 16.u64
+        digit u32 <- number / biggest.u32
+        if digit > 9: printCharacter((digit + 'a' - 10).u8, attribute) else: printCharacter(digit.u8 + '0'.u8, attribute)
+        number <- number % biggest.u32
+    ;
+;
+
+@export printNewLine fun
+    printCharacter('\n', 0)
+;

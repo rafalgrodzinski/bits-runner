@@ -1,0 +1,108 @@
+@module mem
+
+@import term
+
+@export heap u32 // marks start of the kernel heap
+
+Layout blob
+    memSize u32
+    pageSize u32
+    pagesCount u32
+    memPages data<u8>
+;
+pMemLayout ptr<blob<Layout>>
+freePagesCount u32 <- 0
+
+HeapLayout blob
+    pHeapStart ptr<u8>
+    size u32
+    allocatedBytes u32
+;
+heapLayout blob<HeapLayout>
+
+@export init fun
+    pMemLayout <- { heap.adr }
+    // Calculate free pages
+    kernelPagesCount u32 <- 0
+    rep i u32 <- 0, i < pMemLayout.val.pagesCount, i <- i + 1
+        if pMemLayout.val.memPages[i] = 0.u8: freePagesCount <- freePagesCount + 1
+        if pMemLayout.val.memPages[i] = 1.u8: kernelPagesCount <- kernelPagesCount + 1
+    ;
+    
+    // Setup heap
+    heapLayout.pHeapStart <- { heap.adr }
+    heapLayout.size <- kernelPagesCount * pMemLayout.val.pageSize - heap.adr & 0x0fff_ffff
+    heapLayout.allocatedBytes <- pMemLayout.val.pagesCount + 12
+
+    printStats()
+    @term.printNewLine()
+    allocateBytes(1478)
+    printStats()
+
+    /*rep i u32 <- 0, i < 512, i <- i + 1
+        @term.printNumber(pMemLayout.val.memPages[i].u32, 7)
+        @term.printCharacter(' ', 7)
+    ;*/
+;
+
+@export allocatePageBytes fun: bytes u32 -> u32
+    requestedPages u32 <- (bytes + pMemLayout.val.pageSize - 1) / pMemLayout.val.pageSize
+    // Fix compilation
+    //if freePagesCount < requestedPages: ret 0
+
+    remainingPage u32 <- requestedPages
+    rep i u32 <- 0, remainingPage > 0, i <- i + 1
+        if pMemLayout.val.memPages[i] = 0.u8
+            pMemLayout.val.memPages[i] <- 1.u8
+            remainingPage <- remainingPage - 1
+        ;
+    ;
+
+    freePagesCount <- freePagesCount - requestedPages
+    ret requestedPages * pMemLayout.val.pageSize
+;
+
+@export allocateBytes fun: bytes u32 -> ptr<u8>
+    pBytes ptr<u8> <- { 0 }
+
+    if (heapLayout.size - heapLayout.allocatedBytes) >= bytes
+        pBytes <- { heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes }
+        heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes
+    else
+        requiredBytes u32 <- bytes - (heapLayout.size - heapLayout.allocatedBytes)
+        allocatedBytes u32 <- allocatePageBytes(requiredBytes)
+        if allocatedBytes > 0
+            heapLayout.size <- heapLayout.size + allocatedBytes
+            pBytes <- { heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes }
+            heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes
+        ;
+    ;
+
+    ret pBytes
+;
+
+printStats fun
+    @term.printString("Mem size: ", 7)
+    @term.printHex(pMemLayout.val.memSize, 7)
+    @term.printNewLine()
+
+    @term.printString("Total pages: ", 7)
+    @term.printHex(pMemLayout.val.pagesCount, 7)
+    @term.printNewLine()
+
+    @term.printString("Free pages: ", 7)
+    @term.printHex(freePagesCount, 7)
+    @term.printNewLine()
+
+    @term.printString("Heap start: ", 7)
+    @term.printHex(heapLayout.pHeapStart.vAdr, 7)
+    @term.printNewLine()
+
+    @term.printString("Heap size: ", 7)
+    @term.printHex(heapLayout.size, 7)
+    @term.printNewLine()
+
+    @term.printString("Allocated bytes: ", 7)
+    @term.printHex(heapLayout.allocatedBytes, 7)
+    @term.printNewLine()
+;
