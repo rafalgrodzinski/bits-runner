@@ -1,13 +1,17 @@
 @module fs_fat12
 
 @import mem
+@import bios_service
+@import term
 
+BYTES_PER_SECTOR u32 <- 512
+RESERVED_SECTORS_COUNT u32 <- 1
 FATS_COUNT u32 <- 2
 SECTORS_PER_FAT u32 <- 9
-BYTES_PER_SECTOR u32 <- 512
 
 pFatEntry ptr<u8>
 
 @export init fun
     pFatEntry <- @mem.allocateBytes(SECTORS_PER_FAT * BYTES_PER_SECTOR)
+    @bios_service.readSectors(0, RESERVED_SECTORS_COUNT, SECTORS_PER_FAT, pFatEntry)
 ;

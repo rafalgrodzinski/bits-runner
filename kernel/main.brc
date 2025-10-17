@@ -19,7 +19,7 @@ copyEax raw<"=r"> -> u32
     @mem.init()
     @fs_fat12.init()
 
-    @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GRAY)
+    @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
 
     rep
     ;

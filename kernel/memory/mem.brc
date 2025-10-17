@@ -72,11 +72,13 @@ heapLayout blob<HeapLayout>
         ;
     ;
 
+    printStats()
+
     ret pBytes
 ;
 
 printStats fun
-    @term.printString("Mem size: ", 7)
+    @term.printString("Memory size: ", 7)
     @term.printHex(pMemLayout.val.memSize, 7)
     @term.printNewLine()
 
