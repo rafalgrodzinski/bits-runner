@@ -33,10 +33,6 @@ heapLayout blob<HeapLayout>
     heapLayout.pHeapStart <- { heap.adr }
     heapLayout.size <- kernelPagesCount * pMemLayout.val.pageSize - heap.adr & 0x0fff_ffff
     heapLayout.allocatedBytes <- pMemLayout.val.pagesCount + 12
-
-    printStats()
-    @term.printNewLine()
-
 ;
 
 @export allocatePageBytes fun: bytes u32 -> u32
@@ -71,9 +67,6 @@ heapLayout blob<HeapLayout>
             heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes
         ;
     ;
-
-    printStats()
-
     ret pBytes
 ;
 
