@@ -1,7 +1,7 @@
 cpu 386
 bits 32
 
-%include "boot/bios_service_header.asm"
+%include "bios_service/bios_service_header.asm"
 
 %define TERMINAL_BUFFER 0xb8000
 

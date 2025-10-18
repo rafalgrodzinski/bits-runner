@@ -1,7 +1,7 @@
 org 0x1000
 cpu 386
 
-%include "boot/bios_service_header.asm"
+%include "bios_service/bios_service_header.asm"
 
 %define RAM_MIN 0x1000000 ; 16MiB
 %define BUFFER_ADR 0x6000
@@ -854,8 +854,8 @@ init_memory_layout:
 %undef .memory_size
 %undef .layout_data_adr
 
-%include "boot/fat12.asm"
-%include "kernel/memory_manager.asm"
+%include "bios_service/fat12.asm"
+%include "bios_service/memory_manager.asm"
 
 memory_size: dd 0
 memory_map_entries: db 0

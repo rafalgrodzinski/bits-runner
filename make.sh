@@ -19,7 +19,7 @@ echo
 
 # BIOS Service
 echo "🛠️ Building BIOS service..."
-nasm -f bin -o bios_svc.bin boot/bios_service.asm
+nasm -f bin -o bios_svc.bin bios_service/bios_service.asm
 check "Failed to build BIOS service"
 
 echo
