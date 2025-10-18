@@ -9,6 +9,10 @@ copyEax raw<"=r"> -> u32
     mov eax, eax
 ;
 
+call raw<"m">: entryAdr u32
+    call $0
+;
+
 @export start fun
     @bios_service.init(copyEax())
 
@@ -20,6 +24,13 @@ copyEax raw<"=r"> -> u32
     @fs_fat12.init()
 
     @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
+
+    pShell ptr<u8> <- @fs_fat12.loadFile("SHELL.BIN")
+    if pShell.vAdr = 0
+        @term.printString("Could not load shell.bin!", @term.FOREGROUND_RED)
+    else
+        call(pShell.vAdr)
+    ;
 
     rep
     ;

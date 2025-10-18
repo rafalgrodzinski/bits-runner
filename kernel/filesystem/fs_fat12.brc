@@ -47,8 +47,6 @@ volumeName data<u8, 64>
         pFatEntry
     )
     initRootDir()
-
-    printDirEntry({ rootDirEntry.adr })
 ;
 
 initRootDir fun
@@ -225,4 +223,55 @@ printDirEntry fun: pDirEntry ptr<blob<FileEntry>>
             printDirEntry(pCurrentFileEntry)
         ;
     ;
+;
+
+@export loadFile fun: fileName data<u8, 64> -> ptr<u8>
+    pFileData ptr<data<u8>> <- { 0 }
+
+    rep pFileEntry ptr<blob<FileEntry>> <- rootDirEntry.subDirEntry, pFileEntry.vAdr != 0 and pFileData.vAdr = 0
+        if stringsMatch(fileName, pFileEntry.val.fileName)
+            pFileData <- @mem.allocateBytes(pFileEntry.val.fileSize)
+            buffer ptr<data<u8>> <- @mem.allocateBytes(BYTES_PER_SECTOR)
+            copiedSectorsCount u32 <- 0
+
+            rep cluster u32 <- pFileEntry.val.cluster, true, cluster < 0x0ff8 and cluster != 0
+                // read cluster data into buffer
+                sector u32 <- cluster + RESERVED_SECTORS_COUNT + SECTORS_PER_FAT * FATS_COUNT + (ROOT_DIR_ENTRIES_COUNT * BYTES_PER_ENTRY) / BYTES_PER_SECTOR - 2
+                @bios_service.readSectors(
+                    0,
+                    sector,
+                    1,
+                    buffer
+                )
+
+                // then copy buffer data into file data
+                rep i u32 <- 0, i < BYTES_PER_SECTOR and copiedSectorsCount * BYTES_PER_SECTOR + i < pFileEntry.val.fileSize, i <- i + 1
+                    pFileData.val[copiedSectorsCount * BYTES_PER_SECTOR + i] <- buffer.val[i]
+                ;
+                copiedSectorsCount <- copiedSectorsCount + 1
+
+                // get next cluster
+                // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
+                clusterIndex u32 <- cluster * 3 / 2
+                // calculate next cluster depending on wethere cluster index is odd or even
+                if cluster & 0x01 = 0
+                    cluster <- pFatEntry.val[clusterIndex].u32 + ((pFatEntry.val[clusterIndex + 1].u32 & 0x0f) << 8)
+                else
+                    cluster <- (pFatEntry.val[clusterIndex].u32 >> 4) + (pFatEntry.val[clusterIndex + 1].u32 << 4)
+                ;
+            ;
+        else
+            pFileEntry <- pFileEntry.val.nextFileEntry
+        ;
+    ;
+
+    ret pFileData
+;
+
+stringsMatch fun: string1 data<u8, 64>, string2 data<u8, 64> -> bool
+    isMatching bool <- true
+    rep i u32 <- 0, i < 64 and string1[i] != 0.u8 and string2[i] != 0.u8, i <- i + 1
+        if string1[i] != string2[i]: isMatching <- false
+    ;
+    ret isMatching
 ;
