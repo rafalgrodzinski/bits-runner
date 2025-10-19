@@ -15,7 +15,7 @@ freePagesCount u32 <- 0
 
 HeapLayout blob
     pHeapStart ptr<u8>
-    size u32
+    heapSize u32
     allocatedBytes u32
 ;
 heapLayout blob<HeapLayout>
@@ -31,14 +31,13 @@ heapLayout blob<HeapLayout>
     
     // Setup heap
     heapLayout.pHeapStart <- { heap.adr }
-    heapLayout.size <- kernelPagesCount * pMemLayout.val.pageSize - heap.adr & 0x0fff_ffff
-    heapLayout.allocatedBytes <- pMemLayout.val.pagesCount + 12
+    heapLayout.heapSize <- kernelPagesCount * pMemLayout.val.pageSize - heap.adr & 0x0fff_ffff
+    heapLayout.allocatedBytes <- blob<HeapLayout>.size + pMemLayout.val.pagesCount
 ;
 
 @export allocatePageBytes fun: bytes u32 -> u32
     requestedPages u32 <- (bytes + pMemLayout.val.pageSize - 1) / pMemLayout.val.pageSize
-    // Fix compilation
-    //if freePagesCount < requestedPages: ret 0
+    if freePagesCount < requestedPages: ret 0
 
     remainingPage u32 <- requestedPages
     rep i u32 <- 0, remainingPage > 0, i <- i + 1
@@ -55,14 +54,14 @@ heapLayout blob<HeapLayout>
 @export allocateBytes fun: bytes u32 -> ptr<u8>
     pBytes ptr<u8> <- { 0 }
 
-    if (heapLayout.size - heapLayout.allocatedBytes) >= bytes
+    if (heapLayout.heapSize - heapLayout.allocatedBytes) >= bytes
         pBytes <- { heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes }
         heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes
     else
-        requiredBytes u32 <- bytes - (heapLayout.size - heapLayout.allocatedBytes)
+        requiredBytes u32 <- bytes - (heapLayout.heapSize - heapLayout.allocatedBytes)
         allocatedBytes u32 <- allocatePageBytes(requiredBytes)
         if allocatedBytes > 0
-            heapLayout.size <- heapLayout.size + allocatedBytes
+            heapLayout.heapSize <- heapLayout.heapSize + allocatedBytes
             pBytes <- { heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes }
             heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes
         ;
@@ -88,7 +87,7 @@ printStats fun
     @term.printNewLine()
 
     @term.printString("Heap size: ", 7)
-    @term.printHex(heapLayout.size, 7)
+    @term.printHex(heapLayout.heapSize, 7)
     @term.printNewLine()
 
     @term.printString("Allocated bytes: ", 7)

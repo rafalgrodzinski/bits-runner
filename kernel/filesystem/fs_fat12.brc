@@ -99,7 +99,7 @@ initRootDir fun
 ;
 
 initDir fun: pDirEntry ptr<blob<FileEntry>>
-    //if pDirEntry.val.kind != FILE_ENTRY_KIND_DIR: ret
+    if pDirEntry.val.kind != FILE_ENTRY_KIND_DIR: ret
 
     pFatFileEntries ptr<data<u8>> <- @mem.allocateBytes(BYTES_PER_SECTOR)
 
@@ -154,7 +154,8 @@ fileEntryForFatFileData fun: pFatFileEntry ptr<data<u8>> -> ptr<blob<FileEntry>>
     isNavigationDirectory bool <- (pFatFileEntry.val[0] = '.'.u8 and pFatFileEntry.val[1] = ' '.u8) or (pFatFileEntry.val[0] = '.'.u8 and pFatFileEntry.val[1] = '.'.u8 and pFatFileEntry.val[2] = ' '.u8) 
 
     if not isLongFileName and not isVolumeId and not isNavigationDirectory and pFatFileEntry.val[0].u32 != FAT_FILE_FREE
-        pFileEntry <- @mem.allocateBytes(64 + 4 * 5)
+        pFileEntry <- @mem.allocateBytes(blob<FileEntry>.size)
+
         pFileEntry.val.subDirEntry <- { 0x00 }
         pFileEntry.val.nextFileEntry <- { 0x00 }
 
@@ -269,9 +270,8 @@ printDirEntry fun: pDirEntry ptr<blob<FileEntry>>
 ;
 
 stringsMatch fun: string1 data<u8, 64>, string2 data<u8, 64> -> bool
-    isMatching bool <- true
     rep i u32 <- 0, i < 64 and string1[i] != 0.u8 and string2[i] != 0.u8, i <- i + 1
-        if string1[i] != string2[i]: isMatching <- false
+        if string1[i] != string2[i]: ret false
     ;
-    ret isMatching
+    ret true
 ;
