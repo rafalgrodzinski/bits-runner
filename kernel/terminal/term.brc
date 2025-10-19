@@ -1,5 +1,10 @@
 @module term
 
+@import bios_service
+
+@export MODE_80x25 u32 <- 1
+@export MODE_80x50 u32 <- 2
+
 @export FOREGROUND_BLACK u8 <- 0x00
 @export FOREGROUND_BLUE u8 <- 0x01
 @export FOREGROUND_GREEN u8 <- 0x02
@@ -35,24 +40,18 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
     out dx, al
 ;
 
-setMode raw<"m, i, i">: biosServiceAdr u32, serviceNum u8, modeNum u8
-    mov ah, $1
-    mov al, $2
-    call $0
-;
-
-@export init fun: biosServiceAdr u32, mode u32
-    if mode = 1
+@export init fun: mode u32
+    if mode = MODE_80x50
         termWidth <- 80
         termHeight <- 50
-        setMode(biosServiceAdr, 1.u8, 1.u8)
+        @bios_service.setVideoMode(@bios_service.VIDEO_MODE_TEXT_80x50)
     else
         termWidth <- 80
         termHeight <- 25
-        setMode(biosServiceAdr, 1.u8, 0.u8)
+        @bios_service.setVideoMode(@bios_service.VIDEO_MODE_TEXT_80x25)
     ;
 
-    clear(7)
+    clear(FOREGROUND_GRAY)
 ;
 
 @export clear fun: attribute u8
