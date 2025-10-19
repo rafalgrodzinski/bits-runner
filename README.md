@@ -1,6 +1,8 @@
 # Bits Runner
 Bits Runner is a 32bit operating system for x86 computers.
 
+<img width="800" src="https://github.com/user-attachments/assets/7e593201-c37a-4a2d-8fcd-d435bf4734d3" />
+
 ## Quick Links
 - [Extra Information](docs/Extra.md)
 
