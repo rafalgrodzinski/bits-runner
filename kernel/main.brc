@@ -29,7 +29,7 @@ call raw<"m">: entryAdr u32
     if pShell.vAdr = 0
         @term.printString("Could not load SHELL.BIN!", @term.FOREGROUND_RED)
     else
-        call(pShell.vAdr)
+        //call(pShell.vAdr)
     ;
 
     rep

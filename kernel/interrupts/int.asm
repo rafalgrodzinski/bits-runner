@@ -1,7 +1,8 @@
 cpu 386
 bits 32
 
-%include "drivers/keyboard.asm"
+extern drv_keyboard.handleInterrupt
+
 ;%include "drivers/serial.asm"
 %include "kernel/interrupts/constants.asm"
 %include "kernel/interrupts/terminal.asm"
@@ -542,7 +543,7 @@ cli
     ; IRQ1 - keyboard
     cmp eax, 0x21
     jne .not_keyboard
-    call keyboard_interrupt_handler
+    call drv_keyboard.handleInterrupt
     pop eax
     jmp .interrupt_handled
 .not_keyboard:
@@ -639,8 +640,8 @@ interrupt_handle_sys:
     ; Get pressed ascii
     cmp ah, SYS_INT_GET_PRESSED_ASCII
     jne .not_get_pressed_ascii
-    movzx ebx, byte [pressedAcii]
-    mov byte [pressedAcii], 0
+    ;movzx ebx, byte [pressedAcii]
+    ;mov byte [pressedAcii], 0
     jmp .end
 
 .not_get_pressed_ascii:
