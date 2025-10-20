@@ -1,8 +1,8 @@
 OUTPUT_FORMAT(binary)
-phys = 0x80000000;
 SECTIONS {
-    
-    .text phys : AT(phys) {
+    . = 0x80000000;
+    .text : {
+        *(.text.start)
         *(.text .text.*)
         *(.rodata .rodata.*)
         *(.data .data.*)

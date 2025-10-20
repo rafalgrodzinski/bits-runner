@@ -1,7 +1,7 @@
 @module io
 
 // NOT WORKING???
-/*@export ATTRIB_BLACK u32 <- 0x00
+@export ATTRIB_BLACK u32 <- 0x00
 @export ATTRIB_BLUE u32 <- 0x01
 @export ATTRIB_GREEN u32 <- 0x02
 @export ATTRIB_CYAN u32 <- 0x03
@@ -20,7 +20,7 @@
 @export ATTRIB_BACKGROUND_WHITE u32 <- 0x70
 
 @export ATTRIB_LIGHT u32 <- 0x08
-@export ATTRIB_BLINKING u32 <- 0x80*/
+@export ATTRIB_BLINKING u32 <- 0x80
 
 readPressedAsciiRaw raw<"=r,~{eax},~{ebx}"> -> u32
     mov ah, 0x07

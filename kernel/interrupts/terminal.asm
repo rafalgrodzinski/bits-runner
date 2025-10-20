@@ -1,7 +1,7 @@
 cpu 386
 bits 32
 
-%include "bios_service/bios_service_header.asm"
+;%include "bios_service/bios_service_header.asm"
 
 %define TERMINAL_BUFFER 0xb8000
 
@@ -60,25 +60,25 @@ cursor_y dw 0
 ; Clears the screen with a given attribute
 ; in
 ;  al: background's attribute
-terminal_clear:
-    pushad
-    mov bl, al
-    shl ebx, 24
-    mov bh, al ; preserve in bx <attrib><empty><attrib><empty>
-
-    mov eax, 0
-    mov ax, [terminal_width]
-    mul word [terminal_height]
-    mov ecx, eax
-    shr ecx, 1 ; half of count of chars
-
-    ; copy eax into [edi+ecx]
-    mov eax, ebx
-    mov edi, TERMINAL_BUFFER
-    rep stosd
-
-    popad
-    ret
+;terminal_clear:
+;    pushad
+;    mov bl, al
+;    shl ebx, 24
+;    mov bh, al ; preserve in bx <attrib><empty><attrib><empty>
+;
+;    mov eax, 0
+;    mov ax, [terminal_width]
+;    mul word [terminal_height]
+;    mov ecx, eax
+;    shr ecx, 1 ; half of count of chars
+;
+;    ; copy eax into [edi+ecx]
+;    mov eax, ebx
+;    mov edi, TERMINAL_BUFFER
+;    rep stosd
+;
+;    popad
+;    ret
 
 ;
 ; Scroll down by one line
@@ -237,31 +237,31 @@ terminal_print_string:
 ; Print an unsigned integer
 ; in
 ;  ax - Value
-print_uint:
-	pusha
-	mov cx, 0 ; Count number of digits
-
-.loop_process_digit:
-	inc cx
-    mov dx, 0
-	mov bx, 10
-	div bx
-	add dx, `0` ; Convert reminder of the division into an ASCII char
-	push dx ; and place it on stack
-
-    cmp ax, 0 ; Check if we're out of digits
-	jnz .loop_process_digit
-
-.loop_print_digit:
-    pop ax
-    mov ah, 0x0e
-	int 0x10
-
-    dec cx
-    jnz .loop_print_digit
-
-	popa
-	ret
+;print_uint:
+;	pusha
+;	mov cx, 0 ; Count number of digits
+;
+;.loop_process_digit:
+;	inc cx
+;    mov dx, 0
+;	mov bx, 10
+;	div bx
+;	add dx, `0` ; Convert reminder of the division into an ASCII char
+;	push dx ; and place it on stack
+;
+;    cmp ax, 0 ; Check if we're out of digits
+;	jnz .loop_process_digit
+;
+;.loop_print_digit:
+;    pop ax
+;    mov ah, 0x0e
+;	int 0x10
+;
+;    dec cx
+;    jnz .loop_print_digit
+;
+;	popa
+;	ret
 
 ;
 ; Print value in hexadeciaml format at current position
