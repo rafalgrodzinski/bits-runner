@@ -5,6 +5,11 @@ rebootRaw raw<"~{eax}">
     int 0x30
 ;
 
+printMemStatsRaw raw<"~{eax}">
+    mov ah, 0x08
+    int 0x30
+;
+
 isEqual fun: first data<u32, 16>, second data<u32, 16> -> bool
     i u32 <- 0
     rep i < 16 and first[i] = second[i] and first[i] != 0 and second[i] != 0
@@ -44,6 +49,8 @@ start fun
             num1 u32 <- 5
             num2 u32 <- 0
             res u32 <- num1 / num2
+        else if isEqual(buffer, "mem")
+            printMemStatsRaw()
         else
             @io.printTextLine("Dunno", 0x07)
         ;
