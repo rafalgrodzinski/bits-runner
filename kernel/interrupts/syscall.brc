@@ -4,11 +4,13 @@
 @import term
 @import drv_keyboard
 @import mem
+@import fs_fat12
 
 CALL_REBOOT u32 <- 0x00
 CALL_PRINT_CHARACTER u32 <- 0x01
 CALL_READ_ASCII u32 <- 0x07
 CALL_PRINT_MEM_STATS u32 <- 0x08
+CALL_LIST_DIR u32 <- 0x09
 
 copyEax raw<"=r"> -> u32
     mov $0, eax
@@ -36,6 +38,8 @@ setEbx raw<"m">: value u32
     else if call = CALL_READ_ASCII
         value u32 <- @drv_keyboard.readPressedAscii()
         setEbx(value)
+    else if call = CALL_LIST_DIR
+        @fs_fat12.listDir()
     else if call = CALL_PRINT_MEM_STATS
         @mem.printMemStats()
     ;

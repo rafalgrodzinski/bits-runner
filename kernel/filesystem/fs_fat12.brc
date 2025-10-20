@@ -275,3 +275,7 @@ stringsMatch fun: string1 data<u8, 64>, string2 data<u8, 64> -> bool
     ;
     ret true
 ;
+
+@export listDir fun
+    printDirEntry({ rootDirEntry.adr })
+;
