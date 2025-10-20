@@ -17,6 +17,15 @@ serviceAdr u32
     serviceAdr <- biosServiceAdr
 ;
 
+rebootRaw raw<"m,m,~{eax}">: biosServiceAdr u32, serviceNum u8
+    mov ah, $1
+    call $0
+;
+
+@export reboot fun
+    rebootRaw(serviceAdr, SERVICE_REBOOT)
+;
+
 readSectorsRaw raw<"m, m, m, m, m, m,~{eax},~{ebx},~{ecx},~{edi}">: biosServiceAdr u32, serviceNum u8, driveNumber u8, firstSectorNum u32, sectorsCount u32, targetAddress u32
     mov ah, $1
     mov al, $2
