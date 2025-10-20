@@ -2,6 +2,7 @@ cpu 386
 bits 32
 
 extern drv_keyboard.handleInterrupt
+extern syscall.handleInterrupt
 
 ;%include "drivers/serial.asm"
 %include "kernel/interrupts/constants.asm"
@@ -553,7 +554,7 @@ cli
     jne .not_sys
 
     pop eax
-    call interrupt_handle_sys
+    call syscall.handleInterrupt
     jmp .interrupt_handled
 .not_sys:
 
@@ -612,45 +613,45 @@ interrupt_handle_timer:
 
 ;
 ; Handle syscall
-interrupt_handle_sys:
-    ; Print char
-    cmp ah, SYS_INT_PRINT_CHAR
-    jne .not_print_char
-    push eax
-    mov ah, bl
-    call terminal_print_character
-    pop eax
-    jmp .end
-
-.not_print_char:
-    ; Print string
-    cmp ah, SYS_INT_PRINT_STRING
-    jne .not_print_string
-    call terminal_print_string
-    jmp .end
-
-.not_print_string:
-    ; Print hex
-    cmp ah, SYS_INT_PRINT_HEX
-    jne .not_print_hex
-    call terminal_print_hex
-    jmp .end
-
-.not_print_hex:
-    ; Get pressed ascii
-    cmp ah, SYS_INT_GET_PRESSED_ASCII
-    jne .not_get_pressed_ascii
-    ;movzx ebx, byte [pressedAcii]
-    ;mov byte [pressedAcii], 0
-    jmp .end
-
-.not_get_pressed_ascii:
-    ; Reboot
-    cmp ah, SYS_INT_REBOOT
-    jne .not_reboot
-    ;call sys_reboot
-
-.not_reboot:
-
-.end:
-    ret
+;interrupt_handle_sys:
+;    ; Print char
+;    cmp ah, SYS_INT_PRINT_CHAR
+;    jne .not_print_char
+;    push eax
+;    mov ah, bl
+;    call terminal_print_character
+;    pop eax
+;    jmp .end
+;
+;.not_print_char:
+;    ; Print string
+;    cmp ah, SYS_INT_PRINT_STRING
+;    jne .not_print_string
+;    call terminal_print_string
+;    jmp .end
+;
+;.not_print_string:
+;    ; Print hex
+;    cmp ah, SYS_INT_PRINT_HEX
+;    jne .not_print_hex
+;    call terminal_print_hex
+;    jmp .end
+;
+;.not_print_hex:
+;    ; Get pressed ascii
+;    cmp ah, SYS_INT_GET_PRESSED_ASCII
+;    jne .not_get_pressed_ascii
+;    ;movzx ebx, byte [pressedAcii]
+;    ;mov byte [pressedAcii], 0
+;    jmp .end
+;
+;.not_get_pressed_ascii:
+;    ; Reboot
+;    cmp ah, SYS_INT_REBOOT
+;    jne .not_reboot
+;    ;call sys_reboot
+;
+;.not_reboot:
+;
+;.end:
+;    ret

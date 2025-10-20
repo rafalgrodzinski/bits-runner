@@ -1,7 +1,5 @@
 @module drv_keyboard
 
-@import term
-
 CMD_PORT u32 <- 0x64
 DATA_PORT u32 <- 0x60
 
@@ -163,8 +161,10 @@ in raw<"=r,m,~{eax},~{edx}">: portNum u32 -> u32
         isShiftPressed bool <- keyboardStatus[KEY_L_SHIFT] or keyboardStatus[KEY_R_SHIFT]
         pressedAscii <- if isShiftPressed: SHIFTED_ASCII_MAP[scanCode] else: ASCII_MAP[scanCode]
     ;
+;
 
-    if pressedAscii != 0.u8
-        @term.printCharacter(pressedAscii, @term.FOREGROUND_GRAY)
-    ;
+@export readPressedAscii fun -> u32
+    value u32 <- pressedAscii.u32
+    pressedAscii <- 0
+    ret value
 ;

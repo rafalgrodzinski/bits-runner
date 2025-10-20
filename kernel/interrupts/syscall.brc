@@ -1,0 +1,29 @@
+@module syscall
+
+@import term
+@import drv_keyboard
+
+CALL_REBOOT u32 <- 0x00
+CALL_PRINT_CHARACTER u32 <- 0x01
+CALL_READ_ASCII u32 <- 0x07
+
+copyEax raw<"=r"> -> u32
+    mov $0, eax
+;
+
+setEbx raw<"m">: value u32
+    mov ebx, $0
+;
+
+@export handleInterrupt fun
+    eax u32 <- copyEax()
+    call u32 <- (eax & 0xff00) >> 8
+
+    if call = CALL_PRINT_CHARACTER
+        character u8 <- (eax & 0xff).u8
+        @term.printCharacter(character, @term.FOREGROUND_BLUE)
+    else if call = CALL_READ_ASCII
+        value u32 <- @drv_keyboard.readPressedAscii()
+        setEbx(value)
+    ;
+;

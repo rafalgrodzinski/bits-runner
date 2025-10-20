@@ -1,17 +1,20 @@
-@import terminal
-@import sys
+@import io
 
-isEqual fun: first data<u32, 16>, second data<u32, 16> -> bool
+/*isEqual fun: first data<u32, 16>, second data<u32, 16> -> bool
     i u32 <- 0
     rep i < 16 and first[i] = second[i] and first[i] != 0 and second[i] != 0
         i <- i + 1
     ;
 
     ret first[i] = second[i]
-;
+;*/
 
 start fun
-    buffer data<u32, 16>
+    rep
+        pressedAscii u32 <- @io.readPressedAscii()
+        if pressedAscii != 0: @io.printChar(pressedAscii)
+    ;
+    /*buffer data<u32, 16>
     count u32 <- 0
     character u32 <- 0
 
@@ -57,5 +60,5 @@ start fun
             @terminal.printChar('o', 0x07)
             @terminal.printChar('\n', 0x07)
         ;
-    ;
+    ;*/
 ;
