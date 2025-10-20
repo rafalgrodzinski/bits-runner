@@ -3,6 +3,14 @@
 CMD_PORT u32 <- 0x64
 DATA_PORT u32 <- 0x60
 
+CMD_SET_LED u8 <- 0xed
+CMD_ECHO u8 <- 0xee
+ACK u8 <- 0xfa
+
+LED_SCROLL_LOCK u8 <- 0b0000_0001
+LED_NUMBER_LOCK u8 <- 0b0000_0010
+LED_CAPS_LOCK u8 <- 0b0000_0100
+
 KEY_L_SHIFT u32 <- 0x2a
 KEY_R_SHIFT u32 <- 0x36
 
@@ -131,16 +139,21 @@ SHIFTED_ASCII_MAP data<u8> <- {
 keyboardStatus data<bool, 128>
 pressedAscii u8
 
-in raw<"=r,m,~{eax},~{edx}">: portNum u32 -> u32
+in raw<"=r,m,~{eax},~{edx}">: portNum u32 -> u8
     mov dx, $1
-    xor eax, eax
     in al, dx
-    mov $0, eax
+    mov $0, al
+;
+
+out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
+    mov dx, $0
+    mov al, $1
+    out dx, al
 ;
 
 @export handleInterrupt fun
     // check if we have data
-    if in(CMD_PORT) & 0x02 != 0: ret
+    if in(CMD_PORT) & 0x02.u8 != 0.u8: ret
 
     scanCode u32 <- in(DATA_PORT)
     isPressed bool <- scanCode & 0x80 = 0
@@ -160,6 +173,20 @@ in raw<"=r,m,~{eax},~{edx}">: portNum u32 -> u32
     if scanCode != 0
         isShiftPressed bool <- keyboardStatus[KEY_L_SHIFT] or keyboardStatus[KEY_R_SHIFT]
         pressedAscii <- if isShiftPressed: SHIFTED_ASCII_MAP[scanCode] else: ASCII_MAP[scanCode]
+    ;
+
+    if pressedAscii = 'a'.u8
+        out(DATA_PORT, CMD_SET_LED)
+        out(DATA_PORT, LED_CAPS_LOCK)
+        if in(DATA_PORT) != ACK
+            out(DATA_PORT, LED_CAPS_LOCK)
+        ;
+    else
+        out(DATA_PORT, CMD_SET_LED)
+        out(DATA_PORT, 0.u8)
+        if in(DATA_PORT) != ACK
+            out(DATA_PORT, 0.u8)
+        ;
     ;
 ;
 
