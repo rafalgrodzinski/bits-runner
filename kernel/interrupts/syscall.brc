@@ -12,21 +12,7 @@ CALL_READ_ASCII u32 <- 0x07
 CALL_PRINT_MEM_STATS u32 <- 0x08
 CALL_LIST_DIR u32 <- 0x09
 
-copyEax raw<"=r"> -> u32
-    mov $0, eax
-;
-
-copyEbx raw<"=r"> -> u32
-    mov $0, ebx
-;
-
-setEbx raw<"m">: value u32
-    mov ebx, $0
-;
-
-@export handleInterrupt fun
-    eax u32 <- copyEax()
-    ebx u32 <- copyEbx()
+@export handleInterrupt fun: eax u32, ebx u32 -> u32
     call u32 <- (eax & 0xff00) >> 8
 
     if call = CALL_REBOOT
@@ -36,11 +22,12 @@ setEbx raw<"m">: value u32
         attribute u8 <- (ebx & 0xff).u8
         @term.printCharacter(character, attribute)
     else if call = CALL_READ_ASCII
-        value u32 <- @drv_keyboard.readPressedAscii()
-        setEbx(value)
+        ret @drv_keyboard.readPressedAscii()
     else if call = CALL_LIST_DIR
         @fs_fat12.listDir()
     else if call = CALL_PRINT_MEM_STATS
         @mem.printMemStats()
     ;
+
+    ret 0
 ;

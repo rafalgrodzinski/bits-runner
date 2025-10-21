@@ -9,16 +9,17 @@ function check {
     fi
 }
 
-brb -v --function-sections  --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --reloc=static \
+brb -v --function-sections --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --reloc=static --call=cdecl \
 "${SCRIPT_DIR}/main.brc" \
 "${SCRIPT_DIR}/memory/mem.brc" \
 "${SCRIPT_DIR}/terminal/term.brc" \
 "${SCRIPT_DIR}/filesystem/fs_fat12.brc" \
 "${SCRIPT_DIR}/bios_service.brc" \
 "${SCRIPT_DIR}/drivers/drv_keyboard.brc" \
-"${SCRIPT_DIR}/interrupts/syscall.brc"
+"${SCRIPT_DIR}/interrupts/syscall.brc" \
+"${SCRIPT_DIR}/interrupts/int_handler.brc"
 
 check
 nasm  -f elf32 -o int.o "${SCRIPT_DIR}/interrupts/int.asm"
 check
-ld.lld -T "${SCRIPT_DIR}/kernel.ld" term.o main.o mem.o int.o fs_fat12.o bios_service.o drv_keyboard.o syscall.o -o kernel.bin
+ld.lld -T "${SCRIPT_DIR}/kernel.ld" term.o main.o mem.o int.o fs_fat12.o bios_service.o drv_keyboard.o syscall.o int_handler.o -o kernel.bin

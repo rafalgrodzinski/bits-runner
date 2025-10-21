@@ -50,6 +50,9 @@ start fun
         if isEqual(buffer, "reboot")
             @io.printTextLine("Rebooting...", 0x07)
             rebootRaw()
+        else if isEqual(buffer, "pf")
+            p ptr<u8> <- { 0x80_00_00 }
+            p.val <- 42
         else if isEqual(buffer, "div")
             num1 u32 <- 5
             num2 u32 <- 0

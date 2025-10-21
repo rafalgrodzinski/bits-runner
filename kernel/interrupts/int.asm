@@ -1,12 +1,7 @@
 cpu 386
 bits 32
 
-extern drv_keyboard.handleInterrupt
-extern syscall.handleInterrupt
-
-;%include "drivers/serial.asm"
-%include "kernel/interrupts/constants.asm"
-%include "kernel/interrupts/terminal.asm"
+extern int_handler.handleInterrupt
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
@@ -81,15 +76,6 @@ IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2e IRQ e
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2f IRQ f
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x30 SYS
 idt_protected_mode_end:
-
-;
-; Messages
-msg_error_unhandled_0: db `Unhandled interrupt: \0`
-msg_error_unhandled_1: db `, error: \0`
-msg_error_unhandled_2: db `\n\0`
-
-msg_error_page_fault_0: db `Page fault accessing memroy at: \0`
-msg_error_page_fault_1: db ` !!!\n\0`
 
 %macro UPDATE_IDT_ADDRESS 2
     mov eax, %2
@@ -185,427 +171,301 @@ interrupt_init_protected_mode:
 ; divide error
 interrupt_handler_00:
     push  0
-    push eax
-    mov eax, 0x00
+    push 0x00
     jmp interrupt_handler
 
 ; debug exception
 interrupt_handler_01:
     push  0
-    push eax
-    mov eax, 0x01
+    push 0x01
     jmp interrupt_handler
 
 ; nmi interrupt
 interrupt_handler_02:
     push  0
-    push eax
-    mov eax, 0x02
+    push 0x02
     jmp interrupt_handler
 
 ; breakpoint
 interrupt_handler_03:
     push  0
-    push eax
-    mov eax, 0x03
+    push 0x03
     jmp interrupt_handler
 
 ; overflow
 interrupt_handler_04:
     push  0
-    push eax
-    mov eax, 0x04
+    push 0x04
     jmp interrupt_handler
 
 ; bound range
 interrupt_handler_05:
     push  0
-    push eax
-    mov eax, 0x05
+    push 0x05
     jmp interrupt_handler
 
 ; invalid opcode
 interrupt_handler_06:
     push  0
-    push eax
-    mov eax, 0x06
+    push 0x06
     jmp interrupt_handler
 
 ; no math coprocessor
 interrupt_handler_07:
     push  0
-    push eax
-    mov eax, 0x07
+    push 0x07
     jmp interrupt_handler
 
 ; double fault
 interrupt_handler_08:
     ; error info pushed by CPU
-    push eax
-    mov eax, 0x08
+    push 0x08
     jmp interrupt_handler
 
 ; coprocessor segment overrun
 interrupt_handler_09:
     push  0
-    push eax
-    mov eax, 0x09
+    push 0x09
     jmp interrupt_handler
 
 ; invalid tss
 interrupt_handler_0a:
     ; error info pushed by CPU
-    push eax
-    mov eax, 0x0a
+    push 0x0a
     jmp interrupt_handler
 
 ; segment not present
 interrupt_handler_0b:
     ; error info pushed by CPU
-    push eax
-    mov eax, 0x0b
+    push 0x0b
     jmp interrupt_handler
 
 ; stack-segment fault
 interrupt_handler_0c:
     ; error info pushed by CPU
-    push eax
-    mov eax, 0x0c
+    push 0x0c
     jmp interrupt_handler
 
 ; general protection
 interrupt_handler_0d:
     ; error info pushed by CPU
-    push eax
-    mov eax, 0x0d
+    push 0x0d
     jmp interrupt_handler
 
 ; page fault
 interrupt_handler_0e:
     ; error info pushed by CPU
-    push eax
-    mov eax, 0x0e
+    push 0x0e
     jmp interrupt_handler
 
 interrupt_handler_0f:
     push  0
-    push eax
-    mov eax, 0x0f
+    push 0x0f
     jmp interrupt_handler
 
 ; fpu fault
 interrupt_handler_10:
     push  0
-    push eax
-    mov eax, 0x10
+    push 0x10
     jmp interrupt_handler
 
 ; alignment check
 interrupt_handler_11:
     ; error info pushed by CPU
-    push eax
-    mov eax, 0x11
+    push 0x11
     jmp interrupt_handler
 
 ; machine check
 interrupt_handler_12:
     push  0
-    push eax
-    mov eax, 0x12
+    push 0x12
     jmp interrupt_handler
 
 ; simd exception
 interrupt_handler_13:
     push  0
-    push eax
-    mov eax, 0x13
+    push 0x13
     jmp interrupt_handler
 
 ; virtualization exception
 interrupt_handler_14:
     push  0
-    push eax
-    mov eax, 0x14
+    push 0x14
     jmp interrupt_handler
 
 ; control protection exception
 interrupt_handler_15:
     ; error info pushed by CPU
-    push eax
-    mov eax, 0x15
+    push 0x15
     jmp interrupt_handler
 
 interrupt_handler_16:
     push  0
-    push eax
-    mov eax, 0x16
+    push 0x16
     jmp interrupt_handler
 
 interrupt_handler_17:
     push  0
-    push eax
-    mov eax, 0x17
+    push 0x17
     jmp interrupt_handler
 
 interrupt_handler_18:
     push  0
-    push eax
-    mov eax, 0x18
+    push 0x18
     jmp interrupt_handler
 
 interrupt_handler_19:
     push  0
-    push eax
-    mov eax, 0x19
+    push 0x19
     jmp interrupt_handler
 
 interrupt_handler_1a:
     push  0
-    push eax
-    mov eax, 0x1a
+    push 0x1a
     jmp interrupt_handler
 
 interrupt_handler_1b:
     push  0
-    push eax
-    mov eax, 0x1b
+    push 0x1b
     jmp interrupt_handler
 
 interrupt_handler_1c:
     push  0
-    push eax
-    mov eax, 0x1c
+    push 0x1c
     jmp interrupt_handler
 
 interrupt_handler_1d:
     push  0
-    push eax
-    mov eax, 0x1d
+    push 0x1d
     jmp interrupt_handler
 
 interrupt_handler_1e:
     push  0
-    push eax
-    mov eax, 0x1e
+    push 0x1e
     jmp interrupt_handler
 
 interrupt_handler_1f:
     push  0
-    push eax
-    mov eax, 0x1f
+    push 0x1f
     jmp interrupt_handler
 
 ; IRQ 0
 interrupt_handler_20:
     push 0
-    push eax
-    mov eax, 0x20
+    push 0x20
     jmp interrupt_handler
 
 ; IRQ 1
 interrupt_handler_21:
     push 0
-    push eax
-    mov eax, 0x21
+    push 0x21
     jmp interrupt_handler
 
 ; IRQ 2
 interrupt_handler_22:
     push  0
-    push eax
-    mov eax, 0x22
+    push 0x22
     jmp interrupt_handler
 
 ; IRQ 3
 interrupt_handler_23:
     push  0
-    push eax
-    mov eax, 0x23
+    push 0x23
     jmp interrupt_handler
 
 ; IRQ 4
 interrupt_handler_24:
     push  0
-    push eax
-    mov eax, 0x24
+    push 0x24
     jmp interrupt_handler
 
 ; IRQ 5
 interrupt_handler_25:
     push  0
-    push eax
-    mov eax, 0x25
+    push 0x25
     jmp interrupt_handler
 
 ; IRQ 6
 interrupt_handler_26:
     push  0
-    push eax
-    mov eax, 0x26
+    push 0x26
     jmp interrupt_handler
 
 ; IRQ 7
 interrupt_handler_27:
     push  0
-    push eax
-    mov eax, 0x27
+    push 0x27
     jmp interrupt_handler
 
 ; IRQ 8
 interrupt_handler_28:
     push  0
-    push eax
-    mov eax, 0x28
+    push 0x28
     jmp interrupt_handler
 
 ; IRQ 9
 interrupt_handler_29:
     push  0
-    push eax
-    mov eax, 0x29
+    push 0x29
     jmp interrupt_handler
 
 ; IRQ a
 interrupt_handler_2a:
     push  0
-    push eax
-    mov eax, 0x2a
+    push 0x2a
     jmp interrupt_handler
 
 ; IRQ b
 interrupt_handler_2b:
     push  0
-    push eax
-    mov eax, 0x2b
+    push 0x2b
     jmp interrupt_handler
 
 ; IRQ c
 interrupt_handler_2c:
     push  0
-    push eax
-    mov eax, 0x2c
+    push 0x2c
     jmp interrupt_handler
 
 ; IRQ d
 interrupt_handler_2d:
     push  0
-    push eax
-    mov eax, 0x2d
+    push 0x2d
     jmp interrupt_handler
 
 ; IRQ e
 interrupt_handler_2e:
     push  0
-    push eax
-    mov eax, 0x2e
+    push 0x2e
     jmp interrupt_handler
 
 ; IRQ f
 interrupt_handler_2f:
     push  0
-    push eax
-    mov eax, 0x2f
+    push 0x2f
     jmp interrupt_handler
 
 ; SYS
 interrupt_handler_30:
     push 0
-    push eax
-    mov eax, 0x30
+    push 0x30
     jmp interrupt_handler
 
 ;
 ; Aggregated handler for all interrupts
 interrupt_handler:
-cli
+    cli
+
+    push ebx
+    push eax
+    call int_handler.handleInterrupt
+    add esp, 16
+
     ; Acknowledge interrupt
     push eax
     mov al, 0x20
     out PIC1_CMD_PORT, al
     pop eax
 
-    ; Page fault
-    cmp eax, 0x0e
-    jne .not_page_fault
-
-    call interrupt_handle_page_fault
-    ; no return
-.not_page_fault:
-
-    ; IRQ0 - timer
-    cmp eax, 0x20
-    jne .not_timer
-
-    call interrupt_handle_timer
-    pop eax
-    jmp .interrupt_handled
-.not_timer:
-
-    ; IRQ1 - keyboard
-    cmp eax, 0x21
-    jne .not_keyboard
-    call drv_keyboard.handleInterrupt
-    pop eax
-    jmp .interrupt_handled
-.not_keyboard:
-
-    ; SYS
-    cmp eax, SYS_INT
-    jne .not_sys
-
-    pop eax
-    call syscall.handleInterrupt
-    jmp .interrupt_handled
-.not_sys:
-
-    ; Unhandled interrupt
-    push ebx
-    push esi
-    mov ebx, eax
-    mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_LIGHT
-
-    mov esi, msg_error_unhandled_0
-    call terminal_print_string
-
-    call terminal_print_hex
-
-    mov esi, msg_error_unhandled_1
-    call terminal_print_string
-
-    mov ebx, [esp + 12]
-    call terminal_print_hex
-
-    mov esi, msg_error_unhandled_2
-    call terminal_print_string
-
-    pop esi
-    pop ebx
-    pop eax
-    add esp, 4
-    jmp .end
-
-.interrupt_handled:
-    add esp, 4 ; Pop error code
-
-.end:
     sti
     iret
-
-;
-; Page fault
-interrupt_handle_page_fault:
-    mov al, TERMINAL_FOREGROUND_RED + TERMINAL_ATTRIB_BLINKING
-    mov esi, msg_error_page_fault_0
-    call terminal_print_string
-
-    mov ebx, cr2
-    call terminal_print_hex
-
-    mov esi, msg_error_page_fault_1
-    call terminal_print_string
-.halt:
-    hlt
-    jmp .halt
-
-interrupt_handle_timer:
-    ret

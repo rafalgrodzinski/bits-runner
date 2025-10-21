@@ -22,15 +22,14 @@
 @export ATTRIB_LIGHT u32 <- 0x08
 @export ATTRIB_BLINKING u32 <- 0x80
 
-readPressedAsciiRaw raw<"=r,~{eax},~{ebx}"> -> u32
+readPressedAsciiRaw raw<"=r,~{eax}"> -> u32
     mov ah, 0x07
     int 0x30
-    mov $0, ebx
+    mov $0, eax
 ;
 
 @export readPressedAscii fun -> u32
     ret readPressedAsciiRaw()
-    ret 0
 ;
 
 printCharRaw raw<"m,m,~{eax},~{ebx}">: character u32, attribute u32
