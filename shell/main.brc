@@ -1,5 +1,19 @@
-@import terminal
-@import sys
+@import io
+
+rebootRaw raw<"~{eax}">
+    mov ah, 0x00
+    int 0x30
+;
+
+printMemStatsRaw raw<"~{eax}">
+    mov ah, 0x08
+    int 0x30
+;
+
+listRootRaw raw<"~{eax}">
+    mov ah, 0x09
+    int 0x30
+;
 
 isEqual fun: first data<u32, 16>, second data<u32, 16> -> bool
     i u32 <- 0
@@ -17,45 +31,38 @@ start fun
 
     rep
         rep character != '\n'
-            character <- @terminal.readPressedAscii()
+            character <- @io.readPressedAscii()
             if character = '\b' and count > 0
                 count <- count - 1
-                @terminal.printChar(character, 0x07)
+                @io.printChar(character, 0x07)
             ;
             if character != '\n' and character != '\b' and character != 0 and count < 15
                 buffer[count] <- character
                 count <- count + 1
-                @terminal.printChar(character, 0x07)
+                @io.printChar(character, 0x07)
             ;
         ;
         buffer[count] <- 0
         count <- 0
         character <- 0
-        @terminal.printChar('\n', 0x07)
+        @io.printChar('\n', 0x07)
 
         if isEqual(buffer, "reboot")
-            @terminal.printChar('R', 0x07)
-            @terminal.printChar('e', 0x07)
-            @terminal.printChar('b', 0x07)
-            @terminal.printChar('o', 0x07)
-            @terminal.printChar('o', 0x07)
-            @terminal.printChar('t', 0x07)
-            @terminal.printChar('i', 0x07)
-            @terminal.printChar('n', 0x07)
-            @terminal.printChar('g', 0x07)
-            @terminal.printChar('\n', 0x07)
-            @sys.reboot()
+            @io.printTextLine("Rebooting...", 0x07)
+            rebootRaw()
+        else if isEqual(buffer, "pf")
+            p ptr<u8> <- { 0x80_00_00 }
+            p.val <- 42
         else if isEqual(buffer, "div")
             num1 u32 <- 5
             num2 u32 <- 0
             res u32 <- num1 / num2
+        else if isEqual(buffer, "mem")
+            printMemStatsRaw()
+        else if isEqual(buffer, "ls")
+            listRootRaw()
         else
-            @terminal.printChar('D', 0x07)
-            @terminal.printChar('u', 0x07)
-            @terminal.printChar('n', 0x07)
-            @terminal.printChar('n', 0x07)
-            @terminal.printChar('o', 0x07)
-            @terminal.printChar('\n', 0x07)
+            @io.printTextLine("Dunno", 0x07)
         ;
     ;
 ;
