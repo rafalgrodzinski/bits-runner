@@ -258,11 +258,6 @@ interrupt_handler_0e:
     push 0x0e
     jmp interrupt_handler
 
-interrupt_handler_0f:
-    push  0
-    push 0x0f
-    jmp interrupt_handler
-
 ; fpu fault
 interrupt_handler_10:
     push  0
