@@ -10,7 +10,9 @@ INT_IRQ1 u32 <- 0x21 // keyboard
 INT_SYSCALL u32 <- 0x30
 
 halt raw<"">
+halt${:uid}:
     hlt
+    jmp halt${:uid}
 ;
 
 copyCr2 raw<"=r"> -> u32
@@ -22,7 +24,7 @@ copyCr2 raw<"=r"> -> u32
         @term.printString("Page fault accessing memory at: ", @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
         @term.printHex(copyCr2(), @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
         @term.printNewLine()
-        rep: halt()
+        halt()
     else if interrupt = INT_IRQ0
     else if interrupt = INT_IRQ1
         @drv_keyboard.handleInterrupt()
@@ -32,7 +34,7 @@ copyCr2 raw<"=r"> -> u32
         @term.printString("Unhandled interrupt: ", @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
         @term.printHex(interrupt, @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
         @term.printNewLine()
-        rep: halt()
+        halt()
     ;
 
     ret 0
