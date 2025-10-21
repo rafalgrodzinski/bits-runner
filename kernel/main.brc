@@ -2,6 +2,7 @@
 @import mem
 @import fs_fat12
 @import bios_service
+@import drv_serial
 
 @extern interrupt_init_protected_mode fun
 
@@ -19,6 +20,7 @@ call raw<"m">: entryAdr u32
     @mem.init()
     @term.init(@term.MODE_80x25)
     @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
+    @drv_serial.init()
 
     interrupt_init_protected_mode()
     @fs_fat12.init()

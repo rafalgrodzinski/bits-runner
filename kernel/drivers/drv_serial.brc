@@ -1,0 +1,59 @@
+@module drv_serial
+
+COM_PORT_1 u32 <- 0x03f8
+COM_PORT_2 u32 <- 0x02f8
+
+in raw<"=r,m,~{eax},~{edx}">: portNum u32 -> u8
+    mov dx, $1
+    in al, dx
+    mov $0, al
+;
+
+out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
+    mov dx, $0
+    mov al, $1
+    out dx, al
+;
+
+
+@export init fun
+    out(COM_PORT_1 + 1, 0x00.u8) // Disable all interrupts
+    out(COM_PORT_1 + 3, 0x80.u8) // Enable DLAB (set baud rate divisor)
+    out(COM_PORT_1 + 0, 0x03.u8) // Set divisor to 3 (lo byte) 38400 baud
+    out(COM_PORT_1 + 1, 0x00.u8) //                  (hi byte)
+    out(COM_PORT_1 + 3, 0x03.u8) // 8 bits, no parity, one stop bit
+    out(COM_PORT_1 + 2, 0xc7.u8) // Enable FIFO, clear them, with 14-byte threshold
+    out(COM_PORT_1 + 4, 0x0b.u8) // IRQs enabled, RTS/DSR set
+    out(COM_PORT_1 + 4, 0x0f.u8) // IRQs enabled and OUT#1 and OUT#2 bits enabled
+;
+
+@export writeCharacter fun: character u8
+    rep in(COM_PORT_1 + 5).u32 & 0x20 = 0
+    ;
+    out(COM_PORT_1, character)
+;
+
+@export writeString fun: string data<u8, 64>
+    rep i u32 <- 0, i < string.count and string[i] != 0.u8, i <- i + 1
+        writeCharacter(string[i])
+    ;
+;
+
+@export writeHex fun: number u32
+    biggest u64 <- 16
+    digitsCount u32 <- 1
+    rep biggest <= number.u64
+        biggest <- biggest * 16.u64
+        digitsCount <- digitsCount + 1
+    ;
+    biggest <- biggest / 16.u64
+
+    // prefix
+    if digitsCount % 2 = 0: writeString("0x") else: writeString("0x0")
+
+    rep biggest > 0.u64, biggest <- biggest / 16.u64
+        digit u32 <- number / biggest.u32
+        if digit > 9: writeCharacter((digit + 'a' - 10).u8) else: writeCharacter(digit.u8 + '0'.u8)
+        number <- number % biggest.u32
+    ;
+;
