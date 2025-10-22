@@ -37,5 +37,5 @@ copyCr2 raw<"=r"> -> u32
         halt()
     ;
 
-    ret 0
+    ret eax
 ;

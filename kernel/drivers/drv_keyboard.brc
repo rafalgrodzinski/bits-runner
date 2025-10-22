@@ -153,7 +153,7 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
 
 @export handleInterrupt fun
     // check if we have data
-    if in(CMD_PORT) & 0x02.u8 != 0.u8: ret
+    //if in(CMD_PORT) & 0x02.u8 != 1.u8: ret
 
     scanCode u32 <- in(DATA_PORT)
     isPressed bool <- scanCode & 0x80 = 0

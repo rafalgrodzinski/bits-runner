@@ -258,11 +258,6 @@ interrupt_handler_0e:
     push 0x0e
     jmp interrupt_handler
 
-interrupt_handler_0f:
-    push  0
-    push 0x0f
-    jmp interrupt_handler
-
 ; fpu fault
 interrupt_handler_10:
     push  0
@@ -453,19 +448,31 @@ interrupt_handler_30:
 
 ;
 ; Aggregated handler for all interrupts
+%define .eax [ebp + 4 * 7]
+%define .ebx [ebp + 4 * 4]
+%define .interrupt [ebp + 4 * 8]
+%define .info [ebp + 4 * 9]
 interrupt_handler:
-    cli
+    pushad
+    mov ebp, esp
 
-    push ebx
-    push eax
+    push dword .info
+    push dword .interrupt
+    push dword .ebx
+    push dword .eax
+
     call int_handler.handleInterrupt
-    add esp, 16
+    mov .eax, eax
 
     ; Acknowledge interrupt
-    push eax
     mov al, 0x20
     out PIC1_CMD_PORT, al
-    pop eax
 
-    sti
+    mov esp, ebp
+    popad
+    add esp, 8
     iret
+%undef .info
+%undef .interrupt 
+%undef .ebx
+%undef .eax

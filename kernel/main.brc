@@ -2,11 +2,12 @@
 @import mem
 @import fs_fat12
 @import bios_service
+@import drv_serial
 
 @extern interrupt_init_protected_mode fun
 
 copyEax raw<"=r"> -> u32
-    mov eax, eax
+    mov $0, eax
 ;
 
 call raw<"m">: entryAdr u32
@@ -16,11 +17,12 @@ call raw<"m">: entryAdr u32
 @export start fun
     @bios_service.init(copyEax())
 
+    @mem.init()
     @term.init(@term.MODE_80x25)
     @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
+    @drv_serial.init()
 
     interrupt_init_protected_mode()
-    @mem.init()
     @fs_fat12.init()
 
     @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
