@@ -52,21 +52,40 @@ heapLayout blob<HeapLayout>
 ;
 
 @export allocateBytes fun: bytes u32 -> ptr<u8>
+    ret allocateAlignedBytes(bytes, 0)
+;
+
+@export allocateAlignedBytes fun: bytes u32, alignment u32 -> ptr<u8>
     pBytes ptr<u8> <- { 0 }
 
-    if (heapLayout.heapSize - heapLayout.allocatedBytes) >= bytes
-        pBytes <- { heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes }
-        heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes
+    fillerSize u32 <- if alignment > 1: (alignment - ((heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes) % alignment)) % alignment else: 0
+
+    if (heapLayout.heapSize - heapLayout.allocatedBytes) >= (bytes + fillerSize)
+        pBytes <- { heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes + fillerSize }
+        heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes + fillerSize
     else
-        requiredBytes u32 <- bytes - (heapLayout.heapSize - heapLayout.allocatedBytes)
+        requiredBytes u32 <- (bytes + fillerSize) - (heapLayout.heapSize - heapLayout.allocatedBytes)
         allocatedBytes u32 <- allocatePageBytes(requiredBytes)
         if allocatedBytes > 0
             heapLayout.heapSize <- heapLayout.heapSize + allocatedBytes
-            pBytes <- { heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes }
-            heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes
+            pBytes <- { heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes + fillerSize }
+            heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes + fillerSize
         ;
     ;
+
     ret pBytes
+;
+
+@export virAdrToPhyAdr fun: address u32 -> u32
+    pPageDirectory ptr<data<u32>> <- { 0xffc0_0000 }
+
+    directoryIndex u32 <- (address & 0xffc0_0000) >> 22
+    tableIndex u32 <- (address & 0x003f_f000) >> 12
+    offset u32 <- address & 0x0000_0fff
+
+    pageEntry u32 <- pPageDirectory.val[directoryIndex * 1024 + tableIndex]
+    
+    ret pageEntry & 0xffff_fc00 + offset
 ;
 
 @export printMemStats fun

@@ -3,6 +3,7 @@
 @import fs_fat12
 @import bios_service
 @import drv_serial
+@import scheduler
 
 @extern interrupt_init_protected_mode fun
 
@@ -31,7 +32,8 @@ call raw<"m">: entryAdr u32
     if pShell.vAdr = 0
         @term.printString("Could not load SHELL.BIN!", @term.FOREGROUND_RED)
     else
-        call(pShell.vAdr)
+        pProcess ptr<blob<Process>> <- @scheduler.createProcess(pShell, 3_636)
+        @scheduler.switchToProcess(pProcess)
     ;
 
     rep

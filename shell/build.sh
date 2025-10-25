@@ -11,5 +11,5 @@ SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
 
 brb -v --triple=i686-unknown-linux-gnu --function-sections --no-zero-initialized-in-bss --reloc=static "${SCRIPT_DIR}/main.brc" "${SCRIPT_DIR}/io.brc"
 check
-ld.lld -T "${SCRIPT_DIR}/flat_binary.ld" main.o io.o -o shell.bin
+ld.lld -T "${SCRIPT_DIR}/shell.ld" main.o io.o -o shell.bin
 check

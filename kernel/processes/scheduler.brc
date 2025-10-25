@@ -1,0 +1,88 @@
+@module scheduler
+
+@import mem
+@import term
+
+Process blob
+    pageDirectory data<u32, 1024>
+    pid u32
+    cr3 u32
+    eip u32
+;
+
+getCr3 raw<"=r"> -> u32
+    mov $0, cr3
+;
+
+setCr3 raw<"m">: address u32
+    mov eax, $0
+    mov cr3, eax
+;
+
+disableInterrupts raw<"">
+    cli
+;
+
+enableInterrupts raw<"">
+    sti
+;
+
+@export createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32 -> ptr<blob<Process>>
+    pProcess ptr<blob<Process>> <- @mem.allocateAlignedBytes(blob<Process>.size, 0x1000)
+    pProcess.val.eip <- 0x40_00_00 // 4 MiB
+
+    // Setup paging
+    // clear all the data
+    rep i u32 <- 0, i < 1024, i <- i + 1: pProcess.val.pageDirectory[i] <-  0
+
+    pPageTable ptr<data<u32>>
+    // identity paging of the first MiB
+    pPageTable <- @mem.allocateAlignedBytes(u32.size * 1024, 0x1000)
+    rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- 0
+    rep i u32 <- 0, i < 256, i <- i + 1: pPageTable.val[i] <- (0x1000 * i) | 0b0000_0011 // RW & P
+    pProcess.val.pageDirectory[0] <- @mem.virAdrToPhyAdr(pPageTable.vAdr) | 0b0000_0011 // RW & P
+
+    // map kernel's memory 4 MiB
+    pPageTable <- @mem.allocateAlignedBytes(u32.size * 1024, 0x1000)
+    rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- ((0x1000 * i) + 0x10_00_00) | 0b0000_0011 // RW & P
+    pProcess.val.pageDirectory[512] <- @mem.virAdrToPhyAdr(pPageTable.vAdr) | 0b0000_0011 // RW & P
+
+    // map process' memory
+    pPageTable <- @mem.allocateAlignedBytes(u32.size * 1024, 0x1000)
+    rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- ((0x1000 * i) + pProcess.val.eip) | 0b0000_0011 // RW & P
+    pProcess.val.pageDirectory[1] <- @mem.virAdrToPhyAdr(pPageTable.vAdr) | 0b0000_0011 // RW & P
+
+    // store page directory address for process switching
+    pProcess.val.cr3 <- @mem.virAdrToPhyAdr(pProcess.val.pageDirectory.adr)
+
+    // map last memory page back to the page tables
+    pProcess.val.pageDirectory[1023] <- pProcess.val.cr3
+
+    // Copy image to target address
+    disableInterrupts()
+
+    oldCr3 u32 <- getCr3()
+    setCr3(pProcess.val.cr3)
+    imageTargetAddrss ptr<data<u8>> <- { pProcess.val.eip }
+    rep i u32 <- 0, i < imageSize, i <- i + 1
+        imageTargetAddrss.val[i] <- imageSourceAddress.val[i]
+    ;
+    setCr3(oldCr3)
+
+    enableInterrupts()
+
+    ret pProcess
+;
+
+switchToProcessRaw raw<"m,m,~{eax}">: eip u32, cr3 u32
+    cli
+    mov eax, $1
+    mov cr3, eax
+    push $0
+    sti
+    ret
+;
+
+@export switchToProcess fun: pProcess ptr<blob<Process>>
+    switchToProcessRaw(pProcess.val.eip, pProcess.val.cr3)
+;

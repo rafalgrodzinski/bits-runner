@@ -453,6 +453,7 @@ interrupt_handler_30:
 %define .interrupt [ebp + 4 * 8]
 %define .info [ebp + 4 * 9]
 interrupt_handler:
+    cli
     pushad
     mov ebp, esp
 
@@ -471,6 +472,7 @@ interrupt_handler:
     mov esp, ebp
     popad
     add esp, 8
+    sti
     iret
 %undef .info
 %undef .interrupt 
