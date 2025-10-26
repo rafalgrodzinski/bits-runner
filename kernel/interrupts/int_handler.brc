@@ -19,7 +19,7 @@ copyCr2 raw<"=r"> -> u32
     mov $0, cr2
 ;
 
-@export handleInterrupt fun: eax u32, ebx u32, interrupt u32, info u32 -> u32
+@export handleInterrupt fun: eax u32, ebx u32, interrupt u32, errorCode u32 -> u32
     if interrupt = INT_PAGE_FAULT
         @term.printString("Page fault accessing memory at: ", @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
         @term.printHex(copyCr2(), @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
@@ -33,6 +33,8 @@ copyCr2 raw<"=r"> -> u32
     else
         @term.printString("Unhandled interrupt: ", @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
         @term.printHex(interrupt, @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
+        @term.printString(", error code: ", @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
+        @term.printHex(errorCode, @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
         @term.printNewLine()
         halt()
     ;

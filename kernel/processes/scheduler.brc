@@ -5,11 +5,10 @@
 
 Process blob
     pageDirectory data<u32, 1024>
-    imgAdr u32
-    imgSize u32
-    pid u32
     cr3 u32
     eip u32
+    esp u32
+    pid u32
 ;
 
 getCr3 raw<"=r"> -> u32
@@ -32,6 +31,7 @@ enableInterrupts raw<"">
 @export createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32 -> ptr<blob<Process>>
     pProcess ptr<blob<Process>> <- @mem.allocateAlignedBytes(blob<Process>.size, 0x1000)
     pProcess.val.eip <- 0x40_00_00 // 4 MiB
+    pProcess.val.esp <- 0x8000_0000 - 3 * u32.size // Just below the kernel with 3 slots for iret frame
 
     // Setup paging
     // clear all the data
@@ -57,34 +57,45 @@ enableInterrupts raw<"">
     // map process' memory
     allocatedSize u32 <- @mem.allocateProcessPageBytes({ pProcess.val.pageDirectory.adr }, imageSize, pProcess.val.eip)
     if allocatedSize = 0
-        // TODO: Do some error or something
+        // TODO: Do some error handling or something
+    ;
+
+    // stack
+    allocatedStackSize u32 <- @mem.allocateProcessPageBytes({ pProcess.val.pageDirectory.adr }, 0x01, pProcess.val.esp)
+    if allocatedStackSize = 0
+        // TODO: Do some error handling or something
     ;
 
     // Copy image to target address
     disableInterrupts()
-
     oldCr3 u32 <- getCr3()
     setCr3(pProcess.val.cr3)
+
+    // setup iret frame
+    pStack ptr<data<u32>> <- { pProcess.val.esp }
+    pStack.val[2] <- 0x202 // eflags IF & 1
+    pStack.val[1] <- 0x08 // cs
+    pStack.val[0] <- pProcess.val.eip // eip
+
     imageTargetAddrss ptr<data<u8>> <- { pProcess.val.eip }
     rep i u32 <- 0, i < imageSize, i <- i + 1
         imageTargetAddrss.val[i] <- imageSourceAddress.val[i]
     ;
-    setCr3(oldCr3)
 
+    setCr3(oldCr3)
     enableInterrupts()
 
     ret pProcess
 ;
 
-switchToProcessRaw raw<"m,m,~{eax}">: eip u32, cr3 u32
+switchToProcessRaw raw<"m,m">: esp u32, cr3 u32
     cli
     mov eax, $1
     mov cr3, eax
-    push $0
-    sti
-    ret
+    mov esp, $0
+    iretd
 ;
 
 @export switchToProcess fun: pProcess ptr<blob<Process>>
-    switchToProcessRaw(pProcess.val.eip, pProcess.val.cr3)
+    switchToProcessRaw(pProcess.val.esp, pProcess.val.cr3)
 ;
