@@ -5,6 +5,8 @@
 
 Process blob
     pageDirectory data<u32, 1024>
+    imgAdr u32
+    imgSize u32
     pid u32
     cr3 u32
     eip u32
@@ -40,23 +42,23 @@ enableInterrupts raw<"">
     pPageTable <- @mem.allocateAlignedBytes(u32.size * 1024, 0x1000)
     rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- 0
     rep i u32 <- 0, i < 256, i <- i + 1: pPageTable.val[i] <- (0x1000 * i) | 0b0000_0011 // RW & P
-    pProcess.val.pageDirectory[0] <- @mem.virAdrToPhyAdr(pPageTable.vAdr) | 0b0000_0011 // RW & P
+    pProcess.val.pageDirectory[0] <- @mem.lAdrToPAdr(pPageTable.vAdr) | 0b0000_0011 // RW & P
 
     // map kernel's memory 4 MiB
     pPageTable <- @mem.allocateAlignedBytes(u32.size * 1024, 0x1000)
     rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- ((0x1000 * i) + 0x10_00_00) | 0b0000_0011 // RW & P
-    pProcess.val.pageDirectory[512] <- @mem.virAdrToPhyAdr(pPageTable.vAdr) | 0b0000_0011 // RW & P
-
-    // map process' memory
-    pPageTable <- @mem.allocateAlignedBytes(u32.size * 1024, 0x1000)
-    rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- ((0x1000 * i) + pProcess.val.eip) | 0b0000_0011 // RW & P
-    pProcess.val.pageDirectory[1] <- @mem.virAdrToPhyAdr(pPageTable.vAdr) | 0b0000_0011 // RW & P
+    pProcess.val.pageDirectory[512] <- @mem.lAdrToPAdr(pPageTable.vAdr) | 0b0000_0011 // RW & P
 
     // store page directory address for process switching
-    pProcess.val.cr3 <- @mem.virAdrToPhyAdr(pProcess.val.pageDirectory.adr)
-
+    pProcess.val.cr3 <- @mem.lAdrToPAdr(pProcess.val.pageDirectory.adr)
     // map last memory page back to the page tables
-    pProcess.val.pageDirectory[1023] <- pProcess.val.cr3
+    pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x03
+
+    // map process' memory
+    allocatedSize u32 <- @mem.allocateProcessPageBytes({ pProcess.val.pageDirectory.adr }, imageSize, pProcess.val.eip)
+    if allocatedSize = 0
+        // TODO: Do some error or something
+    ;
 
     // Copy image to target address
     disableInterrupts()
