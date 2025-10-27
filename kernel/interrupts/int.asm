@@ -25,6 +25,14 @@ dd idt_protected_mode ; address of IDT
     dw 0 ; ISR offset high bits <31-16>
 %endmacro
 
+%macro IDT_ENTRY_USER 1
+    dw 0 ; ISR offset low bits <15-0>
+    dw %1 ; gdt segment selector
+    db 0 ; reserved
+    db 11101110b ; <7: P> <6-5: DPL> <4: 0> <3: D> <2-0: Gate Type>, P: is active, DPL: priviledge, D: is 32bit, Gate Type: 110 interrupt
+    dw 0 ; ISR offset high bits <31-16>
+%endmacro
+
 idt_protected_mode:
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x00 divide error
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x01 debug exception
@@ -74,7 +82,7 @@ IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2c IRQ c
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2d IRQ d
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2e IRQ e
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2f IRQ f
-IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x30 SYS
+IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x30 SYS
 idt_protected_mode_end:
 
 %macro UPDATE_IDT_ADDRESS 2

@@ -14,3 +14,9 @@
 ## Multitasking
 - Brendan's Multi-tasking Tutorial:
 [https://wiki.osdev.org/Brendan%27s_Multi-tasking_Tutorial](https://wiki.osdev.org/Brendan%27s_Multi-tasking_Tutorial)
+
+## GDT
+[https://web.archive.org/web/20190424213806/http://www.osdever.net/tutorials/view/the-world-of-protected-mode](https://web.archive.org/web/20190424213806/http://www.osdever.net/tutorials/view/the-world-of-protected-mode)
+
+- Getting to Ring 3:
+[https://wiki.osdev.org/Getting_to_Ring_3](https://wiki.osdev.org/Getting_to_Ring_3)

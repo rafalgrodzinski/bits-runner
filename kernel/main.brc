@@ -11,12 +11,17 @@ copyEax raw<"=r"> -> u32
     mov $0, eax
 ;
 
+getEbx raw<"=r"> -> u32
+    mov $0, ebx
+;
+
 call raw<"m">: entryAdr u32
     call $0
 ;
 
 @export start fun
     @bios_service.init(copyEax())
+    @scheduler.init(getEbx())
 
     @mem.init()
     @term.init(@term.MODE_80x25)

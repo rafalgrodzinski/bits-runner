@@ -123,12 +123,12 @@ registerPageForLAdr fun: pPageDirectory ptr<data<u32>>, page u32, lAdr u32
     if pPageDirectory.val[directoryIndex] & 0x01 = 0
         pPageTable ptr<data<u32>> <- allocateAlignedBytes(u32.size * 1024, 0x1000)
         rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- 0
-        pPageDirectory.val[directoryIndex] <- lAdrToPAdr(pPageTable.vAdr) | 0x03
+        pPageDirectory.val[directoryIndex] <- lAdrToPAdr(pPageTable.vAdr) | 0b111
     ;
 
     // register page in page table
     pPageTables ptr<data<u32>> <- { 0xffc0_0000 }
-    pPageTables.val[directoryIndex * 0x400 + tableIndex] <- (page * pMemLayout.val.pageSize) | 0x03
+    pPageTables.val[directoryIndex * 0x400 + tableIndex] <- (page * pMemLayout.val.pageSize) | 0b111
 ;
 
 @export lAdrToPAdr fun: lAdr u32 -> u32

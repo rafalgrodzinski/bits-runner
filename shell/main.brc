@@ -53,10 +53,13 @@ start fun
         else if isEqual(buffer, "pf")
             p ptr<u8> <- { 0x80_00_00 }
             p.val <- 42
-        else if isEqual(buffer, "div")
+        /*else if isEqual(buffer, "div")
             num1 u32 <- 5
             num2 u32 <- 0
-            res u32 <- num1 / num2
+            res u32 <- num1 / num2*/
+        else if isEqual(buffer, "km")
+            p2 ptr<u8> <- { 0x8000_0000 }
+            p2.val <- 42
         else if isEqual(buffer, "mem")
             printMemStatsRaw()
         else if isEqual(buffer, "ls")
