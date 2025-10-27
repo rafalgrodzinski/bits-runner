@@ -52,6 +52,12 @@ memory_init:
     cmp ecx, 1024
     jb .loop_512
 
+    ; Point last entry to page directory
+    mov eax, page_directory
+    and eax, 0xfffff000
+    or eax, 3
+    mov [page_directory + 1023 * 4], eax
+
     ; Enable paging
     mov eax, page_directory
     mov cr3, eax

@@ -34,35 +34,38 @@ start fun
             character <- @io.readPressedAscii()
             if character = '\b' and count > 0
                 count <- count - 1
-                @io.printChar(character, 0x07)
+                @io.printChar(character, @io.ATTRIB_GRAY)
             ;
             if character != '\n' and character != '\b' and character != 0 and count < 15
                 buffer[count] <- character
                 count <- count + 1
-                @io.printChar(character, 0x07)
+                @io.printChar(character, @io.ATTRIB_GRAY)
             ;
         ;
         buffer[count] <- 0
         count <- 0
         character <- 0
-        @io.printChar('\n', 0x07)
+        @io.printChar('\n', @io.ATTRIB_GRAY)
 
         if isEqual(buffer, "reboot")
-            @io.printTextLine("Rebooting...", 0x07)
+            @io.printTextLine("Rebooting...", @io.ATTRIB_GRAY)
             rebootRaw()
         else if isEqual(buffer, "pf")
             p ptr<u8> <- { 0x80_00_00 }
             p.val <- 42
-        else if isEqual(buffer, "div")
+        /*else if isEqual(buffer, "div")
             num1 u32 <- 5
             num2 u32 <- 0
-            res u32 <- num1 / num2
+            res u32 <- num1 / num2*/
+        else if isEqual(buffer, "km")
+            p2 ptr<u8> <- { 0x8000_0000 }
+            p2.val <- 42
         else if isEqual(buffer, "mem")
             printMemStatsRaw()
         else if isEqual(buffer, "ls")
             listRootRaw()
         else
-            @io.printTextLine("Dunno", 0x07)
+            @io.printTextLine("Dunno", @io.ATTRIB_GRAY)
         ;
     ;
 ;

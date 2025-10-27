@@ -3,11 +3,16 @@
 @import fs_fat12
 @import bios_service
 @import drv_serial
+@import scheduler
 
 @extern interrupt_init_protected_mode fun
 
 copyEax raw<"=r"> -> u32
     mov $0, eax
+;
+
+getEbx raw<"=r"> -> u32
+    mov $0, ebx
 ;
 
 call raw<"m">: entryAdr u32
@@ -16,6 +21,7 @@ call raw<"m">: entryAdr u32
 
 @export start fun
     @bios_service.init(copyEax())
+    @scheduler.init(getEbx())
 
     @mem.init()
     @term.init(@term.MODE_80x25)
@@ -31,7 +37,8 @@ call raw<"m">: entryAdr u32
     if pShell.vAdr = 0
         @term.printString("Could not load SHELL.BIN!", @term.FOREGROUND_RED)
     else
-        call(pShell.vAdr)
+        pProcess ptr<blob<Process>> <- @scheduler.createProcess(pShell, 3_636)
+        @scheduler.switchToProcess(pProcess)
     ;
 
     rep

@@ -50,6 +50,22 @@ db 0
 db 10010010b
 db 00001111b
 db 0
+gdt_code_user_mode:
+dw 0xffff ; limit <15-0>
+dw 0x00 ; base <15-0>
+db 0x00 ; base <23-16>
+db 11111010b ; <7: Present> <6-5: Priviledge Level> <4: 1> <3-0: Type>
+db 11001111b ; <7: limit * 4kB> <6: 32bit> <5-4: 0> <3-0: limit 19-16>
+db 0x00 ; base <31-24>
+gdt_data_user_mode:
+dw 0xffff
+dw 0x00
+db 0x00
+db 11110010b
+db 11001111b
+db 0x00
+gdt_tss:
+dq 0
 
 gdt_descriptor:
 dw $ - gdt - 1 ; size of GDT - 1
@@ -195,6 +211,7 @@ bits 32
     call memory_init
 
     mov eax, bios_service
+    mov ebx, gdt_tss
     jmp KERNEL_ADR
 
 .halt:
