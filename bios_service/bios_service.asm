@@ -212,7 +212,6 @@ bits 32
 
     mov eax, bios_service
     mov ebx, gdt_tss
-    ;mov ebx, 0
     jmp KERNEL_ADR
 
 .halt:
