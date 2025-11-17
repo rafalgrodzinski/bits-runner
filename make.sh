@@ -36,7 +36,7 @@ echo "🛠️ Building shell..."
 ./shell/build.sh
 check "Failed to build shell"
 
-#echo
+echo
 
 # Disk Image
 echo "🛠️ Building disk image..."
