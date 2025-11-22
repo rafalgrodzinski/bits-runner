@@ -4,10 +4,11 @@
 @import bios_service
 @import drv_serial
 @import scheduler
+@import Storage
 
 @extern interrupt_init_protected_mode fun
 
-copyEax raw<"=r"> -> u32
+getEax raw<"=r"> -> u32
     mov $0, eax
 ;
 
@@ -15,20 +16,37 @@ getEbx raw<"=r"> -> u32
     mov $0, ebx
 ;
 
+getEdx raw<"=r"> -> u32
+    mov $0, edx
+;
+
+getEsi raw<"=r"> -> u32
+    mov $0, esi
+;
+
 call raw<"m">: entryAdr u32
     call $0
 ;
 
 @export start fun
-    @bios_service.init(copyEax())
-    @scheduler.init(getEbx())
+    biosServiceAdr u32 <- getEax()
+    gdtTssAdr u32 <- getEbx()
+    bootDriveNum u32 <- getEdx() & 0xff
+    bootPartitionAdr u32 <- getEsi() & 0xffff
+
+    @bios_service.init(biosServiceAdr)
+    @scheduler.init(gdtTssAdr)
 
     @mem.init()
     @term.init(@term.MODE_80x25)
     @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
-    @drv_serial.init()
+    //@drv_serial.init()
 
     interrupt_init_protected_mode()
+
+    @Storage.init(bootDriveNum, bootPartitionAdr)
+    @Storage.getBootStorageFs()
+    
     @fs_fat12.init()
 
     @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)

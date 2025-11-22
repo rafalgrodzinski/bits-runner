@@ -5,6 +5,7 @@
 SERVICE_REBOOT u8 <- 0x00
 SERVICE_SET_VIDEO_MODE u8 <- 0x01
 SERVICE_READ_SECTORS u8 <- 0x02
+SERVICE_SECTORS_COUNT u8 <- 0x03
 
 @export VIDEO_MODE_TEXT_80x25 u8 <- 0x00
 @export VIDEO_MODE_TEXT_80x50 u8 <- 0x01
@@ -37,6 +38,17 @@ readSectorsRaw raw<"m, m, m, m, m, m,~{eax},~{ebx},~{ecx},~{edi}">: biosServiceA
 
 @export readSectors fun: driveNum u32, firstSectorNum u32, sectorsCount u32, targetAddress ptr<u8>
     readSectorsRaw(serviceAdr, SERVICE_READ_SECTORS, driveNum.u8, firstSectorNum, sectorsCount, targetAddress.vAdr)
+;
+
+sectorsCountRaw raw<"=r,m,m,m,~{eax},~{edx}">: biosServiceAdr u32, serviceNum u8, driveNum u8 -> u32
+    mov ah, $2
+    mov dl, $3
+    call $1
+    mov $0, eax
+;
+
+@export sectorsCount fun: driveNum u32 -> u32
+    ret sectorsCountRaw(serviceAdr, SERVICE_SECTORS_COUNT, driveNum)
 ;
 
 setVideoModeRaw raw<"m, m, m">: biosServiceAdr u32, serviceNum u8, modeNum u8

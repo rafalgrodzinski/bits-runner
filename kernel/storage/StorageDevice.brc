@@ -1,0 +1,21 @@
+@module Storage
+
+@import bios_service
+
+StorageDevice blob
+    biosDriveNum u32
+    sectorsCount u32
+    readSectors ptr<fun u32, u32, ptr<data<u8>>>
+;
+
+initBiosDevice fun: biosDriveNum u32 -> blob<StorageDevice>
+    storageDevice blob<StorageDevice>
+    storageDevice.biosDriveNum <- biosDriveNum
+    storageDevice.sectorsCount <- @bios_service.sectorsCount(biosDriveNum)
+    storageDevice.readSectors <- { biosDeviceReadSectors.adr }
+    ret storageDevice
+;
+
+biosDeviceReadSectors fun: it ptr<blob<StorageDevice>>, startSector u32, sectorsCount u32, targetAdr ptr<data<u8>>
+    @bios_service.readSectors(it.val.biosDriveNum, startSector, sectorsCount, targetAdr)
+;

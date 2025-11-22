@@ -19,7 +19,10 @@ brb --ver=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-initi
 "${SCRIPT_DIR}/interrupts/syscall.brc" \
 "${SCRIPT_DIR}/interrupts/int_handler.brc" \
 "${SCRIPT_DIR}/drivers/drv_serial.brc" \
-"${SCRIPT_DIR}/processes/scheduler.brc"
+"${SCRIPT_DIR}/processes/scheduler.brc" \
+"${SCRIPT_DIR}/Storage/Storage.brc" \
+"${SCRIPT_DIR}/Storage/StorageDevice.brc" \
+"${SCRIPT_DIR}/Storage/StorageArea.brc"
 
 check
 nasm  -f elf32 -o int.o "${SCRIPT_DIR}/interrupts/int.asm"
@@ -35,4 +38,5 @@ drv_keyboard.o \
 syscall.o \
 int_handler.o \
 drv_serial.o \
-scheduler.o
+scheduler.o \
+Storage.o

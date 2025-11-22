@@ -1,0 +1,41 @@
+@module Storage
+
+@import term
+
+StorageArea blob
+    storageDevice blob<StorageDevice>
+    startSector u32
+    sectorsCount u32
+    readSectors ptr<fun ptr<blob<StorageDevice>>, u32, u32, ptr<data<u8>>>
+;
+
+initArea fun: device blob<StorageDevice>, startSector u32, sectorsCount u32 -> blob<StorageArea>
+    storageArea blob<StorageArea>
+    storageArea.storageDevice <- device
+    storageArea.startSector <- startSector
+    storageArea.sectorsCount <- sectorsCount
+    storageArea.readSectors <- { areaReadSectors.adr }
+
+    @term.printString("Device num: ", @term.FOREGROUND_GRAY)
+    @term.printHex(device.biosDriveNum, @term.FOREGROUND_GRAY)
+    @term.printNewLine()
+
+    @term.printString("Device sectors count: ", @term.FOREGROUND_GRAY)
+    @term.printHex(device.sectorsCount, @term.FOREGROUND_GRAY)
+    @term.printNewLine()
+
+    @term.printString("Area start sector: ", @term.FOREGROUND_GRAY)
+    @term.printHex(startSector, @term.FOREGROUND_GRAY)
+    @term.printNewLine()
+
+    @term.printString("Area sectors count: ", @term.FOREGROUND_GRAY)
+    @term.printHex(sectorsCount, @term.FOREGROUND_GRAY)
+    @term.printNewLine()
+
+    ret storageArea
+;
+
+areaReadSectors fun: it ptr<blob<StorageArea>>, startSector u32, sectorsCount u32, pTarget ptr<data<u8>>
+    startSector <- startSector + it.val.startSector
+    it.val.storageDevice.readSectors.val(startSector, sectorsCount, pTarget)
+;

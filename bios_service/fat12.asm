@@ -30,6 +30,31 @@ address_fat: dd 0
 address_root_dir: dd 0
 
 ;
+; Load file from root directory to a given address
+; in
+;  drive_number
+;  file_name_adr
+;  target_adr
+; out
+;  eax: 0 if success
+%define .drive_number [ebp + 8]
+%define .file_name_adr [ebp + 12]
+%define .target_adr [ebp + 16]
+[bits 32]
+storage_load_file:
+	push ebp
+	mov ebp, esp
+
+	mov eax, 1
+
+	mov esp, ebp
+	pop ebp
+	ret 4 * 3
+%undef .target_adr
+%undef .file_name_adr
+%undef .drive_number
+
+;
 ; Initialize fat file system
 ; in
 ;  edi: fat buffer address

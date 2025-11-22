@@ -1,0 +1,88 @@
+@module Storage
+
+@import term
+
+StorageFs blob
+
+;
+
+MBR_FIRST_PARTITION_OFFSET u32 <- 0x01be
+MBR_PARTITION_SIZE u32 <- 0x10
+MBR_PARTITION_START_SECTOR_OFFSET u32 <- 0x08
+MBR_PARTITION_SECTORS_COUNT_OFFSET u32 <- 0x0c
+
+bootDriveNumber u32
+bootPartitionIndex u32
+
+@export init fun: biosDriveNumber u32, mbrPartitionAddress u32
+    bootDriveNumber <- biosDriveNumber
+    if mbrPartitionAddress = 0x1be
+        bootPartitionIndex = 1
+    else if mbrPartitionAddress = 0x1ce
+        bootPartitionIndex = 2
+    else if mbrPartitionAddress = 0x1de
+        bootPartitionIndex = 3
+    else if mbrPartitionAddress = 0x1ee
+        bootPartitionIndex = 4
+    else
+        bootPartitionIndex = 0
+    ;
+
+    @term.printString("X", @term.FOREGROUND_GREEN)
+;
+
+@export getBootStorageFs fun //-> blob<StorageFs>
+    bootDevice blob<StorageDevice> <- initBiosDevice(bootDriveNumber)
+    startSector u32
+    sectorsCount u32
+
+    if bootPartitionIndex > 0
+        mbr data<u8, 0x200>
+        bootDevice.readSectors.val(0, 1, { mbr.adr })
+        pStartSector ptr<u32> <- { mbr.adr + MBR_FIRST_PARTITION_OFFSET + MBR_PARTITION_START_SECTOR_OFFSET }
+        pSectorsCount ptr<u32> <- { mbr.adr + MBR_FIRST_PARTITION_OFFSET + MBR_PARTITION_SECTORS_COUNT_OFFSET }
+
+        startSector <- pStartSector.val
+        sectorsCount <- pSectorsCount.val
+    else
+        startSector <- 0
+        sectorsCount <- bootDevice.sectorsCount
+    ;
+
+    bootArea blob<StorageArea> <- initArea(bootDevice, startSector, sectorsCount)
+;
+
+/*
+FsDriver blob
+  storageArea blob<Storage area>
+  file fun: it ptr<blob<FsDriver>>, fileName blob<String> -> blob<File>
+;
+
+StorageArea blob
+   storageDevice blob<StorageDevice>
+  startSector u32
+  sectorsCount u32
+  read fun: it ptr<blob<StorageArea>>, startSector u32, sectorsCount u32, target address ptr<data<u8>>
+;
+
+init fun:. ... -> blob<Storage Area>
+  storageArea blob<StorageArea>
+  storageArea.storageDevice <- storageDevice
+  ...
+  ret storageArea
+
+storageInit
+
+storageDevice blob<StorageDevice> <- @StorageDeviceFdd.biosDevice(deviceNum)
+
+mbr blob<Mbr> <- readMbr(storageDevice)
+
+storageArea blob<StorageArea> <- @StorageArea.init(device, mbr[i].start, mbr[i].count)
+
+fs blob<FsDriver> <- @FsDriverFat.init(storageArea)
+
+Storage FS
+fsDriver blob<FsDriver>
+
+file fun: fileName blob<String> -> blob<File>
+*/

@@ -55,4 +55,7 @@ cp kernel.bin "${MOUNT_POINT}/"
 cp shell.bin "${MOUNT_POINT}/"
 hdiutil eject "${MOUNT_POINT}"
 
-cp floppy.img ~/Downloads/
+# tmp
+cp floppy.img ~/Downloads/bits_runner.img
+rm ~/Downloads/bits_runner.vmdk
+VBoxManage convertfromraw ~/Downloads/bits_runner.img ~/Downloads/bits_runner.vmdk --format VMDK

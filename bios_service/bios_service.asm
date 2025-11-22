@@ -1,5 +1,5 @@
-org 0x1000
-cpu 386
+[org 0x1000]
+[cpu 386]
 
 %include "bios_service/bios_service_header.asm"
 
@@ -14,7 +14,7 @@ cpu 386
 %define PIC2_DATA_PORT 0xa1
 
 ; Jump over data into strt point
-bits 16
+[bits 16]
 jmp 0:start ; Sets CS to 0
 
 ;
@@ -92,6 +92,7 @@ dd 0
 %define GDT_DATA_V86_MODE gdt_data_v86_mode - gdt
 
 boot_drive_number: db 0
+boot_partition_adr: dw 0
 kernel_file_name: db `KERNEL  BIN`
 kernel_size: dd 0
 
@@ -105,10 +106,12 @@ msg_error_memory_low db `Fatal Error! At least 16MiB of RAM is required!\0`
 msg_error_kernel_not_found db `Fatal Error! KERNEL.BIN not found!\0`
 msg_error_a20_not_enabled db `Fatal Error! A20 line not enabled!\0`
 
-bits 16
+[bits 16]
 start:
 	; store boot drive number
 	mov [boot_drive_number], dl
+    ; store boot partition address
+    mov [boot_partition_adr], si
 
     ; Enable line A20 so memory above 1MiB behaves correctly
     call enable_a20
@@ -168,16 +171,21 @@ start:
     lgdt [gdt_descriptor]
     call switch_to_protected_mode
 
+    ;mov edi, BUFFER_ADR + 512
+    ;mov dl, [boot_drive_number]
+    ;call fat_init
+
+    ;mov esi, kernel_file_name
+    ;call fat_file_entry  ; Get file entry into edi
+
 bits 32
     ; Load kernel
-    mov edi, BUFFER_ADR + 512
-    mov dl, [boot_drive_number]
-    call fat_init
-
-    mov esi, kernel_file_name
-    call fat_file_entry  ; Get file entry into edi
-    cmp edi, 0
-    jne .kernel_file_found
+    push dword BUFFER_ADR + 512
+    push kernel_file_name
+    push dword [boot_drive_number]
+    call storage_load_file
+    cmp eax, 0
+    jz .kernel_file_found
     call switch_to_v86_mode
 bits 16
     mov si, msg_error_kernel_not_found
@@ -212,6 +220,10 @@ bits 32
 
     mov eax, bios_service
     mov ebx, gdt_tss
+    mov edx, 0
+    mov dl, [boot_drive_number]
+    mov esi, 0
+    mov si, [boot_partition_adr]
     jmp KERNEL_ADR
 
 .halt:
@@ -506,6 +518,14 @@ bios_service:
     call service_read_sectors
 .not_read_sectors:
 
+    ; Sectors count
+    cmp ah, BIOS_SERVICE_SECTORS_COUNT
+    jne .not_sectors_count
+    and edx, 0xff
+    push edx ; drive number
+    call service_sectors_count
+.not_sectors_count:
+
     ret
 
 ;
@@ -575,7 +595,7 @@ bits 32
 %define .source_lba_address [ebp + 12]
 %define .sectors_count [ebp + 16]
 %define .target_address [ebp + 20]
-bits 32
+[bits 32]
 service_read_sectors:
     push ebp
     mov ebp, esp
@@ -616,6 +636,52 @@ service_read_sectors:
 %undef .sectors_count
 %undef .source_lba_address
 %undef .drive_number
+
+;
+; Get number of sectors for a given drive 
+; in
+;  drive_number
+db `BANANA`
+%define .drive_number [ebp + 8]
+bits 32
+service_sectors_count:
+    push ebp
+    mov ebp, esp
+
+    call switch_to_v86_mode
+bits 16
+    mov ah, 0x08
+    mov edx, .drive_number
+    ;mov esi, buffer
+    int 0x13
+    ;mov eax, [buffer + 0x10]
+
+    ; heads
+    mov eax, 0
+    mov al, dh
+    inc al
+
+    ; sectors
+    mov bx, cx
+    and bx, 0x3f ; bits 5-0 sectors
+    mul bx
+
+    ; cylinders
+    mov bx, 0
+    mov bl, ch
+    shr cl, 6
+    mov bh, cl
+    inc bx
+    mul bx
+
+    ; eax <- heads * sectors * cylinders
+
+    call switch_to_protected_mode
+bits 32
+
+    mov esp, ebp
+    pop ebp
+    ret 4 * 1
 
 ;
 ; Stop execution and show error message
