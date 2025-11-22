@@ -937,7 +937,7 @@ init_memory_layout:
 %undef .memory_size
 %undef .layout_data_adr
 
-%include "bios_service/fat12.asm"
+%include "bios_service/storage.asm"
 %include "bios_service/memory_manager.asm"
 
 memory_size: dd 0
