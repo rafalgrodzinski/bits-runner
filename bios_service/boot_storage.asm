@@ -1,6 +1,6 @@
-org 0x1000
-cpu 386
-bits 32
+[org 0x1000]
+[cpu 386]
+[bits 32]
 
 %define FAT_BYTES_PER_SECTOR 512
 %define FAT_RESERVED_SECTORS_COUNT 1
@@ -29,6 +29,58 @@ heads_count: db FAT_HEADS_COUNT
 address_fat: dd 0
 address_root_dir: dd 0
 
+
+boot_drive_heads dd 0
+boot_drive_sectors dd 0
+boot_drive_cylinders dd 0
+boot_drive_first_sector
+
+;
+; Initialize boot storage handler
+; in
+;  boot_drive_number
+;  boot_partition_entry_adr
+%define .boot_drive_number [ebp + 8]
+%define .boot_partition_entry_adr [ebp + 12]
+[bits 32]
+boot_storage_init_32:
+	push ebp
+	mov ebp, esp
+
+	; Get geometry
+	call switch_to_v86_mode
+[bits 16]
+	mov ah, 0x08
+	mov edx, .boot_drive_number
+	int 0x13
+
+	; heads (bits 7:0 of edx)
+	shr edx, 8
+	and edx, 0xff
+	inc edx
+	mov [boot_drive_heads], eax
+
+	; sectors (bits 5-0 of ecx)
+	mov eax, ecx
+	and eax, 0x3f
+	mov [boot_drive_sectors], eax
+
+	; cylinders (bits 7-6 cl, 7-0 ch)
+	mov eax, 0
+	mov al, ch
+	shr cl, 6
+	mov ah, cl
+	inc eax
+	mov [boot_drive_cylinders], eax
+
+	; Get first sector (first sector of a partition or 0 if not using mbr)
+	
+
+	mov esp, ebp
+	pop ebp
+%undef .boot_partition_entry_adr
+%undef .boot_drive_number
+
 ;
 ; Load file from root directory to a given address
 ; in
@@ -38,20 +90,27 @@ address_root_dir: dd 0
 ; out
 ;  eax: 0 if success
 %define .drive_number [ebp + 8]
-%define .file_name_adr [ebp + 12]
-%define .target_adr [ebp + 16]
+%define .partition_entry_adr [ebp + 12]
+%define .file_name_adr [ebp + 16]
+%define .target_adr [ebp + 20]
 [bits 32]
 storage_load_file:
 	push ebp
 	mov ebp, esp
 
-	mov eax, 1
+    mov edi, BUFFER_ADR + 512
+    mov edx, .drive_number
+    call fat_init
+
+	mov esi, .file_name_adr
+	call fat_file_entry
 
 	mov esp, ebp
 	pop ebp
 	ret 4 * 3
 %undef .target_adr
 %undef .file_name_adr
+%undef .partition_entry_adr
 %undef .drive_number
 
 ;

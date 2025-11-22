@@ -92,7 +92,7 @@ dd 0
 %define GDT_DATA_V86_MODE gdt_data_v86_mode - gdt
 
 boot_drive_number: db 0
-boot_partition_adr: dw 0
+boot_partition_entry_adr: dw 0
 kernel_file_name: db `KERNEL  BIN`
 kernel_size: dd 0
 
@@ -111,7 +111,7 @@ start:
 	; store boot drive number
 	mov [boot_drive_number], dl
     ; store boot partition address
-    mov [boot_partition_adr], si
+    mov [boot_partition_entry_adr], si
 
     ; Enable line A20 so memory above 1MiB behaves correctly
     call enable_a20
@@ -178,10 +178,15 @@ start:
     ;mov esi, kernel_file_name
     ;call fat_file_entry  ; Get file entry into edi
 
-bits 32
+[bits 32]
     ; Load kernel
+    push dword [boot_partition_entry_adr]
+    push dword [boot_drive_number]
+    call boot_storage_init_32
+
     push dword BUFFER_ADR + 512
     push kernel_file_name
+    push dword [boot_partition_entry_adr]
     push dword [boot_drive_number]
     call storage_load_file
     cmp eax, 0
@@ -223,7 +228,7 @@ bits 32
     mov edx, 0
     mov dl, [boot_drive_number]
     mov esi, 0
-    mov si, [boot_partition_adr]
+    mov si, [boot_partition_entry_adr]
     jmp KERNEL_ADR
 
 .halt:
@@ -937,7 +942,7 @@ init_memory_layout:
 %undef .memory_size
 %undef .layout_data_adr
 
-%include "bios_service/storage.asm"
+%include "bios_service/boot_storage.asm"
 %include "bios_service/memory_manager.asm"
 
 memory_size: dd 0
