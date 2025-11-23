@@ -18,6 +18,12 @@
 %define FAT_ROOT_DIR_OFFSET FAT_RESERVED_SECTORS_COUNT + FAT_SECTORS_PER_FAT * FAT_FATS_COUNT
 %define FAT_ROOT_DIR_SECTORS_COUNT (FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY) / FAT_BYTES_PER_SECTOR
 
+%define FIRST_PARTITION_ENTRY_OFFSET 0x01be
+%define SECOND_PARTITION_ENTRY_OFFSET 0x01ce
+%define THIRD_PARTITION_ENTRY_OFFSET 0x01de
+%define FOURTH_PARTITION_ENTRY_OFFSET 0x01ee
+%define PARTITION_ENTRY_START_SECTOR_OFFSET 0x08
+
 ;
 ; Messages
 msg_error_disk_read_failed db `Failed to read disk!\n\0`
@@ -29,11 +35,11 @@ heads_count: db FAT_HEADS_COUNT
 address_fat: dd 0
 address_root_dir: dd 0
 
-
-boot_drive_heads dd 0
-boot_drive_sectors dd 0
-boot_drive_cylinders dd 0
-boot_drive_first_sector
+boot_storage_drive_number: dd 0
+boot_storage_drive_cylinders: dd 0
+boot_storage_drive_heads: dd 0
+boot_storage_drive_sectors: dd 0
+boot_storage_first_sector: dd 0
 
 ;
 ; Initialize boot storage handler
@@ -47,23 +53,30 @@ boot_storage_init_32:
 	push ebp
 	mov ebp, esp
 
+	mov eax, .boot_drive_number
+	mov dword [boot_storage_drive_number], eax
+
 	; Get geometry
 	call switch_to_v86_mode
 [bits 16]
+
 	mov ah, 0x08
 	mov edx, .boot_drive_number
 	int 0x13
+
+	call switch_to_protected_mode
+[bits 32]
 
 	; heads (bits 7:0 of edx)
 	shr edx, 8
 	and edx, 0xff
 	inc edx
-	mov [boot_drive_heads], eax
+	mov [boot_storage_drive_heads], edx
 
 	; sectors (bits 5-0 of ecx)
 	mov eax, ecx
 	and eax, 0x3f
-	mov [boot_drive_sectors], eax
+	mov [boot_storage_drive_sectors], eax
 
 	; cylinders (bits 7-6 cl, 7-0 ch)
 	mov eax, 0
@@ -71,15 +84,129 @@ boot_storage_init_32:
 	shr cl, 6
 	mov ah, cl
 	inc eax
-	mov [boot_drive_cylinders], eax
+	mov [boot_storage_drive_cylinders], eax
 
 	; Get first sector (first sector of a partition or 0 if not using mbr)
-	
+	push dword buffer
+	push dword 0
+	call boot_storage_read_sector_32
+
+	; Then figure out which partition entry should be used
+	mov eax, 0 ; no offset if no partitions 0x165b
+
+	cmp dword .boot_partition_entry_adr, FIRST_PARTITION_ENTRY_OFFSET
+	jne .not_first
+	mov eax, [buffer + FIRST_PARTITION_ENTRY_OFFSET + PARTITION_ENTRY_START_SECTOR_OFFSET]
+	.not_first:
+
+	cmp dword .boot_partition_entry_adr, SECOND_PARTITION_ENTRY_OFFSET
+	jne .not_second
+	mov eax, [buffer + SECOND_PARTITION_ENTRY_OFFSET + PARTITION_ENTRY_START_SECTOR_OFFSET]
+	.not_second:
+
+	cmp dword .boot_partition_entry_adr, THIRD_PARTITION_ENTRY_OFFSET
+	jne .not_third
+	mov eax, [buffer + THIRD_PARTITION_ENTRY_OFFSET + PARTITION_ENTRY_START_SECTOR_OFFSET]
+	.not_third:
+
+	cmp dword .boot_partition_entry_adr, FOURTH_PARTITION_ENTRY_OFFSET
+	jne .not_fourth
+	mov eax, [buffer + FOURTH_PARTITION_ENTRY_OFFSET + PARTITION_ENTRY_START_SECTOR_OFFSET]
+	.not_fourth:
+
+	mov [boot_storage_first_sector], eax
 
 	mov esp, ebp
 	pop ebp
+	ret 4 * 2
 %undef .boot_partition_entry_adr
 %undef .boot_drive_number
+
+;
+; Read sector from the boot storage device
+; in
+;  sector_index
+;  target_adr
+; out
+;  eax: read sectors count or 0 on error
+%define .sector_index [ebp + 8]
+%define .target_address [ebp + 12]
+[bits 32]
+boot_storage_read_sector_32:
+	push ebp
+	mov ebp, esp
+
+	; convert LBA address into CHS in ch, dh, cl
+	push dword .sector_index
+	call boot_storage_lba_to_chs_32
+
+	mov al, 1 ; read single sector
+	mov bx, .target_address
+	mov dl, [boot_storage_drive_number]
+	mov edi, 3 ; try reading 3 times
+
+	call switch_to_v86_mode
+[bits 16]
+
+.loop:
+	mov ah, 0x02
+	int 0x13
+	jnc .read_successful
+	dec edi
+	jnz .loop
+
+	mov eax, 0
+	jmp .reading_finished
+
+.read_successful:
+	mov eax, 1
+
+.reading_finished:
+	call switch_to_protected_mode
+[bits 32]
+	mov esp, ebp
+	pop ebp
+	ret 4 * 3
+%undef .target_address
+%undef .sectors_count
+%undef .start_sector
+
+;
+; Convert LBA address to CHS address
+; in
+;  lba
+; out
+;  cl: cylinder & sector
+;  ch: cylinder
+;  dh: head
+;  cylinder <cl 7-6, ch 7-0>, sector <cl 5-0>, head <dh>
+%define .lba [ebp + 8]
+[bits 32]
+boot_storage_lba_to_chs_32: ; 0x16e6
+	push ebp
+	mov ebp, esp
+
+	mov dx, 0
+	mov ax, .lba
+
+	mov bx, [boot_storage_drive_sectors]
+	div bx
+	mov cl, dl
+	add cl, 1
+	and cl, 0x3f ; sector, bits 5-0, lba % sectors per track + 1
+	
+	mov dx, 0
+    mov bx, [boot_storage_drive_heads]
+	div bx
+	mov dh, dl ; head, (lba / secttors per track) % heads
+	mov ch, al ; cylinder, 7-0 (lba / secttors per track) / heads
+	shl ah, 6
+	or cl, ah ; cylinder, 9-8 (in bits 7-6 of cl, together with sector at 5-0)
+
+	mov esp, ebp
+	pop ebp
+	ret 4 * 1
+%undef .lba
 
 ;
 ; Load file from root directory to a given address

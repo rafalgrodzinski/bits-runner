@@ -91,8 +91,8 @@ dd 0
 %define GDT_CODE_V86_MODE gdt_code_v86_mode - gdt
 %define GDT_DATA_V86_MODE gdt_data_v86_mode - gdt
 
-boot_drive_number: db 0
-boot_partition_entry_adr: dw 0
+boot_drive_number: dd 0
+boot_partition_entry_adr: dd 0
 kernel_file_name: db `KERNEL  BIN`
 kernel_size: dd 0
 
@@ -109,9 +109,11 @@ msg_error_a20_not_enabled db `Fatal Error! A20 line not enabled!\0`
 [bits 16]
 start:
 	; store boot drive number
-	mov [boot_drive_number], dl
+    and edx, 0xff
+	mov [boot_drive_number], edx
     ; store boot partition address
-    mov [boot_partition_entry_adr], si
+    and esi, 0xffff
+    mov [boot_partition_entry_adr], esi
 
     ; Enable line A20 so memory above 1MiB behaves correctly
     call enable_a20
@@ -169,7 +171,6 @@ start:
     mov ss, ax
     mov sp, 0xffff
     lgdt [gdt_descriptor]
-    call switch_to_protected_mode
 
     ;mov edi, BUFFER_ADR + 512
     ;mov dl, [boot_drive_number]
@@ -177,38 +178,40 @@ start:
 
     ;mov esi, kernel_file_name
     ;call fat_file_entry  ; Get file entry into edi
-
+    call switch_to_protected_mode
 [bits 32]
+
     ; Load kernel
     push dword [boot_partition_entry_adr]
     push dword [boot_drive_number]
     call boot_storage_init_32
 
-    push dword BUFFER_ADR + 512
-    push kernel_file_name
-    push dword [boot_partition_entry_adr]
-    push dword [boot_drive_number]
-    call storage_load_file
-    cmp eax, 0
-    jz .kernel_file_found
-    call switch_to_v86_mode
-bits 16
-    mov si, msg_error_kernel_not_found
-    call fatal_error
 
-bits 32
-.kernel_file_found:
-    mov ebx, edi ; preserve
+;    push dword BUFFER_ADR + 512
+;    push kernel_file_name
+;    push dword [boot_partition_entry_adr]
+;    push dword [boot_drive_number]
+;    call storage_load_file
+;    cmp eax, 0
+;    jz .kernel_file_found
+;    call switch_to_v86_mode
+;bits 16
+;    mov si, msg_error_kernel_not_found
+;    call fatal_error
 
-    mov esi, edi
-    call fat_file_size ; Get size into eax
-    mov [kernel_size], eax
-
-    mov esi, ebx ; restore entry address
-    mov edi, KERNEL_PHY_ADR
-    mov ebx, BUFFER_ADR
-    mov dl, [boot_drive_number]
-    call fat_load_file
+;bits 32
+;.kernel_file_found:
+;    mov ebx, edi ; preserve
+;
+;    mov esi, edi
+;    call fat_file_size ; Get size into eax
+;    mov [kernel_size], eax
+;
+;    mov esi, ebx ; restore entry address
+;    mov edi, KERNEL_PHY_ADR
+;    mov ebx, BUFFER_ADR
+;    mov dl, [boot_drive_number]
+;    call fat_load_file
 
     ; Provide memory information to kernel
     push dword [kernel_size]
@@ -646,7 +649,6 @@ service_read_sectors:
 ; Get number of sectors for a given drive 
 ; in
 ;  drive_number
-db `BANANA`
 %define .drive_number [ebp + 8]
 bits 32
 service_sectors_count:
