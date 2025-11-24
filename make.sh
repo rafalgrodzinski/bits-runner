@@ -38,22 +38,30 @@ check "Failed to build shell"
 
 echo
 
-## Create floppy image
-#echo "🛠️ Building disk image..."
-## Generate empty image file
-#dd if=/dev/zero bs=512 count=2880 of=floppy.img
-## Attach and format the file
-#DISK=`hdiutil attach floppy.img -nomount`
-#newfs_msdos -F 12 -v "${VOLUME_NAME}" ${DISK}
-## Overrite the boot sector
-#dd if=boot.bin of=${DISK}
-#diskutil eject ${DISK}
-## Mount and copy a file into it
-#MOUNT_POINT=$(hdiutil attach floppy.img | grep -o '\/Volumes\/.*')
-#cp bios_svc.bin "${MOUNT_POINT}/"
-#cp kernel.bin "${MOUNT_POINT}/"
-#cp shell.bin "${MOUNT_POINT}/"
-#hdiutil eject "${MOUNT_POINT}"
+
+# Create floppy image
+echo "🛠️ Building FDD image..."
+# Generate empty image file
+rm fdd.img &> /dev/null
+dd if=/dev/zero bs=512 count=2880 of=fdd.img
+
+# Attach and format the file
+DISK_FDD=`hdiutil attach fdd.img -nomount | xargs`
+newfs_msdos -F 12 -v "${VOLUME_NAME}" "${DISK_FDD}"
+
+# Overwrite the boot sector
+dd if=boot.bin of="${DISK_FDD}"
+diskutil eject "${DISK_FDD}"
+
+# Mount and copy files
+FDD_MOUNT_POINT=$(hdiutil attach fdd.img | grep -o '\/Volumes\/.*')
+cp bios_svc.bin "${FDD_MOUNT_POINT}/"
+cp kernel.bin "${FDD_MOUNT_POINT}/"
+cp shell.bin "${FDD_MOUNT_POINT}/"
+hdiutil eject "${FDD_MOUNT_POINT}"
+
+echo
+
 
 # Create 64 MiB hard disk image
 echo "🛠️ Building HDD image..."
@@ -83,7 +91,7 @@ cp kernel.bin "${HDD_MOUNT_POINT}/"
 cp shell.bin "${HDD_MOUNT_POINT}/"
 hdiutil eject "${DISK_HDD}"
 
-# tmp
-#cp floppy.img ~/Downloads/bits_runner_fdd.img
-#rm ~/Downloads/bits_runner.vmdk
-#VBoxManage convertfromraw ~/Downloads/bits_runner.img ~/Downloads/bits_runner.vmdk --format VMDK
+# Copy image files
+cp fdd.img ~/Downloads/bits_runner_fdd.img
+rm ~/Downloads/bits_runner_hdd.vmdk &> /dev/null
+VBoxManage convertfromraw hdd.img ~/Downloads/bits_runner_hdd.vmdk --format VMDK
