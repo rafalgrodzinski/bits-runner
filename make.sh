@@ -9,6 +9,8 @@ function check {
 }
 
 VOLUME_NAME="BITS RUNNER"
+FAT_12_16_HEADER_SIZE=62
+FAT_32_HEADER_SIZE=90
 
 # Boot
 echo "🛠️ Building bootloader..."
@@ -49,8 +51,8 @@ dd if=/dev/zero bs=512 count=2880 of=fdd.img
 DISK_FDD=`hdiutil attach fdd.img -nomount | xargs`
 newfs_msdos -F 12 -v "${VOLUME_NAME}" "${DISK_FDD}"
 
-# Overwrite the boot sector
-dd if=boot.bin of="${DISK_FDD}"
+# Overwrite the boot sector (but keep the FAT header intact)
+dd if=boot.bin of="${DISK_FDD}" bs=1 count=450 skip=${FAT_12_16_HEADER_SIZE} seek=${FAT_12_16_HEADER_SIZE}
 diskutil eject "${DISK_FDD}"
 
 # Mount and copy files
@@ -79,12 +81,11 @@ diskutil eject "${DISK_HDD}"
 hdiutil attach hdd.img -nomount
 # Overwrite drive boot sector
 dd if=mbr.bin of="${DISK_HDD}" bs=446 count=1
-# Overwrite partition boot sector
-dd if=boot.bin of="${DISK_HDD}s1"
+# Overwrite partition boot sector (but keep the FAT header intact)
+dd if=boot.bin of="${DISK_HDD}s1" bs=1 count=450 skip=${FAT_12_16_HEADER_SIZE} seek=${FAT_12_16_HEADER_SIZE}
 
 diskutil eject "${DISK_HDD}"
-
-## Mount and copy files
+# Mount and copy files
 HDD_MOUNT_POINT=$(hdiutil attach hdd.img | grep -o '\/Volumes\/.*' | head -1)
 cp bios_svc.bin "${HDD_MOUNT_POINT}/"
 cp kernel.bin "${HDD_MOUNT_POINT}/"
