@@ -24,3 +24,6 @@ It is under early development but the the desired design includes:
 Building works on macOS. Support for Linux may be added at a later point.
 
 Make sure you have [nasm](https://github.com/netwide-assembler/nasm) and [BRC](https://github.com/rafalgrodzinski/bits-runner-code) in your run path. Execute `/.make.sh`, which should produce a `floppy.img`, which is a FAT12 formatted floppy disk image. Run on your favourite virtual machine (tested on VM Ware and Bochs).
+
+## Notes
+The HDD image uses [MBiRa](https://github.com/alexfru/MBiRa) as the MBR boot manager.
