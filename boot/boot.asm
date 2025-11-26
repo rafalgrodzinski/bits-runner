@@ -2,6 +2,7 @@
 [cpu 386]
 [bits 16]
 
+; 0xeb 0x3c 0x90, jump to the start of the code
 jmp short start
 nop
 
@@ -11,11 +12,18 @@ nop
 
 %define ADDRESS_BIOS_SERVICE 0x1000 ; 4KiB
 
+%define boot_drive_number buffer ; 1 byte
+%define fat_first_data_sector buffer + 1 ; 2 bytes
+%define fat_root_dir_start_sector buffer + 3 ; 2 bytes
+%define fat_root_dir_sectors_count buffer + 5 ; 2 bytes
+%define fat_bytes_per_cluster buffer + 7 ; 2 bytes
+%define data buffer + 9
+
 ; FAT12 header (filled-in by formatting utility)
 ; BPB (BIOS Parameter Block)
 times 8 db 0; label
 bpb_bytes_per_sector: dw 0
-db 0 ; sectors per cluster
+bpb_sectors_per_cluster: db 0
 bpb_reserved_sectors_count: dw 0
 bpb_fats_count: db 0
 bpb_root_dir_entries_count: dw 0
@@ -36,9 +44,8 @@ times 8 db 0 ; file system type (8 bytes)
 
 start:
 	; Setup segments
-	mov ax, 0
+	xor ax, ax
 	mov ds, ax
-	mov es, ax
 	mov ss, ax
 	mov sp, 0x7c00
 
@@ -54,6 +61,7 @@ start:
 	call print_string
 
 	; Read drive CHS geometry
+	mov dl, [boot_drive_number]
 	mov ah, 0x08
 	int 0x13
 	and cl, 0x3f ; only bits 5-0 are used (7-6 are used fore cylinders)
@@ -61,35 +69,39 @@ start:
 	inc dh
 	mov [bpb_heads_count], dh
 
-	; fat_root_dir_offset
+	; fat_root_dir_start_sector
 	mov ax, [bpb_sectors_per_fat]
 	mul word [bpb_fats_count]
 	add ax, [bpb_reserved_sectors_count]
 	add ax, [bpb_hidden_sectors]
-	mov [fat_root_dir_offset], ax
+	mov [fat_root_dir_start_sector], ax
 
 	; fat_root_dir_sectors_count
-	mov dx, 0
+	xor dx, dx
 	mov ax, [bpb_root_dir_entries_count]
 	mov bx, FAT_BYTES_PER_ENTRY
 	mul bx
 	div word [bpb_bytes_per_sector]
 	mov [fat_root_dir_sectors_count], ax
 
-	; fat first data sector
-	mov ax, [fat_root_dir_offset]
-	add ax, word [fat_root_dir_sectors_count]
-	sub ax, 2
+	; fat_first_data_sector
+	mov ax, [fat_root_dir_start_sector]
+	add ax, [fat_root_dir_sectors_count]
 	mov [fat_first_data_sector], ax
 
+	; fat_bytes_per_cluster
+	movzx ax, [bpb_sectors_per_cluster]
+	mul word [bpb_bytes_per_sector]
+	mov [fat_bytes_per_cluster], ax
+
 	; Read root directory
-	mov ax, [fat_root_dir_offset]
-	mov bx, buffer
+	mov ax, [fat_root_dir_start_sector]
+	mov bx, data
 	mov cx, [fat_root_dir_sectors_count]
 	call read_sectors
 
 	; Find fat cluster number for bios service file
-	mov ax, buffer
+	mov ax, data
 	mov bx, bios_service_file_name
 	call find_cluster_number
 	cmp ax, 0
@@ -104,13 +116,14 @@ start:
 
 	; Read first fat entry
 	mov ax, [bpb_reserved_sectors_count]
-	mov bx, buffer
+	add ax, [bpb_hidden_sectors]
+	mov bx, data
 	mov cx, [bpb_sectors_per_fat]
 	call read_sectors
 	
 	; Load file
 	pop ax ; restore cluster number
-	mov bx, buffer ; fat buffer
+	mov bx, data ; fat buffer
 	mov cx, ADDRESS_BIOS_SERVICE
 	call load_file
 
@@ -134,9 +147,7 @@ fatal_error:
 ; in
 ;  si: message address
 print_string:
-	pusha
-
-	mov bx, 0
+	xor bx, bx
 	mov ah, 0x0e
 
 .loop:
@@ -153,30 +164,6 @@ print_string:
 	mov al, 0x0a ; LF
 	int 0x10
 
-	popa
-	ret
-
-;
-; Converts LBA to CHS addressing
-; in
-;  ax: LBA address
-; out
-;  cl: sector
-;  dh: head
-;  ch: cylinder
-lba_to_chs:
-	push ax
-	
-	div byte [bpb_sectors_per_track]
-	mov cl, ah
-	add cl, 1 ; sector, lba % sectors per track + 1
-	
-	mov ah, 0
-	div byte [bpb_heads_count]
-	mov dh, ah ; head, (lba / secttors per track) % heads
-	mov ch, al ; cylinder, (lba / secttors per track) / heads
-	
-	pop ax
 	ret
 
 ;
@@ -186,15 +173,28 @@ lba_to_chs:
 ;  bx: buffer address
 ;  cx: number of sectors to read
 read_sectors:
-	pusha
-	
-	mov di, cx ; preserve sectors count (cx overriten by lba_to_chs)
-	call lba_to_chs
+	push cx ; preserve sectors count (cx overriten by lba_to_chs)
 
-	mov ax, 0
+	; convert lba in ax to chs in cl, ch, dh
+	xor dx, dx
+	div word [bpb_sectors_per_track]
+	mov cl, dl
+	add cl, 1
+	and cl, 0x3f ; sector, bits 5-0, lba % sectors per track + 1
+	
+	xor dx, dx
+	div word [bpb_heads_count]
+	mov dh, dl ; head, (lba / sectors per track) % heads
+	mov ch, al ; cylinder, (lba / sectors per track) / heads
+	shl ah, 6
+	or cl, ah ; cylinder, 9-8 (in bits 7-6 of cl, together with sector at 5-0)
+
+	; setup read address, drive, and count
+	xor ax, ax
 	mov es, ax ; target address is pair es:bx
 	mov dl, [boot_drive_number]
-	mov ax, di ; restore sectors count
+
+	pop ax ; restore sectors count
 
 	; try reading 3 times
 	mov di, 3
@@ -211,7 +211,6 @@ read_sectors:
 	call fatal_error
 
 .read_successful:
-	popa
 	ret
 
 ;
@@ -221,13 +220,9 @@ read_sectors:
 ;  bx: file name address
 ; out
 ;  ax: cluster number (or 0 if not found)
-find_cluster_number:
-	push bx
-	push di
-	push si
-	
+find_cluster_number:	
 	mov di, ax ; current entry address
-	mov ax, 0 ; current entry count
+	xor ax, ax ; current entry count
 
 .loop:
 	mov si, bx ; searching file name
@@ -244,16 +239,13 @@ find_cluster_number:
 	jl .loop
 	
 	; Gone through all file entries, nothing found
-	mov ax, 0
+	xor ax, ax
 	jmp .not_found
 
 .found_file:
 	mov ax, [di + FAT_ENTRY_CLUSTER_OFFSET]
 
 .not_found:
-	pop si
-	pop di
-	pop bx
 	ret
 
 ;
@@ -263,18 +255,22 @@ find_cluster_number:
 ;  bx: fat buffer address
 ;  cx: target address
 load_file:
-	pusha
-	
+
 .loop:
 	; Load sector pointed by cluster into memory
 	pusha
 
+	; first cluster starts at 2, so (cluster - 2) * sectors_per_cluster
+	sub ax, 2
+	movzx dx, byte [bpb_sectors_per_cluster]
+	mul dx
+
 	add ax, [fat_first_data_sector]
 	mov bx, cx
-	mov cx, 1
+	movzx cx, byte [bpb_sectors_per_cluster]
 	call read_sectors
 	popa
-	add cx, [bpb_bytes_per_sector]
+	add cx, [fat_bytes_per_cluster]
 
 	; Load next next fat cluster
 	mov si, 3
@@ -299,7 +295,6 @@ load_file:
 	cmp ax, FAT_EOF ; range 0x0ff8 - 0x0fff marks last fat cluster
 	jb .loop
 
-	popa
 	ret
 
 ; Messages
@@ -308,11 +303,6 @@ msg_loading: db `Loading BIOS Service...\0`
 
 msg_disk_read_failed: db `Failed to read disk!\0`
 msg_bios_service_file_not_found: db `BIOS_SVC.BIN not found!\0`
-
-boot_drive_number: db 0
-fat_first_data_sector dw 0
-fat_root_dir_offset dw 0
-fat_root_dir_sectors_count dw 0
 
 times 510 - ($ - $$) db 0 ; padding
 db 0x55, 0xaa ; magic number
