@@ -8,7 +8,8 @@ nop
 
 %define FAT_BYTES_PER_ENTRY 32
 %define FAT_ENTRY_CLUSTER_OFFSET 26
-%define FAT_EOF 0x0ff8
+%define FAT12_EOF 0x0ff8
+%define FAT16_EOF 0xfff8
 
 %define ADDRESS_BIOS_SERVICE 0x1000 ; 4KiB
 
@@ -34,13 +35,13 @@ bpb_sectors_per_track: dw 0
 bpb_heads_count: dw 0
 bpb_hidden_sectors: dd 0
 dd 0 ; large sectors
-; Extended Boot Record
+; EBR (Extended Boot Record)
 db 0 ; drive number
 db 0 ; unused
 db 0 ; boot signature
 dd 0 ; serial number
 times 11 db 0 ; volume label (11 bytes)
-times 8 db 0 ; file system type (8 bytes)
+ebr_file_system_type: times 8 db 0 ; file system type (8 bytes)
 
 start:
 	; Setup segments
@@ -273,6 +274,10 @@ load_file:
 	add cx, [fat_bytes_per_cluster]
 
 	; Load next next fat cluster
+	cmp byte [ebr_file_system_type + 4], `6` ; Are we on FAT 12 or 16?
+	je .fat16
+
+.fat12:
 	mov si, 3
 	mul si
 	mov si, 2
@@ -292,16 +297,27 @@ load_file:
 	and ax, 0x0fff
 
 .next_cluster:		
-	cmp ax, FAT_EOF ; range 0x0ff8 - 0x0fff marks last fat cluster
+	cmp ax, FAT12_EOF ; range 0x0ff8 - 0x0fff marks the last cluster
+	jb .loop
+	jmp .end
+
+.fat16:
+	mov si, 2
+	mul si
+	mov si, bx
+	add si, ax
+	mov ax, [si]
+	cmp ax, FAT16_EOF ; range 0xfff8 - 0xffff marks the last cluster
 	jb .loop
 
+.end:
 	ret
 
 ; Messages
 bios_service_file_name: db `BIOS_SVCBIN\0`
-msg_loading: db `Loading BIOS Service...\0`
+msg_loading: db `Loading...\0`
 
-msg_disk_read_failed: db `Failed to read disk!\0`
+msg_disk_read_failed: db `Disk read failed!\0`
 msg_bios_service_file_not_found: db `BIOS_SVC.BIN not found!\0`
 
 times 510 - ($ - $$) db 0 ; padding
