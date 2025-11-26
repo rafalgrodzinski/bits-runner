@@ -82,8 +82,8 @@ hdiutil attach hdd.img -nomount
 # Overwrite drive boot sector
 dd if=mbira.bin of="${DISK_HDD}" bs=446 count=1
 # Overwrite partition boot sector (but keep the FAT header intact)
-dd if=boot.bin of="${DISK_HDD}s1" bs=1 count=450 skip=${FAT_12_16_HEADER_SIZE} seek=${FAT_12_16_HEADER_SIZE}
-dd if=boot.bin of="${DISK_HDD}s2" bs=1 count=450 skip=${FAT_12_16_HEADER_SIZE} seek=${FAT_12_16_HEADER_SIZE}
+dd if=boot_fat_12_16.bin of="${DISK_HDD}s1" bs=1 count=450 skip=${FAT_12_16_HEADER_SIZE} seek=${FAT_12_16_HEADER_SIZE}
+dd if=boot_fat_12_16.bin of="${DISK_HDD}s2" bs=1 count=450 skip=${FAT_12_16_HEADER_SIZE} seek=${FAT_12_16_HEADER_SIZE}
 diskutil eject "${DISK_HDD}"
 
 # Mount and copy files to the first partition
