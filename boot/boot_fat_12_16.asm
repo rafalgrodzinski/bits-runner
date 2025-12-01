@@ -65,7 +65,7 @@ start:
 	mov dl, [boot_drive_number]
 	mov ah, 0x08
 	int 0x13
-	and cl, 0x3f ; only bits 5-0 are used (7-6 are used fore cylinders)
+	and cl, 0x3f ; only bits 5-0 are used (7-6 are used for cylinders)
 	mov [bpb_sectors_per_track], cl
 	inc dh
 	mov [bpb_heads_count], dh

@@ -36,10 +36,10 @@ address_fat: dd 0
 address_root_dir: dd 0
 
 boot_storage_drive_number: dd 0
+boot_storage_partition_first_sector: dd 0
 boot_storage_drive_cylinders: dd 0
 boot_storage_drive_heads: dd 0
 boot_storage_drive_sectors: dd 0
-boot_storage_first_sector: dd 0
 
 ;
 ; Initialize boot storage handler
@@ -47,14 +47,18 @@ boot_storage_first_sector: dd 0
 ;  boot_drive_number
 ;  boot_partition_entry_adr
 %define .boot_drive_number [ebp + 8]
-%define .boot_partition_entry_adr [ebp + 12]
+%define .boot_partition_first_sector [ebp + 12]
 [bits 32]
 boot_storage_init_32:
 	push ebp
 	mov ebp, esp
 
+	; Store drive number and first sector
 	mov eax, .boot_drive_number
-	mov dword [boot_storage_drive_number], eax
+	mov [boot_storage_drive_number], eax
+
+	mov eax, .boot_partition_first_sector
+	mov [boot_storage_partition_first_sector], eax
 
 	; Get geometry
 	call switch_to_v86_mode
@@ -67,13 +71,13 @@ boot_storage_init_32:
 	call switch_to_protected_mode
 [bits 32]
 
-	; heads (bits 7:0 of edx)
+	; heads (bits 7:0 of dh)
 	shr edx, 8
 	and edx, 0xff
 	inc edx
 	mov [boot_storage_drive_heads], edx
 
-	; sectors (bits 5-0 of ecx)
+	; sectors (bits 5-0 of cl)
 	mov eax, ecx
 	and eax, 0x3f
 	mov [boot_storage_drive_sectors], eax
@@ -86,35 +90,25 @@ boot_storage_init_32:
 	inc eax
 	mov [boot_storage_drive_cylinders], eax
 
-	; Get first sector (first sector of a partition or 0 if not using mbr)
-	push dword buffer
-	push dword 0
-	call boot_storage_read_sector_32
+	push dword [boot_storage_drive_number]
+	call print_hex_32
+	call print_new_line_32
 
-	; Then figure out which partition entry should be used
-	mov eax, 0 ; no offset if no partitions 0x165b
+	push dword [boot_storage_partition_first_sector]
+	call print_hex_32
+	call print_new_line_32
 
-	cmp dword .boot_partition_entry_adr, FIRST_PARTITION_ENTRY_OFFSET
-	jne .not_first
-	mov eax, [buffer + FIRST_PARTITION_ENTRY_OFFSET + PARTITION_ENTRY_START_SECTOR_OFFSET]
-	.not_first:
+	push dword [boot_storage_drive_cylinders]
+	call print_hex_32
+	call print_new_line_32
 
-	cmp dword .boot_partition_entry_adr, SECOND_PARTITION_ENTRY_OFFSET
-	jne .not_second
-	mov eax, [buffer + SECOND_PARTITION_ENTRY_OFFSET + PARTITION_ENTRY_START_SECTOR_OFFSET]
-	.not_second:
+	push dword [boot_storage_drive_heads]
+	call print_hex_32
+	call print_new_line_32
 
-	cmp dword .boot_partition_entry_adr, THIRD_PARTITION_ENTRY_OFFSET
-	jne .not_third
-	mov eax, [buffer + THIRD_PARTITION_ENTRY_OFFSET + PARTITION_ENTRY_START_SECTOR_OFFSET]
-	.not_third:
-
-	cmp dword .boot_partition_entry_adr, FOURTH_PARTITION_ENTRY_OFFSET
-	jne .not_fourth
-	mov eax, [buffer + FOURTH_PARTITION_ENTRY_OFFSET + PARTITION_ENTRY_START_SECTOR_OFFSET]
-	.not_fourth:
-
-	mov [boot_storage_first_sector], eax
+	push dword [boot_storage_drive_sectors]
+	call print_hex_32
+	call print_new_line_32
 
 	mov esp, ebp
 	pop ebp
@@ -198,8 +192,8 @@ boot_storage_lba_to_chs_32: ; 0x16e6
 	mov dx, 0
     mov bx, [boot_storage_drive_heads]
 	div bx
-	mov dh, dl ; head, (lba / secttors per track) % heads
-	mov ch, al ; cylinder, 7-0 (lba / secttors per track) / heads
+	mov dh, dl ; head, (lba / sectors per track) % heads
+	mov ch, al ; cylinder, 7-0 (lba / sectors per track) / heads
 	shl ah, 6
 	or cl, ah ; cylinder, 9-8 (in bits 7-6 of cl, together with sector at 5-0)
 

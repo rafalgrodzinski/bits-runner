@@ -15,7 +15,7 @@
 
 ; Jump over data into strt point
 [bits 16]
-jmp 0:start ; Sets CS to 0
+jmp 0:start_16 ; Sets CS to 0
 
 ;
 ; GDT (Global Descriptor Table)
@@ -92,7 +92,7 @@ dd 0
 %define GDT_DATA_V86_MODE gdt_data_v86_mode - gdt
 
 boot_drive_number: dd 0
-boot_partition_entry_adr: dd 0
+boot_partition_first_sector: dd 0
 kernel_file_name: db `KERNEL  BIN`
 kernel_size: dd 0
 
@@ -106,25 +106,44 @@ msg_error_memory_low db `Fatal Error! At least 16MiB of RAM is required!\0`
 msg_error_kernel_not_found db `Fatal Error! KERNEL.BIN not found!\0`
 msg_error_a20_not_enabled db `Fatal Error! A20 line not enabled!\0`
 
+;---
+; Initialization
+;---
+
 [bits 16]
-start:
+start_16:
+    ; Setup segments and stack
+    mov bx, 0
+    mov ds, bx
+    mov es, bx
+    mov fs, bx
+    mov gs, bx
+    mov ss, bx
+    mov sp, 0xffff
+
 	; store boot drive number
     and edx, 0xff
 	mov [boot_drive_number], edx
+
     ; store boot partition address
-    and esi, 0xffff
-    mov [boot_partition_entry_adr], esi
+    and eax, 0xffff
+    mov [boot_partition_first_sector], eax
+
+    ; Set video mode to 80x25
+    mov ah, 0x00
+    mov al, 0x03
+    int 0x10
 
     ; Enable line A20 so memory above 1MiB behaves correctly
-    call enable_a20
-    call is_a20_enabled
+    call enable_a20_16
+    call is_a20_enabled_16
     cmp ax, 0x00
     je .a20_not_enabled
 
     mov si, msg_a20_enabled
     mov bl, 0
     call print_string
-    call print_new_line
+    call print_new_line_16
     jmp .after_a20_check
 
 .a20_not_enabled:
@@ -134,7 +153,7 @@ start:
 .after_a20_check:
 
     ; Get memory size and layout
-    call scan_memory
+    call scan_memory_16
 
     ; Report memory detected
     mov si, msg_memory_detected0
@@ -143,7 +162,7 @@ start:
     call print_int
     mov si, msg_memory_detected1
     call print_string
-    call print_new_line
+    call print_new_line_16
 
     ; Check RAM size
     cmp dword [memory_size], RAM_MIN
@@ -155,37 +174,28 @@ start:
     ; Initialization message
     mov si, msg_initializing
     call print_string
-    call print_new_line
+    call print_new_line_16
 
     cli
     ; Mark paging as uninitialized
     mov eax, 0x00
     mov cr3, eax
     
-    ; Setup segments
-    mov ax, 0
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
-    mov sp, 0xffff
+    ; Load GDT and switch to protected mode
     lgdt [gdt_descriptor]
 
-    ;mov edi, BUFFER_ADR + 512
-    ;mov dl, [boot_drive_number]
-    ;call fat_init
-
-    ;mov esi, kernel_file_name
-    ;call fat_file_entry  ; Get file entry into edi
     call switch_to_protected_mode
 [bits 32]
 
-    ; Load kernel
-    push dword [boot_partition_entry_adr]
+    ; Initialize storage
+    push dword [boot_partition_first_sector]
     push dword [boot_drive_number]
     call boot_storage_init_32
 
+    ; Load kernel
+
+.l:
+    jmp .l
 
 ;    push dword BUFFER_ADR + 512
 ;    push kernel_file_name
@@ -228,24 +238,27 @@ start:
 
     mov eax, bios_service
     mov ebx, gdt_tss
-    mov edx, 0
-    mov dl, [boot_drive_number]
-    mov esi, 0
-    mov si, [boot_partition_entry_adr]
+    ;mov edx, 0
+    ;mov dl, [boot_drive_number]
+    ;mov esi, 0
+    ;mov si, [boot_partition_entry_adr]
     jmp KERNEL_ADR
 
 .halt:
     hlt
     jmp .halt
 
+;---
+; Initialization support
+;---
+
 ;
 ; Try enabling A20 gate so we can access 16MiB of RAM
-bits 16
-enable_a20:
+[bits 16]
+enable_a20_16:
 	cli
-	push ax
 
-	call is_a20_enabled
+	call is_a20_enabled_16
     cmp ax, 0x01
 	je .end
 
@@ -255,7 +268,6 @@ enable_a20:
 	out 0x92, al
 
 .end:
-	pop ax
 	sti
 	ret
 
@@ -263,10 +275,9 @@ enable_a20:
 ; Check if A20 line is enabled
 ; out
 ;  ax: 1 - enabled, 0 - disabled
-bits 16
-is_a20_enabled:
-	push es
-
+[bits 16]
+is_a20_enabled_16:
+    push es
 	mov ax, 0xffff
 	mov es, ax
     ; boot sector indicator is loaded at 0x0000:0x7e0e
@@ -282,15 +293,13 @@ is_a20_enabled:
     mov ax, 0x01
 
 .end:
-	pop es
+    pop es
 	ret
 
 ;
 ; Initialize memory maps and get memory size
-bits 16
-scan_memory:
-    pusha
-
+[bits 16]
+scan_memory_16:
     mov ebx, 0
     mov di, memory_map
 
@@ -317,7 +326,6 @@ scan_memory:
     cmp ebx, 0 ; once ebx becomes 0, scanning has finished
     jne .loop
     
-    popa
     ret
 
 ;
@@ -496,6 +504,10 @@ restore_v86_mode_interrupts:
 
 .end:
     ret
+
+;---
+; BIOS Services
+;---
 
 ;
 ; BIOS Services
@@ -731,11 +743,22 @@ print_string:
 	ret
 
 ;
-; Prints a new line
-bits 16
-print_new_line:
-    pusha
+; Prints new line
+[bits 32]
+print_new_line_32:
+    call switch_to_v86_mode
+[bits 16]
 
+    call print_new_line_16
+
+    call switch_to_protected_mode
+[bits 32]
+    ret
+
+;
+; Prints a new line
+[bits 16]
+print_new_line_16:
 	mov bx, 0
 	mov ah, 0x0e
 
@@ -744,7 +767,6 @@ print_new_line:
 	mov al, 0x0a ; LF
 	int 0x10
 
-    popa
     ret
 
 ;
@@ -773,6 +795,29 @@ print_digit:
 
 	popa
 	ret
+
+;
+; in
+;  value
+%define .value [ebp + 8]
+[bits 32]
+print_hex_32:
+    push ebp
+    mov ebp, esp
+
+    mov eax, .value
+
+    call switch_to_v86_mode
+[bits 16]
+
+    call print_hex
+
+    call switch_to_protected_mode
+[bits 32]
+
+    mov esp, ebp
+    pop ebp
+    ret 4 * 1
 
 ;
 ; Print hexadeciaml value

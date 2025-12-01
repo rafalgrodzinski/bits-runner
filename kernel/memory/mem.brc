@@ -8,7 +8,7 @@ Layout blob
     memSize u32
     pageSize u32
     pagesCount u32
-    memPages data<u8>
+    memPages data<u8, 0>
 ;
 pMemLayout ptr<blob<Layout>>
 freePagesCount u32 <- 0
