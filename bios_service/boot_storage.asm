@@ -205,41 +205,40 @@ boot_storage_lba_to_chs_32: ; 0x16e6
 ;
 ; Load file from root directory to a given address
 ; in
-;  drive_number
 ;  file_name_adr
 ;  target_adr
+;  buffer_adr
 ; out
-;  eax: 0 if success
-%define .drive_number [ebp + 8]
-%define .partition_entry_adr [ebp + 12]
-%define .file_name_adr [ebp + 16]
-%define .target_adr [ebp + 20]
+;  eax: size of loaded file or 0 on failure
+%define .file_name_adr [ebp + 8]
+%define .target_adr [ebp + 12]
+%define .buffer_adr [ebp + 16]
 [bits 32]
-storage_load_file:
+boot_storage_load_file_32:
 	push ebp
 	mov ebp, esp
 
-    mov edi, BUFFER_ADR + 512
+    ;mov edi, BUFFER_ADR + 512
     mov edx, .drive_number
-    call fat_init
+    call boot_storage_fat_init_32
 
 	mov esi, .file_name_adr
 	call fat_file_entry
 
 	mov esp, ebp
 	pop ebp
-	ret 4 * 3
+	ret 4 * 2
+%undef .buffer_adr
 %undef .target_adr
 %undef .file_name_adr
-%undef .partition_entry_adr
-%undef .drive_number
 
 ;
 ; Initialize fat file system
 ; in
 ;  edi: fat buffer address
 ;  dl: drive number
-fat_init:
+[bits 32]
+boot_storage_fat_init_32:
 	pusha
 
 	mov [address_fat], edi

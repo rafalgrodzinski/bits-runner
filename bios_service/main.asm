@@ -4,7 +4,6 @@
 %include "bios_service/bios_service_header.asm"
 
 %define RAM_MIN 0x1000000 ; 16MiB
-%define BUFFER_ADR 0x6000
 %define KERNEL_PHY_ADR 0x100000 ; 1MiB
 %define KERNEL_ADR 0x80000000
 
@@ -150,6 +149,7 @@ start_16:
     mov si, msg_error_a20_not_enabled
     mov bl, 0
     call fatal_error
+
 .after_a20_check:
 
     ; Get memory size and layout
@@ -193,16 +193,19 @@ start_16:
     call boot_storage_init_32
 
     ; Load kernel
+    mov eax, 24
+    mul dword [memory_map_entries_count]
+    add eax, buffer
+    push eax ; buffer_adr (after scanned memory map)
+    push dword KERNEL_PHY_ADR
+    push kernel_file_name
+    call boot_storage_load_file_32
 
-.l:
+    push eax
+    call print_hex_32
+    .l:
     jmp .l
-
-;    push dword BUFFER_ADR + 512
-;    push kernel_file_name
-;    push dword [boot_partition_entry_adr]
-;    push dword [boot_drive_number]
-;    call storage_load_file
-;    cmp eax, 0
+    ;cmp eax, 0
 ;    jz .kernel_file_found
 ;    call switch_to_v86_mode
 ;bits 16
@@ -225,8 +228,8 @@ start_16:
 
     ; Provide memory information to kernel
     push dword [kernel_size]
-    push memory_map ; memory_map_entries_adr
-    push dword [memory_map_entries] ; memory_map_entries_count
+    push buffer ; memory_map_entries_adr
+    push dword [memory_map_entries_count] ; memory_map_entries_count
     push dword 0x1000 ; page_size
     push dword [memory_size] ; memory_size
     add edi, [kernel_size]
@@ -301,7 +304,7 @@ is_a20_enabled_16:
 [bits 16]
 scan_memory_16:
     mov ebx, 0
-    mov di, memory_map
+    mov di, buffer
 
 .loop:
     mov eax, 0xe820
@@ -310,7 +313,7 @@ scan_memory_16:
     int 0x15
     
     ; process result
-    inc byte [memory_map_entries] ; increase count of entries
+    inc byte [memory_map_entries_count] ; increase count of entries
 
     ; check if we found bigger memory limit
     cmp dword [di + 16], 2 ; check if marks unavailable regions
@@ -993,6 +996,5 @@ init_memory_layout:
 %include "bios_service/memory_manager.asm"
 
 memory_size: dd 0
-memory_map_entries: db 0
-memory_map:
+memory_map_entries_count: db 0 ; each entry is 24 bits
 buffer:

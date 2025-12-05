@@ -5,7 +5,7 @@
 StorageDevice blob
     biosDriveNum u32
     sectorsCount u32
-    readSectors ptr<fun u32, u32, ptr<data<u8>>>
+    readSectors ptr<fun: u32, u32, ptr<data<u8>>>
 ;
 
 initBiosDevice fun: biosDriveNum u32 -> blob<StorageDevice>

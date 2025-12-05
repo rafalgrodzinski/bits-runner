@@ -6,7 +6,7 @@ StorageArea blob
     storageDevice blob<StorageDevice>
     startSector u32
     sectorsCount u32
-    readSectors ptr<fun ptr<blob<StorageDevice>>, u32, u32, ptr<data<u8>>>
+    readSectors ptr<fun: ptr<blob<StorageDevice>>, u32, u32, ptr<data<u8>>>
 ;
 
 initArea fun: device blob<StorageDevice>, startSector u32, sectorsCount u32 -> blob<StorageArea>
