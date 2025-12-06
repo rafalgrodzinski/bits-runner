@@ -197,12 +197,10 @@ start_16:
     mul dword [memory_map_entries_count]
     add eax, buffer
     push eax ; buffer_adr (after scanned memory map)
-    push dword KERNEL_PHY_ADR
-    push kernel_file_name
+    push dword KERNEL_PHY_ADR ; target_adr
+    push kernel_file_name ; file_name_adr
     call boot_storage_load_file_32
 
-    push eax
-    call print_hex_32
     .l:
     jmp .l
     ;cmp eax, 0

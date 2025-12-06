@@ -14,7 +14,7 @@
 %define FAT_EOF 0x0ff8
 %define FAT_ENTRY_CLUSTER_OFFSET 26
 %define FAT_ENTRY_FILE_SIZE_OFFSET 28
-%define FAT_FIRST_DATA_SECTOR FAT_RESERVED_SECTORS_COUNT + (FAT_FATS_COUNT * FAT_SECTORS_PER_FAT) + ((FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY) / FAT_BYTES_PER_SECTOR) - 2
+%define FAT_FIRST_DATA_SECTOR FAT_RESERVED_SECTORS_COUNT + (FAT_FATS_COUNT * FAT_SECTORS_PER_FAT) + ((FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY) / FAT_BYTES_PER_SECTOR)
 %define FAT_ROOT_DIR_OFFSET FAT_RESERVED_SECTORS_COUNT + FAT_SECTORS_PER_FAT * FAT_FATS_COUNT
 %define FAT_ROOT_DIR_SECTORS_COUNT (FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY) / FAT_BYTES_PER_SECTOR
 
@@ -32,7 +32,6 @@ msg_error_disk_read_failed db `Failed to read disk!\n\0`
 ; Allocated data
 sectors_per_track: db FAT_SECTORS_PER_TRACK
 heads_count: db FAT_HEADS_COUNT
-address_fat: dd 0
 address_root_dir: dd 0
 
 boot_storage_drive_number: dd 0
@@ -109,6 +108,7 @@ boot_storage_init_32:
 	push dword [boot_storage_drive_sectors]
 	call print_hex_32
 	call print_new_line_32
+	call print_new_line_32
 
 	mov esp, ebp
 	pop ebp
@@ -117,24 +117,40 @@ boot_storage_init_32:
 %undef .boot_drive_number
 
 ;
-; Read sector from the boot storage device
+; Read sectors from the boot storage device
 ; in
-;  sector_index
+;  first_sector
+;  sectors_count
 ;  target_adr
 ; out
 ;  eax: read sectors count or 0 on error
-%define .sector_index [ebp + 8]
-%define .target_address [ebp + 12]
+%define .first_sector [ebp + 8]
+%define .sectors_count [ebp + 12]
+%define .target_address [ebp + 16]
 [bits 32]
-boot_storage_read_sector_32:
+boot_storage_read_sectors_32:
 	push ebp
 	mov ebp, esp
 
+	push dword .first_sector
+	call print_hex_32
+	call print_new_line_32
+
+	push dword .sectors_count
+	call print_hex_32
+	call print_new_line_32
+
+	push dword .target_address
+	call print_hex_32
+	call print_new_line_32
+
+	call print_new_line_32
+
 	; convert LBA address into CHS in ch, dh, cl
-	push dword .sector_index
+	push dword .first_sector
 	call boot_storage_lba_to_chs_32
 
-	mov al, 1 ; read single sector
+	mov al, .sectors_count ; read single sector
 	mov bx, .target_address
 	mov dl, [boot_storage_drive_number]
 	mov edi, 3 ; try reading 3 times
@@ -163,7 +179,7 @@ boot_storage_read_sector_32:
 	ret 4 * 3
 %undef .target_address
 %undef .sectors_count
-%undef .start_sector
+%undef .first_sector
 
 ;
 ; Convert LBA address to CHS address
@@ -218,65 +234,70 @@ boot_storage_load_file_32:
 	push ebp
 	mov ebp, esp
 
-    ;mov edi, BUFFER_ADR + 512
-    mov edx, .drive_number
-    call boot_storage_fat_init_32
+	; load fat & root directory
+	mov eax, .buffer_adr
+	add eax, 0x200
+	push eax ; fat_buffer_adr
+    call boot_storage_fat_load_32
 
-	mov esi, .file_name_adr
-	call fat_file_entry
+	; find file's cluster
+	mov eax, .buffer_adr
+	add eax, 0x200
+	add eax, FAT_SECTORS_PER_FAT * FAT_BYTES_PER_SECTOR
+	push eax ; root_dir_adr
+	push dword .file_name_adr ; file_name_adr
+	call boot_storage_find_fat_file_entry_32
 
+	cmp eax, 0 ; return if nothing was found
+	js .end
+
+	; load file
+	push dword .buffer_adr ; buffer_adr
+	push dword .target_adr ; target_adr
+	mov ebx, .buffer_adr
+	add ebx, 0x200
+	push ebx ; fat_adr
+	push eax ; first_cluster
+	call boot_storage_read_clusters_32
+
+.end:
 	mov esp, ebp
 	pop ebp
-	ret 4 * 2
+	ret 4 * 3
 %undef .buffer_adr
 %undef .target_adr
 %undef .file_name_adr
 
 ;
-; Initialize fat file system
+; Load fat file system
 ; in
-;  edi: fat buffer address
-;  dl: drive number
+;  fat_buffer_adr
 [bits 32]
-boot_storage_fat_init_32:
-	pusha
-
-	mov [address_fat], edi
-
-	; Read drive CHS geometry if HDD
-	cmp dl, 0x80 ; first hard disk number
-	jb .skip_chs_detection
-	push edx
-	call switch_to_v86_mode
-bits 16
-	mov ah, 0x08
-	int 0x13
-	and cl, 0x3f ; only bits 5-0 are used (7-6 are used fore cylinders)
-	mov [sectors_per_track], cl
-	mov [heads_count], dh
-	inc byte [heads_count]
-
-	call switch_to_protected_mode
-bits 32
-	pop edx
-.skip_chs_detection:
+%define .fat_buffer_adr [ebp + 8]
+boot_storage_fat_load_32:
+	push ebp
+	mov ebp, esp
 
 	; load fat
-	mov edi, [address_fat]
-	mov eax, FAT_RESERVED_SECTORS_COUNT
-	mov ebx, FAT_SECTORS_PER_FAT
-	call read_sectors
+	push dword .fat_buffer_adr ; target_adr
+	push FAT_SECTORS_PER_FAT ; sectors_count
+	mov eax, [boot_storage_partition_first_sector]
+	add eax, FAT_RESERVED_SECTORS_COUNT
+	push eax; first_sector
+	call boot_storage_read_sectors_32
 
 	; load root directory
-	add edi, FAT_SECTORS_PER_FAT * FAT_BYTES_PER_SECTOR
-	mov [address_root_dir], edi
+	mov eax, .fat_buffer_adr
+	add eax, FAT_SECTORS_PER_FAT * FAT_BYTES_PER_SECTOR
+	push eax ; target_adr
+	push dword FAT_ROOT_DIR_SECTORS_COUNT ; sectors_count
+	push dword FAT_ROOT_DIR_OFFSET ; first_sector
+	call boot_storage_read_sectors_32
 
-	mov eax, FAT_ROOT_DIR_OFFSET
-	mov ebx, FAT_ROOT_DIR_SECTORS_COUNT
-	call read_sectors
-
-	popa
-	ret
+	mov esp, ebp
+	pop ebp
+	ret 4 * 1
+%undef .fat_buffer_adr
 
 ;
 ; Converts LBA to CHS addressing
@@ -361,25 +382,25 @@ bits 32
 ;
 ; Try finding file entry for a given name
 ; in
-;  esi: file name address
+;  file_name_adr
+;  root_dir_adr
 ; out
-;  edi: found file address
-fat_file_entry:
-	push eax
-	push ebx
-	push ecx
-	push esi
+;   eax: cluster number (0 if not found)
+%define .file_name_adr [ebp + 8]
+%define .root_dir_adr [ebp + 12]
+boot_storage_find_fat_file_entry_32:
+	push ebp
+	mov ebp, esp
 
-	mov ebx, esi ; preserve
-	mov edi, [address_root_dir]
-	mov eax, 0 ; current file entry
+	mov edi, .root_dir_adr
+	xor eax, eax ; current file entry
 .loop:
-	mov esi, ebx ; restore
+	mov esi, .file_name_adr
 	mov ecx, 11 ; 11 chars in file name
 	push edi
 	repe cmpsb ; Try matching file names
 	pop edi
-	je .end ; found file
+	je .found_file ; entry found
 
 	; Try next entry
 	add edi, FAT_BYTES_PER_ENTRY
@@ -388,14 +409,18 @@ fat_file_entry:
 	jl .loop
 
 	; Gone through all file entries, nothing found
-	mov edi, 0
+	xor eax, eax
+	jmp .end
+
+.found_file:
+	movzx eax, word [edi + FAT_ENTRY_CLUSTER_OFFSET] ; cluster number is 16 bit
 
 .end:
-	pop esi
-	pop ecx
-	pop ebx
-	pop eax
-	ret
+	mov esp, ebp
+	pop ebp
+	ret 4 * 2
+%undef .root_dir_adr
+%undef .file_name_adr
 
 ;
 ; Try getting file size for given file entry
@@ -406,6 +431,88 @@ fat_file_entry:
 fat_file_size:
 	mov eax, [esi + FAT_ENTRY_FILE_SIZE_OFFSET]
 	ret
+
+;
+; Read linked clusters into a given adress
+; in
+;  first_cluster
+;  fat_adr
+;  target_adr
+;  buffer_adr
+%define .first_cluster [ebp + 8]
+%define .fat_adr [ebp + 12]
+%define .target_adr [ebp + 16]
+%define .buffer_adr [ebp + 20]
+boot_storage_read_clusters_32:
+	push ebp
+	mov ebp, esp
+
+	mov eax, .first_cluster
+	; mul sectors per cluster
+
+.loop:
+	;push eax
+	;push eax
+	;call print_hex_32
+	;call print_new_line_32
+	;call print_new_line_32
+	;pop eax
+
+	; Calculate sector number (sector - 2) * sectors_per_cluster + data start offset + parition start offset
+	push eax
+	sub eax, 2
+	add eax, FAT_FIRST_DATA_SECTOR
+
+	; read sector
+	push dword .buffer_adr ; target_address
+	push dword 1 ; sectors_count
+	push eax ; first_sector
+	call boot_storage_read_sectors_32
+
+	; copy data from buffer into target
+	xor ecx, ecx
+	mov edi, .target_adr
+	mov esi, .buffer_adr
+.copy_loop:
+	mov al, [esi + ecx]
+	mov [edi + ecx], al
+	inc ecx
+	cmp ecx, 512
+	jb .copy_loop
+
+	add dword .target_adr, 512
+
+	; Load next cluster number
+	pop eax ; restore cluster number
+
+	mov ebx, 3
+	mul ebx
+	mov ebx, 2
+	div ebx ; Multiply by 1.5 since we're extracting 12 bits (1.5 byte)
+	add eax, .fat_adr
+
+	movzx eax, word [eax]
+	; Adjust 12 bit to 16 bit
+	or edx, edx
+	jz .even
+.odd:
+	shr eax, 4
+	jmp .next_cluster
+.even:
+	and eax, 0x0fff
+
+.next_cluster:
+	cmp eax, 0x0ff8 ; range 0x0ff8 - 0x0fff marks the last cluster
+	jb .loop
+
+.end:
+	mov esp, ebp
+	pop ebp
+	ret 4 * 4
+%undef .buffer_adr
+%undef .target_adr
+%undef .fat_adr
+%undef .first_cluster
 
 ;
 ; Load file into memory for given file entry
@@ -457,7 +564,7 @@ fat_load_file:
 	mov ebx, 2
 	div ebx ; Divide by 1.5 since we're extracting 12 bits (1.5 byte)
 	
-	mov ebx, [address_fat]
+	;mov ebx, [address_fat]
 	add ebx, eax
 	movzx eax, word [ebx]
 

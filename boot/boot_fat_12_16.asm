@@ -273,7 +273,7 @@ load_file:
 	popa
 	add cx, [fat_bytes_per_cluster]
 
-	; Load next next fat cluster
+	; Load next cluster
 	cmp byte [ebr_file_system_type + 4], `6` ; Are we on FAT 12 or 16?
 	je .fat16
 
@@ -281,7 +281,7 @@ load_file:
 	mov si, 3
 	mul si
 	mov si, 2
-	div si ; Divide by 1.5 since we're extracting 12 bits (1.5 byte)
+	div si ; Multiply by 1.5 since we're extracting 12 bits (1.5 byte)
 	
 	mov si, bx
 	add si, ax
@@ -314,7 +314,7 @@ load_file:
 	ret
 
 ; Messages
-bios_service_file_name: db `BIOS_SVCBIN\0`
+bios_service_file_name: db `BIOS_SVCBIN`
 msg_loading: db `Loading...\0`
 
 msg_disk_read_failed: db `Disk read failed!\0`
