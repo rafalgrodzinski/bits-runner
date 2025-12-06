@@ -629,7 +629,7 @@ service_read_sectors:
     mov ebx, 1 ; read one sector
     mov edi, buffer 
     mov dl, .drive_number
-    call read_sectors
+    ;call read_sectors
 
     ; copy from buffer into the target addrss
     mov ebx, 0 ; buffer bytes counter
