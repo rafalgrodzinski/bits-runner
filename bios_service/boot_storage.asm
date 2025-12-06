@@ -42,14 +42,14 @@ boot_storage_init_32:
 	mov [boot_storage_partition_first_sector], eax
 
 	; Get geometry
-	call switch_to_v86_mode
+	call switch_to_v86_mode_32
 [bits 16]
 
 	mov ah, 0x08
 	mov edx, .boot_drive_number
 	int 0x13
 
-	call switch_to_protected_mode
+	call switch_to_protected_mode_16
 [bits 32]
 
 	; heads (bits 7:0 of dh)
@@ -137,7 +137,7 @@ boot_storage_read_sectors_32:
 	mov dl, [boot_storage_drive_number]
 	mov edi, 3 ; try reading 3 times
 
-	call switch_to_v86_mode
+	call switch_to_v86_mode_32
 [bits 16]
 
 .loop:
@@ -154,7 +154,7 @@ boot_storage_read_sectors_32:
 	mov eax, 1
 
 .reading_finished:
-	call switch_to_protected_mode
+	call switch_to_protected_mode_16
 [bits 32]
 	mov esp, ebp
 	pop ebp

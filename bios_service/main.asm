@@ -184,7 +184,7 @@ start_16:
     ; Load GDT and switch to protected mode
     lgdt [gdt_descriptor]
 
-    call switch_to_protected_mode
+    call switch_to_protected_mode_16
 [bits 32]
 
     ; Initialize storage
@@ -314,8 +314,8 @@ scan_memory_16:
 
 ;
 ; Initialize 32 bit protected mode
-bits 16
-switch_to_protected_mode:
+[bits 16]
+switch_to_protected_mode_16:
     cli
     ; Enable protected mode
     push eax
@@ -327,7 +327,7 @@ switch_to_protected_mode:
     ; Long jump to 32 bits
     jmp GDT_CODE_PROTECTED_MODE:(.init_data_segment)
 
-bits 32
+[bits 32]
 .init_data_segment:
     ; Set protected mode 32 bit data segment
     push eax
@@ -347,15 +347,15 @@ bits 32
     mov cr0, eax
 
 .skip_paging:
-    call restore_protected_mode_interrupts
+    call restore_protected_mode_interrupts_32
     pop eax
 
     ret
 
 ;
 ; Restore interrupts for protected mode
-bits 32
-restore_protected_mode_interrupts:
+[bits 32]
+restore_protected_mode_interrupts_32:
     cli
 
     ; Check if protected mode interrupts are initialized
@@ -400,13 +400,13 @@ restore_protected_mode_interrupts:
 
 ;
 ; Initialize 16 bit 8086 virtual mode
-bits 32
-switch_to_v86_mode:
+[bits 32]
+switch_to_v86_mode_32:
     ; clear interrupts and set real mode code segment
     cli
     jmp GDT_CODE_V86_MODE:(.init_v86_data_segment)
 
-bits 16
+[bits 16]
 .init_v86_data_segment:
     ; Change to 16 bit protected mode
     ; Set real mode data segment 0x0000 - 0xffff
@@ -438,13 +438,13 @@ bits 16
     mov ss, ax
     pop ax
 
-    call restore_v86_mode_interrupts
+    call restore_v86_mode_interrupts_16
     ret
 
 ;
 ; Restore interrupts for v86 mode
-bits 16
-restore_v86_mode_interrupts:
+[bits 16]
+restore_v86_mode_interrupts_16:
     cli
 
     ; Check currently active interrupts descriptor
@@ -536,7 +536,7 @@ bios_service:
 ; Reboot the system
 bits 32
 reboot:
-    call switch_to_v86_mode
+    call switch_to_v86_mode_32
 bits 16
     jmp 0xffff:0
 
@@ -546,7 +546,7 @@ bits 16
 ;  al: video mode
 bits 32
 set_video_mode:
-    call switch_to_v86_mode
+    call switch_to_v86_mode_32
 
 bits 16
     ; text 80x25
@@ -584,7 +584,7 @@ bits 16
 .not_640x480x4:
 
 .end:
-    call switch_to_protected_mode
+    call switch_to_protected_mode_16
 bits 32
     ret
 
@@ -651,7 +651,7 @@ service_sectors_count:
     push ebp
     mov ebp, esp
 
-    call switch_to_v86_mode
+    call switch_to_v86_mode_32
 bits 16
     mov ah, 0x08
     mov edx, .drive_number
@@ -679,7 +679,7 @@ bits 16
 
     ; eax <- heads * sectors * cylinders
 
-    call switch_to_protected_mode
+    call switch_to_protected_mode_16
 bits 32
 
     mov esp, ebp
@@ -697,7 +697,7 @@ fatal_error_32:
     mov ebp, esp
 
     mov esi, .message_adr
-    call switch_to_v86_mode
+    call switch_to_v86_mode_32
 [bits 16]
     call fatal_error
 
@@ -721,155 +721,6 @@ fatal_error:
 .halt:
     hlt
     jmp .halt
-
-;
-; Print string
-; in
-;  si: string address
-bits 16
-print_string:
-	pusha
-
-	mov bx, 0
-	mov ah, 0x0e
-.loop:
-	lodsb
-	cmp al, 0
-	jz .string_finished ; if al = 0
-	int 0x10
-	jmp .loop
-
-.string_finished:
-	popa
-	ret
-
-;
-; Prints new line
-[bits 32]
-print_new_line_32:
-    call switch_to_v86_mode
-[bits 16]
-
-    call print_new_line_16
-
-    call switch_to_protected_mode
-[bits 32]
-    ret
-
-;
-; Prints a new line
-[bits 16]
-print_new_line_16:
-	mov bx, 0
-	mov ah, 0x0e
-
-	mov al, 0x0d ; CR
-	int 0x10
-	mov al, 0x0a ; LF
-	int 0x10
-
-    ret
-
-;
-; Print integer
-;  eax: integer to print
-bits 16
-print_int:
-	pusha
-
-	mov ecx, 0
-process_digit:
-	inc ecx
-	mov edx, 0
-	mov ebx, 10
-	idiv ebx
-	add dx, "0"
-	push dx
-	cmp eax, 0
-	jnz process_digit
-
-print_digit:
-	mov esi, esp
-	call print_string
-    add sp, 2
-    loop print_digit
-
-	popa
-	ret
-
-;
-; in
-;  value
-%define .value [ebp + 8]
-[bits 32]
-print_hex_32:
-    push ebp
-    mov ebp, esp
-
-    mov eax, .value
-
-    call switch_to_v86_mode
-[bits 16]
-
-    call print_hex
-
-    call switch_to_protected_mode
-[bits 32]
-
-    mov esp, ebp
-    pop ebp
-    ret 4 * 1
-
-;
-; Print hexadeciaml value
-; in
-;  eax: integer to print
-bits 16
-print_hex:
-    pusha
-
-    mov ecx, 0 ; Count number of digits
-.loop_process_digit:
-    inc ecx
-    mov edx, 0
-    mov esi, 16
-    div esi
-
-    cmp dx, 10 ; Check if we should add `0` or `A`
-    jae .above_9
-    add dx, `0`
-    jmp .digit_converted
-
-.above_9:
-    add dx, `a` - 10
-
-.digit_converted:
-    push dx ; Place converted digit on stack
-
-    cmp eax, 0 ; Check if we're out of digits
-	jnz .loop_process_digit
-
-    ; Check if we have even numbr of digits, if not append one
-    test cx, 0x01
-    je .print_pref
-	push 0x0030
-	inc cx
-
-.print_pref:
-	push 0x0000
-	push 0x7830
-	mov si, sp
-	call print_string
-	add sp, 4
-
-.loop_print_digit:
-	mov si, sp
-	call print_string
-	add sp, 2
-	loop .loop_print_digit
-
-    popa
-    ret
 
 ;
 ; Provide memory information to kernel
@@ -990,6 +841,7 @@ init_memory_layout:
 %undef .memory_size
 %undef .layout_data_adr
 
+%include "bios_service/term.asm"
 %include "bios_service/boot_storage.asm"
 %include "bios_service/memory_manager.asm"
 
