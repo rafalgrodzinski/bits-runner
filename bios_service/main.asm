@@ -201,6 +201,10 @@ start_16:
     push kernel_file_name ; file_name_adr
     call boot_storage_load_file_32
 
+    push eax
+    call print_hex_32
+    call print_new_line_32
+
     .l:
     jmp .l
     ;cmp eax, 0

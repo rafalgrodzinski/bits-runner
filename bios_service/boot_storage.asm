@@ -114,19 +114,19 @@ boot_storage_read_sectors_32:
 	push ebp
 	mov ebp, esp
 
-	push dword .first_sector
-	call print_hex_32
-	call print_new_line_32
+	;push dword .first_sector
+	;call print_hex_32
+	;call print_new_line_32
 
-	push dword .sectors_count
-	call print_hex_32
-	call print_new_line_32
+	;push dword .sectors_count
+	;call print_hex_32
+	;call print_new_line_32
 
-	push dword .target_address
-	call print_hex_32
-	call print_new_line_32
+	;push dword .target_address
+	;call print_hex_32
+	;call print_new_line_32
 
-	call print_new_line_32
+	;call print_new_line_32
 
 	; convert LBA address into CHS in ch, dh, cl
 	push dword .first_sector
@@ -222,16 +222,19 @@ boot_storage_load_file_32:
 	push eax ; fat_buffer_adr
     call boot_storage_fat_load_32
 
-	; find file's cluster
+	; find file entry
 	mov eax, .buffer_adr
 	add eax, 0x200
 	add eax, FAT_SECTORS_PER_FAT * FAT_BYTES_PER_SECTOR
 	push eax ; root_dir_adr
 	push dword .file_name_adr ; file_name_adr
-	call boot_storage_find_fat_file_entry_32
+	call boot_storage_find_fat_file_entry_adr_32
 
 	cmp eax, 0 ; return if nothing was found
 	js .end
+
+	push dword [eax + FAT_ENTRY_FILE_SIZE_OFFSET] ; keep file size
+	movzx eax, word [eax + FAT_ENTRY_CLUSTER_OFFSET] ; and get the initial cluster
 
 	; load file
 	push dword .buffer_adr ; buffer_adr
@@ -241,6 +244,8 @@ boot_storage_load_file_32:
 	push ebx ; fat_adr
 	push eax ; first_cluster
 	call boot_storage_read_clusters_32
+
+	pop eax ; restore file size
 
 .end:
 	mov esp, ebp
@@ -287,10 +292,10 @@ boot_storage_fat_load_32:
 ;  file_name_adr
 ;  root_dir_adr
 ; out
-;   eax: cluster number (0 if not found)
+;   eax: address of file entry
 %define .file_name_adr [ebp + 8]
 %define .root_dir_adr [ebp + 12]
-boot_storage_find_fat_file_entry_32:
+boot_storage_find_fat_file_entry_adr_32:
 	push ebp
 	mov ebp, esp
 
@@ -315,7 +320,7 @@ boot_storage_find_fat_file_entry_32:
 	jmp .end
 
 .found_file:
-	movzx eax, word [edi + FAT_ENTRY_CLUSTER_OFFSET] ; cluster number is 16 bit
+	mov eax, edi
 
 .end:
 	mov esp, ebp
@@ -323,16 +328,6 @@ boot_storage_find_fat_file_entry_32:
 	ret 4 * 2
 %undef .root_dir_adr
 %undef .file_name_adr
-
-;
-; Try getting file size for given file entry
-; in
-;  esi: file entry address
-; out
-;  eax: size in bytes
-fat_file_size:
-	mov eax, [esi + FAT_ENTRY_FILE_SIZE_OFFSET]
-	ret
 
 ;
 ; Read linked clusters into a given adress
@@ -353,6 +348,12 @@ boot_storage_read_clusters_32:
 	; mul sectors per cluster
 
 .loop:
+	;push eax
+	;push eax
+	;call print_hex_32
+	;call print_new_line_32
+	;pop eax
+
 	; Calculate sector number (sector - 2) * sectors_per_cluster + data start offset + parition start offset
 	push eax
 	sub eax, 2
