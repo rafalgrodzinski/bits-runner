@@ -27,6 +27,7 @@ boot_storage_drive_sectors: dd 0
 ; in
 ;  boot_drive_number
 ;  boot_partition_entry_adr
+%define .args_count 2
 %define .boot_drive_number [ebp + 8]
 %define .boot_partition_first_sector [ebp + 12]
 [bits 32]
@@ -94,9 +95,10 @@ boot_storage_init_32:
 
 	mov esp, ebp
 	pop ebp
-	ret 4 * 2
+	ret 4 * .args_count
 %undef .boot_partition_entry_adr
 %undef .boot_drive_number
+%undef .args_count
 
 ;
 ; Read sectors from the boot storage device
@@ -106,6 +108,7 @@ boot_storage_init_32:
 ;  target_adr
 ; out
 ;  eax: read sectors count or 0 on error
+%define .args_count 3
 %define .first_sector [ebp + 8]
 %define .sectors_count [ebp + 12]
 %define .target_address [ebp + 16]
@@ -158,10 +161,11 @@ boot_storage_read_sectors_32:
 [bits 32]
 	mov esp, ebp
 	pop ebp
-	ret 4 * 3
+	ret 4 * .args_count
 %undef .target_address
 %undef .sectors_count
 %undef .first_sector
+%undef .args_count
 
 ;
 ; Convert LBA address to CHS address
@@ -172,6 +176,7 @@ boot_storage_read_sectors_32:
 ;  ch: cylinder
 ;  dh: head
 ;  cylinder <cl 7-6, ch 7-0>, sector <cl 5-0>, head <dh>
+%define .args_count 1
 %define .lba [ebp + 8]
 [bits 32]
 boot_storage_lba_to_chs_32: ; 0x16e6
@@ -197,8 +202,9 @@ boot_storage_lba_to_chs_32: ; 0x16e6
 
 	mov esp, ebp
 	pop ebp
-	ret 4 * 1
+	ret 4 * .args_count
 %undef .lba
+%undef .args_count
 
 ;
 ; Load file from root directory to a given address
@@ -208,6 +214,7 @@ boot_storage_lba_to_chs_32: ; 0x16e6
 ;  buffer_adr
 ; out
 ;  eax: size of loaded file or 0 on failure
+%define .args_count 3
 %define .file_name_adr [ebp + 8]
 %define .target_adr [ebp + 12]
 %define .buffer_adr [ebp + 16]
@@ -220,7 +227,7 @@ boot_storage_load_file_32:
 	mov eax, .buffer_adr
 	add eax, 0x200
 	push eax ; fat_buffer_adr
-    call boot_storage_fat_load_32
+    call boot_storage_fat_init_32
 
 	; find file entry
 	mov eax, .buffer_adr
@@ -250,18 +257,20 @@ boot_storage_load_file_32:
 .end:
 	mov esp, ebp
 	pop ebp
-	ret 4 * 3
+	ret 4 * .args_count
 %undef .buffer_adr
 %undef .target_adr
 %undef .file_name_adr
+%undef .args_count
 
 ;
 ; Load fat file system
 ; in
 ;  fat_buffer_adr
 [bits 32]
+%define .args_count 1
 %define .fat_buffer_adr [ebp + 8]
-boot_storage_fat_load_32:
+boot_storage_fat_init_32:
 	push ebp
 	mov ebp, esp
 
@@ -283,8 +292,9 @@ boot_storage_fat_load_32:
 
 	mov esp, ebp
 	pop ebp
-	ret 4 * 1
+	ret 4 * .args_count
 %undef .fat_buffer_adr
+%undef .args_count
 
 ;
 ; Try finding file entry for a given name
@@ -293,6 +303,7 @@ boot_storage_fat_load_32:
 ;  root_dir_adr
 ; out
 ;   eax: address of file entry
+%define .args_count 2
 %define .file_name_adr [ebp + 8]
 %define .root_dir_adr [ebp + 12]
 boot_storage_find_fat_file_entry_adr_32:
@@ -325,9 +336,10 @@ boot_storage_find_fat_file_entry_adr_32:
 .end:
 	mov esp, ebp
 	pop ebp
-	ret 4 * 2
+	ret 4 * .args_count
 %undef .root_dir_adr
 %undef .file_name_adr
+%undef .args_count
 
 ;
 ; Read linked clusters into a given adress
@@ -336,6 +348,7 @@ boot_storage_find_fat_file_entry_adr_32:
 ;  fat_adr
 ;  target_adr
 ;  buffer_adr
+%define .args_count 4
 %define .first_cluster [ebp + 8]
 %define .fat_adr [ebp + 12]
 %define .target_adr [ebp + 16]
@@ -404,8 +417,9 @@ boot_storage_read_clusters_32:
 .end:
 	mov esp, ebp
 	pop ebp
-	ret 4 * 4
+	ret 4 * .args_count
 %undef .buffer_adr
 %undef .target_adr
 %undef .fat_adr
 %undef .first_cluster
+%undef .args_count
