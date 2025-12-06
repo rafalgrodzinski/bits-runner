@@ -76,6 +76,7 @@ print_digit:
 ;
 ; in
 ;  value
+%define .args_count 1
 %define .value [ebp + 8]
 [bits 32]
 term_print_hex_32:
@@ -94,7 +95,9 @@ term_print_hex_32:
 
     mov esp, ebp
     pop ebp
-    ret 4 * 1
+    ret 4 * .args_count
+%undef .value
+%undef .args_count
 
 ;
 ; Print hexadeciaml value
