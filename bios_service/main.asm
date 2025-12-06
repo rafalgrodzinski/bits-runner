@@ -141,8 +141,8 @@ start_16:
 
     mov si, msg_a20_enabled
     mov bl, 0
-    call print_string
-    call print_new_line_16
+    call term_print_string_16
+    call term_print_new_line_16
     jmp .after_a20_check
 
 .a20_not_enabled:
@@ -157,12 +157,12 @@ start_16:
 
     ; Report memory detected
     mov si, msg_memory_detected0
-    call print_string
+    call term_print_string_16
     mov eax, [memory_size]
-    call print_int
+    call term_print_int_16
     mov si, msg_memory_detected1
-    call print_string
-    call print_new_line_16
+    call term_print_string_16
+    call term_print_new_line_16
 
     ; Check RAM size
     cmp dword [memory_size], RAM_MIN
@@ -173,8 +173,8 @@ start_16:
 .ram_size_ok:
     ; Initialization message
     mov si, msg_initializing
-    call print_string
-    call print_new_line_16
+    call term_print_string_16
+    call term_print_new_line_16
 
     cli
     ; Mark paging as uninitialized

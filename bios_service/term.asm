@@ -2,8 +2,8 @@
 ; Print string
 ; in
 ;  si: string address
-bits 16
-print_string:
+[bits 16]
+term_print_string_16:
 	pusha
 
 	mov bx, 0
@@ -22,11 +22,11 @@ print_string:
 ;
 ; Prints new line
 [bits 32]
-print_new_line_32:
+term_print_new_line_32:
     call switch_to_v86_mode_32
 [bits 16]
 
-    call print_new_line_16
+    call term_print_new_line_16
 
     call switch_to_protected_mode_16
 [bits 32]
@@ -35,7 +35,7 @@ print_new_line_32:
 ;
 ; Prints a new line
 [bits 16]
-print_new_line_16:
+term_print_new_line_16:
 	mov bx, 0
 	mov ah, 0x0e
 
@@ -49,8 +49,8 @@ print_new_line_16:
 ;
 ; Print integer
 ;  eax: integer to print
-bits 16
-print_int:
+[bits 16]
+term_print_int_16:
 	pusha
 
 	mov ecx, 0
@@ -66,7 +66,7 @@ process_digit:
 
 print_digit:
 	mov esi, esp
-	call print_string
+	call term_print_string_16
     add sp, 2
     loop print_digit
 
@@ -78,7 +78,7 @@ print_digit:
 ;  value
 %define .value [ebp + 8]
 [bits 32]
-print_hex_32:
+term_print_hex_32:
     push ebp
     mov ebp, esp
 
@@ -87,7 +87,7 @@ print_hex_32:
     call switch_to_v86_mode_32
 [bits 16]
 
-    call print_hex
+    call term_print_hex_16
 
     call switch_to_protected_mode_16
 [bits 32]
@@ -100,8 +100,8 @@ print_hex_32:
 ; Print hexadeciaml value
 ; in
 ;  eax: integer to print
-bits 16
-print_hex:
+[bits 16]
+term_print_hex_16:
     pusha
 
     mov ecx, 0 ; Count number of digits
@@ -135,12 +135,12 @@ print_hex:
 	push 0x0000
 	push 0x7830
 	mov si, sp
-	call print_string
+	call term_print_string_16
 	add sp, 4
 
 .loop_print_digit:
 	mov si, sp
-	call print_string
+	call term_print_string_16
 	add sp, 2
 	loop .loop_print_digit
 
