@@ -200,34 +200,16 @@ start_16:
     push dword KERNEL_PHY_ADR ; target_adr
     push kernel_file_name ; file_name_adr
     call boot_storage_load_file_32
+    mov [kernel_size], eax
 
-    push eax
-    call print_hex_32
-    call print_new_line_32
+    cmp eax, 0
+    jnz .kernel_file_found
 
-    .l:
-    jmp .l
-    ;cmp eax, 0
-;    jz .kernel_file_found
-;    call switch_to_v86_mode
-;bits 16
-;    mov si, msg_error_kernel_not_found
-;    call fatal_error
+    ; Kernel not found!
+    push dword msg_error_kernel_not_found
+    call fatal_error_32
 
-;bits 32
-;.kernel_file_found:
-;    mov ebx, edi ; preserve
-;
-;    mov esi, edi
-;    call fat_file_size ; Get size into eax
-;    mov [kernel_size], eax
-;
-;    mov esi, ebx ; restore entry address
-;    mov edi, KERNEL_PHY_ADR
-;    mov ebx, BUFFER_ADR
-;    mov dl, [boot_drive_number]
-;    call fat_load_file
-
+.kernel_file_found:
     ; Provide memory information to kernel
     push dword [kernel_size]
     push buffer ; memory_map_entries_adr
@@ -241,12 +223,9 @@ start_16:
     ; Enable paging
     call memory_init
 
+    ; pass boot parameters to kernel and start it
     mov eax, bios_service
     mov ebx, gdt_tss
-    ;mov edx, 0
-    ;mov dl, [boot_drive_number]
-    ;mov esi, 0
-    ;mov si, [boot_partition_entry_adr]
     jmp KERNEL_ADR
 
 .halt:
@@ -706,6 +685,23 @@ bits 32
     mov esp, ebp
     pop ebp
     ret 4 * 1
+
+;
+; Stop execution and show error message
+; in
+;  message_adr
+%define .message_adr [ebp + 8]
+[bits 32]
+fatal_error_32:
+    push ebp
+    mov ebp, esp
+
+    mov esi, .message_adr
+    call switch_to_v86_mode
+[bits 16]
+    call fatal_error
+
+%undef .message_adr
 
 ;
 ; Stop execution and show error message

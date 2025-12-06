@@ -31,8 +31,8 @@ call raw<"m">: entryAdr u32
 @export start fun
     biosServiceAdr u32 <- getEax()
     gdtTssAdr u32 <- getEbx()
-    bootDriveNum u32 <- getEdx() & 0xff
-    bootPartitionAdr u32 <- getEsi() & 0xffff
+    //bootDriveNum u32 <- getEdx() & 0xff
+    //bootPartitionAdr u32 <- getEsi() & 0xffff
 
     @bios_service.init(biosServiceAdr)
     @scheduler.init(gdtTssAdr)
@@ -44,20 +44,20 @@ call raw<"m">: entryAdr u32
 
     interrupt_init_protected_mode()
 
-    @Storage.init(bootDriveNum, bootPartitionAdr)
+    /*@Storage.init(bootDriveNum, bootPartitionAdr)
     @Storage.getBootStorageFs()
     
-    @fs_fat12.init()
+    @fs_fat12.init()*/
 
     @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
 
-    pShell ptr<u8> <- @fs_fat12.loadFile("SHELL.BIN")
+    /*pShell ptr<u8> <- @fs_fat12.loadFile("SHELL.BIN")
     if pShell.vAdr = 0
         @term.printString("Could not load SHELL.BIN!", @term.FOREGROUND_RED)
     else
         pProcess ptr<blob<Process>> <- @scheduler.createProcess(pShell, 3_636)
         @scheduler.switchToProcess(pProcess)
-    ;
+    ;*/
 
     rep
     ;
