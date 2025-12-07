@@ -2,20 +2,37 @@
 [cpu 386]
 [bits 32]
 
-%define FAT_BYTES_PER_SECTOR 512
-%define FAT_RESERVED_SECTORS_COUNT 1
-%define FAT_FATS_COUNT 2
-%define FAT_ROOT_DIR_ENTRIES_COUNT 512
-%define FAT_SECTORS_PER_FAT 9
+; predefined values
+%define FAT_BYTES_PER_ENTRY 0x20
+%define FAT_12_EOF 0x0ff8
 
-%define FAT_BYTES_PER_ENTRY 32
-%define FAT_EOF 0x0ff8
-%define FAT_ENTRY_CLUSTER_OFFSET 26
-%define FAT_ENTRY_FILE_SIZE_OFFSET 28
-%define FAT_FIRST_DATA_SECTOR FAT_RESERVED_SECTORS_COUNT + (FAT_FATS_COUNT * FAT_SECTORS_PER_FAT) + ((FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY) / FAT_BYTES_PER_SECTOR)
-%define FAT_ROOT_DIR_OFFSET FAT_RESERVED_SECTORS_COUNT + FAT_SECTORS_PER_FAT * FAT_FATS_COUNT
-%define FAT_ROOT_DIR_SECTORS_COUNT (FAT_ROOT_DIR_ENTRIES_COUNT * FAT_BYTES_PER_ENTRY) / FAT_BYTES_PER_SECTOR
+; file entry offsets
+%define FAT_ENTRY_CLUSTER_OFFSET 0x1a ; 2 bytes
+%define FAT_ENTRY_FILE_SIZE_OFFSET 0x1c ; 4 bytes
 
+; fat header offsets
+%define FAT_BYTES_PER_SECTOR_OFFSET 0x0b ; 2 bytes
+%define FAT_SECTORS_PER_CLUSTER_OFFSET 0x0d ; 1 byte
+%define FAT_RESERVED_SECTORS_COUNT_OFFSET 0x0e ; 1 byte
+%define FAT_FATS_COUNT_OFFSET 0x10 ; 1 byte
+%define FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET 0x11 ; 2 bytes
+%define FAT_SECTORS_PER_FAT_OFFSET 0x16 ; 2 bytes
+
+; from fat header
+boot_storage_fat_bytes_per_sector: dd 0
+boot_storage_fat_sectors_per_cluster: dd 0
+boot_storage_fat_reserved_sectors_count: dd 0
+boot_storage_fat_fats_count: dd 0
+boot_storage_fat_root_dir_entries_count: dd 0
+boot_storage_fat_sectors_per_fat: dd 0
+
+; calclulated
+boot_storage_fat_fat_first_sector: dd 0
+boot_storage_fat_root_dir_sectors_count: dd 0
+boot_storage_fat_root_dir_first_sector: dd 0
+boot_storage_fat_first_data_sector: dd 0
+
+; from boot & bios
 boot_storage_drive_number: dd 0
 boot_storage_partition_first_sector: dd 0
 boot_storage_drive_cylinders: dd 0
@@ -224,15 +241,17 @@ boot_storage_load_file_32:
 	mov ebp, esp
 
 	; load fat & root directory
+	push dword .buffer_adr ; buffer_adr
 	mov eax, .buffer_adr
 	add eax, 0x200
-	push eax ; fat_buffer_adr
+	push eax ; fat_adr
     call boot_storage_fat_init_32
 
 	; find file entry
-	mov eax, .buffer_adr
+	mov eax, [boot_storage_fat_sectors_per_fat]
+	mul dword [boot_storage_fat_bytes_per_sector]
+	add eax, .buffer_adr
 	add eax, 0x200
-	add eax, FAT_SECTORS_PER_FAT * FAT_BYTES_PER_SECTOR
 	push eax ; root_dir_adr
 	push dword .file_name_adr ; file_name_adr
 	call boot_storage_find_fat_file_entry_adr_32
@@ -266,34 +285,95 @@ boot_storage_load_file_32:
 ;
 ; Load fat file system
 ; in
-;  fat_buffer_adr
+;  fat_adr
+;  buffer_adr
 [bits 32]
-%define .args_count 1
-%define .fat_buffer_adr [ebp + 8]
+%define .args_count 2
+%define .fat_adr [ebp + 8]
+%define .buffer_adr [ebp + 12]
 boot_storage_fat_init_32:
 	push ebp
 	mov ebp, esp
 
+	; read fat info
+	push dword .buffer_adr ; target_adr
+	push dword 1 ;sectors_count
+	push dword [boot_storage_partition_first_sector] ; first_sector
+	call boot_storage_read_sectors_32
+
+	; fat_bytes_per_sector
+	mov ebx, .buffer_adr
+	movzx eax, word [ebx + FAT_BYTES_PER_SECTOR_OFFSET]
+	mov [boot_storage_fat_bytes_per_sector], eax
+
+	; fat_sectors_per_cluster
+	mov ebx, .buffer_adr
+	movzx eax, byte [ebx + FAT_SECTORS_PER_CLUSTER_OFFSET]
+	mov [boot_storage_fat_sectors_per_cluster], eax
+
+	; fat_reserved_sectors_count
+	mov ebx, .buffer_adr
+	movzx eax, byte [ebx + FAT_RESERVED_SECTORS_COUNT_OFFSET]
+	mov [boot_storage_fat_reserved_sectors_count], eax
+
+	; fat_fats_count
+	mov ebx, .buffer_adr
+	movzx eax, byte [ebx + FAT_FATS_COUNT_OFFSET]
+	mov [boot_storage_fat_fats_count], eax
+
+	; fat_root_dir_entries_count
+	mov ebx, .buffer_adr
+	movzx eax, word [ebx + FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET]
+	mov [boot_storage_fat_root_dir_entries_count], eax
+
+	; fat_sectors_per_fat
+	mov ebx, .buffer_adr
+	movzx eax, word [ebx + FAT_SECTORS_PER_FAT_OFFSET]
+	mov [boot_storage_fat_sectors_per_fat], eax
+
+	; fat_fat_first_sector <- fat_rserved_sectors_count + partition_first_sector
+	mov eax, [boot_storage_fat_reserved_sectors_count]
+	add eax, [boot_storage_partition_first_sector]
+	mov [boot_storage_fat_fat_first_sector], eax
+
+	; fat_root_dir_first_sector <- fat_fat_first_sector + fat_sectors_per_fat * fat_fats_count
+	mov eax, [boot_storage_fat_sectors_per_fat]
+	mul dword [boot_storage_fat_fats_count]
+	add eax, [boot_storage_fat_fat_first_sector]
+	mov [boot_storage_fat_root_dir_first_sector], eax
+
+	; fat_root_dir_sectors_count <- (root_dir_entries_count * BYTES_PER_ENTRY) / bytes_per_sector
+	mov eax, [boot_storage_fat_root_dir_entries_count]
+	mov ebx, FAT_BYTES_PER_ENTRY
+	mul ebx
+	div dword [boot_storage_fat_bytes_per_sector]
+	mov [boot_storage_fat_root_dir_sectors_count], eax
+
+	; fat_first_data_sector <- fat_root_dir_start_sector + fat_root_dir_sectors_count
+	mov eax, [boot_storage_fat_root_dir_first_sector]
+	add eax, [boot_storage_fat_root_dir_sectors_count]
+	mov [boot_storage_fat_first_data_sector], eax
+
 	; load fat
-	push dword .fat_buffer_adr ; target_adr
-	push FAT_SECTORS_PER_FAT ; sectors_count
-	mov eax, [boot_storage_partition_first_sector]
-	add eax, FAT_RESERVED_SECTORS_COUNT
-	push eax; first_sector
+	push dword .fat_adr ; target_adr
+	push dword [boot_storage_fat_sectors_per_fat] ; sectors_count
+	push dword [boot_storage_fat_fat_first_sector] ; first_sector
 	call boot_storage_read_sectors_32
 
 	; load root directory
-	mov eax, .fat_buffer_adr
-	add eax, FAT_SECTORS_PER_FAT * FAT_BYTES_PER_SECTOR
+	mov eax, [boot_storage_fat_sectors_per_fat]
+	mul dword [boot_storage_fat_bytes_per_sector]
+	add eax, .fat_adr
 	push eax ; target_adr
-	push dword FAT_ROOT_DIR_SECTORS_COUNT ; sectors_count
-	push dword FAT_ROOT_DIR_OFFSET ; first_sector
+	push dword [boot_storage_fat_root_dir_sectors_count] ; sectors_count
+	push dword [boot_storage_fat_root_dir_first_sector] ; first_sector
 	call boot_storage_read_sectors_32
 
 	mov esp, ebp
 	pop ebp
 	ret 4 * .args_count
-%undef .fat_buffer_adr
+%undef .buffer_adr
+%undef .fat_adr
 %undef .args_count
 
 ;
@@ -323,7 +403,7 @@ boot_storage_find_fat_file_entry_adr_32:
 	; Try next entry
 	add edi, FAT_BYTES_PER_ENTRY
 	inc eax
-	cmp eax, FAT_ROOT_DIR_ENTRIES_COUNT
+	cmp eax, dword [boot_storage_fat_root_dir_entries_count]
 	jl .loop
 
 	; Gone through all file entries, nothing found
@@ -367,10 +447,11 @@ boot_storage_read_clusters_32:
 	;call print_new_line_32
 	;pop eax
 
-	; Calculate sector number (sector - 2) * sectors_per_cluster + data start offset + parition start offset
+	; Calculate sector number (cluster - 2) * sectors_per_cluster + data start offset + parition start offset
 	push eax
 	sub eax, 2
-	add eax, FAT_FIRST_DATA_SECTOR
+	mul dword [boot_storage_fat_sectors_per_cluster]
+	add eax, [boot_storage_fat_first_data_sector]
 
 	; read sector
 	push dword .buffer_adr ; target_address
@@ -411,7 +492,7 @@ boot_storage_read_clusters_32:
 	and eax, 0x0fff
 
 .next_cluster:
-	cmp eax, 0x0ff8 ; range 0x0ff8 - 0x0fff marks the last cluster
+	cmp eax, FAT_12_EOF ; range 0x0ff8 - 0x0fff marks the last cluster
 	jb .loop
 
 .end:
