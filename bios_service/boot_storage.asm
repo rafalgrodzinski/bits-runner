@@ -89,27 +89,6 @@ boot_storage_init_32:
 	inc eax
 	mov [boot_storage_drive_cylinders], eax
 
-	;push dword [boot_storage_drive_number]
-	;call print_hex_32
-	;call print_new_line_32
-
-	;push dword [boot_storage_partition_first_sector]
-	;call print_hex_32
-	;call print_new_line_32
-
-	;push dword [boot_storage_drive_cylinders]
-	;call print_hex_32
-	;call print_new_line_32
-
-	;push dword [boot_storage_drive_heads]
-	;call print_hex_32
-	;call print_new_line_32
-
-	;push dword [boot_storage_drive_sectors]
-	;call print_hex_32
-	;call print_new_line_32
-	;call print_new_line_32
-
 	mov esp, ebp
 	pop ebp
 	ret 4 * .args_count
@@ -133,20 +112,6 @@ boot_storage_init_32:
 boot_storage_read_sectors_32:
 	push ebp
 	mov ebp, esp
-
-	;push dword .first_sector
-	;call print_hex_32
-	;call print_new_line_32
-
-	;push dword .sectors_count
-	;call print_hex_32
-	;call print_new_line_32
-
-	;push dword .target_address
-	;call print_hex_32
-	;call print_new_line_32
-
-	;call print_new_line_32
 
 	; convert LBA address into CHS in ch, dh, cl
 	push dword .first_sector
@@ -440,37 +405,37 @@ boot_storage_read_clusters_32:
 	mov eax, .first_cluster
 	; mul sectors per cluster
 
-.loop:
-	;push eax
-	;push eax
-	;call print_hex_32
-	;call print_new_line_32
-	;pop eax
-
+.read_clusters_loop:
 	; Calculate sector number (cluster - 2) * sectors_per_cluster + data start offset + parition start offset
 	push eax
 	sub eax, 2
 	mul dword [boot_storage_fat_sectors_per_cluster]
 	add eax, [boot_storage_fat_first_data_sector]
 
+	; read cluster
+	mov ecx, [boot_storage_fat_sectors_per_cluster]
+.read_cluster_loop:
 	; read sector
+	pusha
 	push dword .buffer_adr ; target_address
 	push dword 1 ; sectors_count
 	push eax ; first_sector
 	call boot_storage_read_sectors_32
+	popa
 
 	; copy data from buffer into target
-	xor ecx, ecx
-	mov edi, .target_adr
+	push ecx
+	cld
+	mov ecx, [boot_storage_fat_bytes_per_sector]
+	shr ecx, 2 ; we move 4 bytes at a time, so divide by 4
 	mov esi, .buffer_adr
-.copy_loop:
-	mov al, [esi + ecx]
-	mov [edi + ecx], al
-	inc ecx
-	cmp ecx, 512
-	jb .copy_loop
+	mov edi, .target_adr
+	rep movsd
+	mov .target_adr, edi
+	pop ecx
 
-	add dword .target_adr, 512
+	inc eax 
+	loop .read_cluster_loop
 
 	; Load next cluster number
 	pop eax ; restore cluster number
@@ -493,7 +458,7 @@ boot_storage_read_clusters_32:
 
 .next_cluster:
 	cmp eax, FAT_12_EOF ; range 0x0ff8 - 0x0fff marks the last cluster
-	jb .loop
+	jb .read_clusters_loop
 
 .end:
 	mov esp, ebp
