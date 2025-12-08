@@ -3,12 +3,17 @@
 [bits 32]
 
 ; predefined values
+%define FS_TYPE_FAT12 12
+%define FS_TYPE_FAT16 16
+
 %define FAT_BYTES_PER_ENTRY 0x20
-%define FAT_12_EOF 0x0ff8
+%define FAT12_EOF 0x0ff8
+%define FAT16_EOF 0xfff8
 
 ; file entry offsets
 %define FAT_ENTRY_CLUSTER_OFFSET 0x1a ; 2 bytes
 %define FAT_ENTRY_FILE_SIZE_OFFSET 0x1c ; 4 bytes
+%define FAT_FS_ID_OFFSET 0x36 ; 8 bytes
 
 ; fat header offsets
 %define FAT_BYTES_PER_SECTOR_OFFSET 0x0b ; 2 bytes
@@ -31,6 +36,8 @@ boot_storage_fat_fat_first_sector: dd 0
 boot_storage_fat_root_dir_sectors_count: dd 0
 boot_storage_fat_root_dir_first_sector: dd 0
 boot_storage_fat_first_data_sector: dd 0
+
+boot_storage_fs_type: dd 0
 
 ; from boot & bios
 boot_storage_drive_number: dd 0
@@ -113,11 +120,14 @@ boot_storage_read_sectors_32:
 	push ebp
 	mov ebp, esp
 
+	mov esi, .sectors_count
+
+.sectors_loop:
 	; convert LBA address into CHS in ch, dh, cl
 	push dword .first_sector
 	call boot_storage_lba_to_chs_32
 
-	mov al, .sectors_count ; read single sector
+	mov al, 1 ; read single sector
 	mov bx, .target_address
 	mov dl, [boot_storage_drive_number]
 	mov edi, 3 ; try reading 3 times
@@ -125,22 +135,32 @@ boot_storage_read_sectors_32:
 	call switch_to_v86_mode_32
 [bits 16]
 
-.loop:
+.retry_loop:
 	mov ah, 0x02
 	int 0x13
-	jnc .read_successful
+	jnc .reading_finished
 	dec edi
-	jnz .loop
+	jnz .retry_loop
 
 	mov eax, 0
 	jmp .reading_finished
 
-.read_successful:
-	mov eax, 1
-
 .reading_finished:
 	call switch_to_protected_mode_16
 [bits 32]
+
+	cmp eax, 0
+	jz .end
+
+	inc dword .first_sector
+	add dword .target_address, 512
+
+	dec esi
+	jnz .sectors_loop
+
+	mov eax, .sectors_count
+
+.end:
 	mov esp, ebp
 	pop ebp
 	ret 4 * .args_count
@@ -212,6 +232,9 @@ boot_storage_load_file_32:
 	push eax ; fat_adr
     call boot_storage_fat_init_32
 
+	cmp eax, 0
+	jz .end
+
 	; find file entry
 	mov eax, [boot_storage_fat_sectors_per_fat]
 	mul dword [boot_storage_fat_bytes_per_sector]
@@ -222,10 +245,10 @@ boot_storage_load_file_32:
 	call boot_storage_find_fat_file_entry_adr_32
 
 	cmp eax, 0 ; return if nothing was found
-	js .end
+	jz .end
 
 	push dword [eax + FAT_ENTRY_FILE_SIZE_OFFSET] ; keep file size
-	movzx eax, word [eax + FAT_ENTRY_CLUSTER_OFFSET] ; and get the initial cluster
+	movzx eax, word [eax + FAT_ENTRY_CLUSTER_OFFSET] ; get the first cluster
 
 	; load file
 	push dword .buffer_adr ; buffer_adr
@@ -252,6 +275,8 @@ boot_storage_load_file_32:
 ; in
 ;  fat_adr
 ;  buffer_adr
+; out
+;  eax: 1 succes, 0 failure
 [bits 32]
 %define .args_count 2
 %define .fat_adr [ebp + 8]
@@ -307,6 +332,8 @@ boot_storage_fat_init_32:
 	add eax, [boot_storage_fat_fat_first_sector]
 	mov [boot_storage_fat_root_dir_first_sector], eax
 
+	mov dword [boot_storage_fat_sectors_per_fat], 10 ; TODO: just a hack, fixme
+
 	; fat_root_dir_sectors_count <- (root_dir_entries_count * BYTES_PER_ENTRY) / bytes_per_sector
 	mov eax, [boot_storage_fat_root_dir_entries_count]
 	mov ebx, FAT_BYTES_PER_ENTRY
@@ -319,9 +346,34 @@ boot_storage_fat_init_32:
 	add eax, [boot_storage_fat_root_dir_sectors_count]
 	mov [boot_storage_fat_first_data_sector], eax
 
+	; fs_type
+	mov ebx, .buffer_adr
+
+	cmp byte [ebx + FAT_FS_ID_OFFSET + 4], `2`
+	jne .fs_not_fat12
+	mov dword [boot_storage_fs_type], FS_TYPE_FAT12
+	jmp .fs_found
+.fs_not_fat12:
+
+	cmp byte [ebx + FAT_FS_ID_OFFSET + 4], `6`
+	jne .fs_not_fat16
+	mov dword [boot_storage_fs_type], FS_TYPE_FAT16
+	jmp .fs_found
+.fs_not_fat16:
+
+	mov eax, 0
+	jmp .end
+
+.fs_found:
+	push dword [boot_storage_fs_type]
+	call term_print_hex_32
+	call term_print_new_line_32
+	call term_print_new_line_32
+
 	; load fat
 	push dword .fat_adr ; target_adr
-	push dword [boot_storage_fat_sectors_per_fat] ; sectors_count
+	;push dword [boot_storage_fat_sectors_per_fat] ; sectors_count
+	push dword 10
 	push dword [boot_storage_fat_fat_first_sector] ; first_sector
 	call boot_storage_read_sectors_32
 
@@ -334,6 +386,9 @@ boot_storage_fat_init_32:
 	push dword [boot_storage_fat_root_dir_first_sector] ; first_sector
 	call boot_storage_read_sectors_32
 
+	mov eax, 1
+
+.end:
 	mov esp, ebp
 	pop ebp
 	ret 4 * .args_count
@@ -403,7 +458,6 @@ boot_storage_read_clusters_32:
 	mov ebp, esp
 
 	mov eax, .first_cluster
-	; mul sectors per cluster
 
 .read_clusters_loop:
 	; Calculate sector number (cluster - 2) * sectors_per_cluster + data start offset + parition start offset
@@ -437,9 +491,13 @@ boot_storage_read_clusters_32:
 	inc eax 
 	loop .read_cluster_loop
 
-	; Load next cluster number
+	; Load next cluster number for give fat type
 	pop eax ; restore cluster number
 
+	cmp dword [boot_storage_fs_type], FS_TYPE_FAT16
+	je .fat16
+
+.fat12:
 	mov ebx, 3
 	mul ebx
 	mov ebx, 2
@@ -457,7 +515,17 @@ boot_storage_read_clusters_32:
 	and eax, 0x0fff
 
 .next_cluster:
-	cmp eax, FAT_12_EOF ; range 0x0ff8 - 0x0fff marks the last cluster
+	cmp eax, FAT12_EOF ; range 0x0ff8 - 0x0fff marks the last cluster
+	jb .read_clusters_loop
+	jmp .end
+
+.fat16:
+	mov ebx, 2
+	mul ebx
+	add eax, .fat_adr
+
+	movzx eax, word [eax]
+	cmp eax, FAT16_EOF
 	jb .read_clusters_loop
 
 .end:

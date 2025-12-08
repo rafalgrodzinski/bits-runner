@@ -104,5 +104,8 @@ check "Failed to create HDD image"
 
 # Copy image files
 cp fdd.img ~/Downloads/bits_runner_fdd.img
+cp hdd.img ~/Downloads/bits_runner_hdd.img
 rm ~/Downloads/bits_runner_hdd.vmdk &> /dev/null
-VBoxManage convertfromraw hdd.img ~/Downloads/bits_runner_hdd.vmdk --format VMDK
+VBoxManage convertfromraw hdd.img ~/Downloads/bits_runner_hdd.vmdk --format VMDK --uuid=182b4980-6880-483c-a9d1-2c6c18e02645
+rm ~/Downloads/bits_runner_hdd.vdi &> /dev/null
+VBoxManage convertfromraw hdd.img ~/Downloads/bits_runner_hdd.vdi --format VDI --uuid=182b4980-6880-483c-a9d1-2c6c18e02645
