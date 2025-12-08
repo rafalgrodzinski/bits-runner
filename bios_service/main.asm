@@ -4,6 +4,7 @@
 %define RAM_MIN 0x1000000 ; 16MiB
 %define KERNEL_PHY_ADR 0x100000 ; 1MiB
 %define KERNEL_ADR 0x80000000
+%define STACK_ADR 0x1000 - 4
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
@@ -116,7 +117,7 @@ start_16:
     mov fs, bx
     mov gs, bx
     mov ss, bx
-    mov sp, 0xffff
+    mov sp, STACK_ADR
 
 	; store boot drive number
     and edx, 0xff

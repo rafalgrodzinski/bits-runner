@@ -24,7 +24,7 @@
 %define FAT_SECTORS_PER_FAT_OFFSET 0x16 ; 2 bytes
 
 ; from fat header
-boot_storage_fat_bytes_per_sector: dd 0
+boot_storage_fat_bytes_per_sector: dd 0x200
 boot_storage_fat_sectors_per_cluster: dd 0
 boot_storage_fat_reserved_sectors_count: dd 0
 boot_storage_fat_fats_count: dd 0
@@ -137,10 +137,9 @@ boot_storage_read_sectors_32:
 	; copy data from buffer into target address
 	cld
 	mov ecx, [boot_storage_fat_bytes_per_sector]
-	shr ecx, 2 ; we move 4 bytes at a time, so divide by 4
 	mov esi, .buffer_adr
 	mov edi, .target_adr
-	rep movsd
+	rep movsb
 	mov .target_adr, edi ; point target address to the next area
 
 	inc dword .first_sector ; move the next input sector
@@ -375,8 +374,6 @@ boot_storage_fat_init_32:
 	add eax, [boot_storage_fat_fat_first_sector]
 	mov [boot_storage_fat_root_dir_first_sector], eax
 
-	mov dword [boot_storage_fat_sectors_per_fat], 10 ; TODO: just a hack, fixme
-
 	; fat_root_dir_sectors_count <- (root_dir_entries_count * BYTES_PER_ENTRY) / bytes_per_sector
 	mov eax, [boot_storage_fat_root_dir_entries_count]
 	mov ebx, FAT_BYTES_PER_ENTRY
@@ -413,8 +410,7 @@ boot_storage_fat_init_32:
 	push dword .buffer_adr ; buffer_adr
 	push dword .fat_adr ; target_adr
 
-	;push dword [boot_storage_fat_sectors_per_fat] ; sectors_count
-	push dword 10 ; TODO: fixme!
+	push dword [boot_storage_fat_sectors_per_fat] ; sectors_count
 
 	push dword [boot_storage_fat_fat_first_sector] ; first_sector
 	call boot_storage_read_sectors_32

@@ -10,6 +10,7 @@ nop
 %define FAT_ENTRY_CLUSTER_OFFSET 26
 %define FAT12_EOF 0x0ff8
 %define FAT16_EOF 0xfff8
+%define STACK_ADR 0x7c00 - 4
 
 %define ADDRESS_BIOS_SERVICE 0x1000 ; 4KiB
 
@@ -48,7 +49,7 @@ start:
 	xor ax, ax
 	mov ds, ax
 	mov ss, ax
-	mov sp, 0x7c00
+	mov sp, STACK_ADR
 
 	; store boot drive number
 	mov [boot_drive_number], dl
@@ -120,6 +121,7 @@ start:
 	add ax, [bpb_hidden_sectors]
 	mov bx, data
 	mov cx, [bpb_sectors_per_fat]
+	and cx, 0x0f ; limit to just 15 sectors because we don't want to go over the 64KiB segment boundary (16 * 512 = 8Kib)
 	call read_sectors
 	
 	; Load file
@@ -317,7 +319,7 @@ load_file:
 bios_service_file_name: db `BIOS_SVCBIN`
 msg_loading: db `Loading...\0`
 
-msg_disk_read_failed: db `Disk read failed!\0`
+msg_disk_read_failed: db `Read failed!\0`
 msg_bios_service_file_not_found: db `BIOS_SVC.BIN not found!\0`
 
 times 510 - ($ - $$) db 0 ; padding
