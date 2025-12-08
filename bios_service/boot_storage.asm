@@ -109,26 +109,76 @@ boot_storage_init_32:
 ;  first_sector
 ;  sectors_count
 ;  target_adr
+;  buffer_adr
 ; out
 ;  eax: read sectors count or 0 on error
-%define .args_count 3
+%define .args_count 4
 %define .first_sector [ebp + 8]
 %define .sectors_count [ebp + 12]
-%define .target_address [ebp + 16]
+%define .target_adr [ebp + 16]
+%define .buffer_adr [ebp + 20]
 [bits 32]
 boot_storage_read_sectors_32:
 	push ebp
 	mov ebp, esp
 
-	mov esi, .sectors_count
+	mov ecx, .sectors_count
 
 .sectors_loop:
-	; convert LBA address into CHS in ch, dh, cl
+	push ecx
+
+	; read given sector into a temp buffer
+	push dword .buffer_adr
 	push dword .first_sector
+	call boot_storage_read_sector_32
+	cmp eax, 0
+	jz .end
+
+	; copy data from buffer into target address
+	cld
+	mov ecx, [boot_storage_fat_bytes_per_sector]
+	shr ecx, 2 ; we move 4 bytes at a time, so divide by 4
+	mov esi, .buffer_adr
+	mov edi, .target_adr
+	rep movsd
+	mov .target_adr, edi ; point target address to the next area
+
+	inc dword .first_sector ; move the next input sector
+
+	pop ecx
+	loop .sectors_loop
+
+.end:
+	mov esp, ebp
+	pop ebp
+	ret 4 * .args_count
+%undef .buffer_adr
+%undef .target_adr
+%undef .sectors_count
+%undef .first_sector
+%undef .args_count
+
+;
+; Read singe sector from the boot storage device
+; in
+;  sector
+;  target_adr (within the first memory segment)
+; out
+;  eax: read sectors count (1) or 0 on error
+%define .args_count 2
+%define .sector [ebp + 8]
+%define .target_adr [ebp + 12]
+[bits 32]
+boot_storage_read_sector_32:
+	push ebp
+	mov ebp, esp
+
+	; convert LBA address into CHS in ch, dh, cl
+	push dword .sector
 	call boot_storage_lba_to_chs_32
 
 	mov al, 1 ; read single sector
-	mov bx, .target_address
+	mov bx, .target_adr
 	mov dl, [boot_storage_drive_number]
 	mov edi, 3 ; try reading 3 times
 
@@ -138,35 +188,27 @@ boot_storage_read_sectors_32:
 .retry_loop:
 	mov ah, 0x02
 	int 0x13
-	jnc .reading_finished
+	jnc .read_successful
 	dec edi
 	jnz .retry_loop
+	jmp .read_failed
 
+.read_successful:
+	mov eax, 1
+	jmp .end
+
+.read_failed:
 	mov eax, 0
-	jmp .reading_finished
 
-.reading_finished:
+.end:
 	call switch_to_protected_mode_16
 [bits 32]
 
-	cmp eax, 0
-	jz .end
-
-	inc dword .first_sector
-	add dword .target_address, 512
-
-	dec esi
-	jnz .sectors_loop
-
-	mov eax, .sectors_count
-
-.end:
 	mov esp, ebp
 	pop ebp
 	ret 4 * .args_count
-%undef .target_address
-%undef .sectors_count
-%undef .first_sector
+%undef .target_adr
+%undef .sector
 %undef .args_count
 
 ;
@@ -286,6 +328,7 @@ boot_storage_fat_init_32:
 	mov ebp, esp
 
 	; read fat info
+	push dword .buffer_adr ; buffer_adr
 	push dword .buffer_adr ; target_adr
 	push dword 1 ;sectors_count
 	push dword [boot_storage_partition_first_sector] ; first_sector
@@ -365,19 +408,19 @@ boot_storage_fat_init_32:
 	jmp .end
 
 .fs_found:
-	push dword [boot_storage_fs_type]
-	call term_print_hex_32
-	call term_print_new_line_32
-	call term_print_new_line_32
 
 	; load fat
+	push dword .buffer_adr ; buffer_adr
 	push dword .fat_adr ; target_adr
+
 	;push dword [boot_storage_fat_sectors_per_fat] ; sectors_count
-	push dword 10
+	push dword 10 ; TODO: fixme!
+
 	push dword [boot_storage_fat_fat_first_sector] ; first_sector
 	call boot_storage_read_sectors_32
 
 	; load root directory
+	push dword .buffer_adr ; buffer_adr
 	mov eax, [boot_storage_fat_sectors_per_fat]
 	mul dword [boot_storage_fat_bytes_per_sector]
 	add eax, .fat_adr
@@ -467,29 +510,16 @@ boot_storage_read_clusters_32:
 	add eax, [boot_storage_fat_first_data_sector]
 
 	; read cluster
-	mov ecx, [boot_storage_fat_sectors_per_cluster]
-.read_cluster_loop:
-	; read sector
-	pusha
-	push dword .buffer_adr ; target_address
-	push dword 1 ; sectors_count
-	push eax ; first_sector
+	push dword .buffer_adr ; buffer_adr
+	push dword .target_adr ; target_adr
+	push dword [boot_storage_fat_sectors_per_cluster] ; sectors_count
+	push dword eax ; first_sector
 	call boot_storage_read_sectors_32
-	popa
 
-	; copy data from buffer into target
-	push ecx
-	cld
-	mov ecx, [boot_storage_fat_bytes_per_sector]
-	shr ecx, 2 ; we move 4 bytes at a time, so divide by 4
-	mov esi, .buffer_adr
-	mov edi, .target_adr
-	rep movsd
-	mov .target_adr, edi
-	pop ecx
-
-	inc eax 
-	loop .read_cluster_loop
+	; target_adr += bytes_per_sector * sectors_per_cluster
+	mov eax, [boot_storage_fat_bytes_per_sector]
+	mul dword [boot_storage_fat_sectors_per_cluster]
+	add .target_adr, eax
 
 	; Load next cluster number for give fat type
 	pop eax ; restore cluster number
