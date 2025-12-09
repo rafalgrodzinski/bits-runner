@@ -1,0 +1,5 @@
+@module Storage
+
+StorageFs blob
+    storageArea blob<StorageArea>
+;

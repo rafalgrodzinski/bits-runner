@@ -1,0 +1,84 @@
+@module Storage
+
+@import mem
+@import term
+
+// Predefined
+FAT_BYTES_PER_ENTRY u32 <- 0x20
+FAT12_EOF u32 <- 0x0ff8
+FAT16_EOF u32 <- 0xfff8
+
+FS_TYPE_FAT12 u32 <- 12
+FS_TYPE_FAT16 u32 <- 16
+
+// FAT header offsets
+FAT_BYTES_PER_SECTOR_OFFSET u32 <- 0x0b // 2 bytes
+FAT_SECTORS_PER_CLUSTER_OFFSET u32 <- 0x0d // 1 byte
+FAT_RESERVED_SECTORS_COUNT_OFFSET u32 <- 0x0e // 1 byte
+FAT_FATS_COUNT_OFFSET u32 <- 0x10 // 1 byte
+FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET u32 <- 0x11 // 2 bytes
+FAT_SECTORS_PER_FAT_OFFSET u32 <- 0x16 // 2 bytes
+FAT_FS_ID_OFFSET u32 <- 0x36 // 8 bytes
+
+StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
+    storageFs blob<StorageFs>
+
+    storageFs.storageArea <- storageArea
+
+    // Init FAT
+    pFatBuffer ptr<data<u8>> <- @mem.allocateBytes(512)
+    storageArea.readSectors.val({storageArea.adr}, 0, 1, pFatBuffer)
+
+    pInfo ptr<u32>
+
+    // read values
+    pInfo <- {pFatBuffer.vAdr + FAT_BYTES_PER_SECTOR_OFFSET}
+    bytesPerSector u32 <- pInfo.val & 0xffff
+
+    pInfo <- {pFatBuffer.vAdr + FAT_SECTORS_PER_CLUSTER_OFFSET}
+    sectorsPerCluster u32 <- pInfo.val & 0xff
+
+    pInfo <- {pFatBuffer.vAdr + FAT_RESERVED_SECTORS_COUNT_OFFSET}
+    reservedSectorsCount u32 <- pInfo.val & 0xff
+
+    pInfo <- {pFatBuffer.vAdr + FAT_FATS_COUNT_OFFSET}
+    fatsCount u32 <- pInfo.val & 0xff
+
+    pInfo <- {pFatBuffer.vAdr + FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET}
+    rootDirEntriesCount u32 <- pInfo.val & 0xffff
+
+    pInfo <- {pFatBuffer.vAdr + FAT_SECTORS_PER_FAT_OFFSET}
+    sectorsPerFat u32 <- pInfo.val & 0xffff
+
+    // calculated values
+    fatFirstSector u32 <- reservedSectorsCount
+
+    rootDirFirstSector u32 <- fatFirstSector + sectorsPerFat * fatsCount
+
+    rootDirSectorsCount u32 <- (rootDirEntriesCount * FAT_BYTES_PER_ENTRY) / bytesPerSector
+
+    firstDataSector u32 <- rootDirFirstSector + rootDirSectorsCount
+
+    // FAT type
+    pInfo <- {pFatBuffer.vAdr + FAT_FS_ID_OFFSET + 4}
+    fatType u32
+    if pInfo.val & 0xff = '2': fatType <- FS_TYPE_FAT12
+    else if pInfo.val & 0xff = '6': fatType <- FS_TYPE_FAT16
+
+    @term.printHex(fatFirstSector, @term.FOREGROUND_RED)
+    @term.printNewLine()
+
+    @term.printHex(rootDirFirstSector, @term.FOREGROUND_GREEN)
+    @term.printNewLine()
+
+    @term.printHex(rootDirSectorsCount, @term.FOREGROUND_BLUE)
+    @term.printNewLine()
+
+    @term.printHex(firstDataSector, @term.FOREGROUND_RED)
+    @term.printNewLine()
+
+    @term.printHex(fatType, @term.FOREGROUND_GREEN)
+    @term.printNewLine()
+
+    ret storageFs
+;

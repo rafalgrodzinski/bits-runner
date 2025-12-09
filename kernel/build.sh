@@ -21,7 +21,9 @@ brb --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-init
 "${SCRIPT_DIR}/processes/scheduler.brc" \
 "${SCRIPT_DIR}/Storage/Storage.brc" \
 "${SCRIPT_DIR}/Storage/BiosBootStorageDevice.brc" \
-"${SCRIPT_DIR}/Storage/StorageArea.brc"
+"${SCRIPT_DIR}/Storage/StorageArea.brc" \
+"${SCRIPT_DIR}/Storage/StorageFs/StorageFs.brc" \
+"${SCRIPT_DIR}/Storage/StorageFs/StorageFsFat.brc"
 
 check
 nasm  -f elf32 -o int.o "${SCRIPT_DIR}/interrupts/int.asm"

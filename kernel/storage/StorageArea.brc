@@ -12,6 +12,7 @@ StorageArea blob
 
 StorageArea fun: device blob<StorageDevice>, partitionNum u32, firstSector u32, sectorsCount u32 -> blob<StorageArea>
     storageArea blob<StorageArea>
+
     storageArea.storageDevice <- device
     storageArea.partitionNum <- partitionNum
     storageArea.firstSector <- firstSector

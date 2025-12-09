@@ -34,6 +34,7 @@ buffer data<u8, 512>
     storageArea blob<StorageArea> <- StorageArea(storageDevice, storageAreaPartitionNumber, bootPartitionFirstSector, storageAreaSectorsCount)
 
     // And finally the storage filesystem
+    storageFs blob<StorageFs> <- StorageFsFat(storageArea)
 
     //startSector u32
     //sectorsCount u32
