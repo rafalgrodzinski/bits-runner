@@ -1,8 +1,7 @@
 @import term
 @import mem
-@import fs_fat12
+//@import fs_fat12
 @import bios_service
-@import drv_serial
 @import scheduler
 @import Storage
 
@@ -16,12 +15,12 @@ getEbx raw<"=r"> -> u32
     mov $0, ebx
 ;
 
-getEdx raw<"=r"> -> u32
-    mov $0, edx
+getEcx raw<"=r"> -> u32
+    mov $0, ecx
 ;
 
-getEsi raw<"=r"> -> u32
-    mov $0, esi
+getEdx raw<"=r"> -> u32
+    mov $0, edx
 ;
 
 call raw<"m">: entryAdr u32
@@ -29,25 +28,26 @@ call raw<"m">: entryAdr u32
 ;
 
 @export start fun
+    // Get boot parameters from BIOS Service
     biosServiceAdr u32 <- getEax()
     gdtTssAdr u32 <- getEbx()
-    //bootDriveNum u32 <- getEdx() & 0xff
-    //bootPartitionAdr u32 <- getEsi() & 0xffff
+    bootPartitionFirstSector u32 <- getEcx()
+    biosBootDriveNumber u32 <- getEdx()
 
+    // Initialize subsystems
     @bios_service.init(biosServiceAdr)
     @scheduler.init(gdtTssAdr)
-
     @mem.init()
     @term.init(@term.MODE_80x25)
-    @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
-    //@drv_serial.init()
-
     interrupt_init_protected_mode()
 
-    /*@Storage.init(bootDriveNum, bootPartitionAdr)
-    @Storage.getBootStorageFs()
+    @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
+
+
+    //@Storage.init(biosBootDriveNumber, bootPartitionFirstSector)
+    @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
     
-    @fs_fat12.init()*/
+    //@fs_fat12.init()
 
     @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
 

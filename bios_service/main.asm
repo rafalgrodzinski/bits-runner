@@ -225,6 +225,8 @@ start_16:
     ; pass boot parameters to kernel and start it
     mov eax, bios_service
     mov ebx, gdt_tss
+    mov ecx, [boot_partition_first_sector]
+    mov edx, [boot_drive_number]
     jmp KERNEL_ADR
 
 .halt:

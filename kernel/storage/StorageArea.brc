@@ -4,17 +4,19 @@
 
 StorageArea blob
     storageDevice blob<StorageDevice>
-    startSector u32
+    partitionNum u32
+    firstSector u32
     sectorsCount u32
-    readSectors ptr<fun: ptr<blob<StorageDevice>>, u32, u32, ptr<data<u8>>>
+    readSectors ptr<fun: ptr<blob<StorageArea>>, u32, u32, ptr<data<u8>> -> u32>
 ;
 
-initArea fun: device blob<StorageDevice>, startSector u32, sectorsCount u32 -> blob<StorageArea>
+StorageArea fun: device blob<StorageDevice>, partitionNum u32, firstSector u32, sectorsCount u32 -> blob<StorageArea>
     storageArea blob<StorageArea>
     storageArea.storageDevice <- device
-    storageArea.startSector <- startSector
+    storageArea.partitionNum <- partitionNum
+    storageArea.firstSector <- firstSector
     storageArea.sectorsCount <- sectorsCount
-    storageArea.readSectors <- { areaReadSectors.adr }
+    storageArea.readSectors <- { storageAreaReadSectors.adr }
 
     @term.printString("Device num: ", @term.FOREGROUND_GRAY)
     @term.printHex(device.biosDriveNum, @term.FOREGROUND_GRAY)
@@ -24,8 +26,12 @@ initArea fun: device blob<StorageDevice>, startSector u32, sectorsCount u32 -> b
     @term.printHex(device.sectorsCount, @term.FOREGROUND_GRAY)
     @term.printNewLine()
 
+    @term.printString("Area partition num: ", @term.FOREGROUND_GRAY)
+    @term.printHex(partitionNum, @term.FOREGROUND_GRAY)
+    @term.printNewLine()
+
     @term.printString("Area start sector: ", @term.FOREGROUND_GRAY)
-    @term.printHex(startSector, @term.FOREGROUND_GRAY)
+    @term.printHex(firstSector, @term.FOREGROUND_GRAY)
     @term.printNewLine()
 
     @term.printString("Area sectors count: ", @term.FOREGROUND_GRAY)
@@ -35,7 +41,7 @@ initArea fun: device blob<StorageDevice>, startSector u32, sectorsCount u32 -> b
     ret storageArea
 ;
 
-areaReadSectors fun: it ptr<blob<StorageArea>>, startSector u32, sectorsCount u32, pTarget ptr<data<u8>>
-    startSector <- startSector + it.val.startSector
-    it.val.storageDevice.readSectors.val(startSector, sectorsCount, pTarget)
+storageAreaReadSectors fun: it ptr<blob<StorageArea>>, firstSector u32, sectorsCount u32, pTarget ptr<data<u8>> -> u32
+    firstSector <- firstSector + it.val.firstSector
+    ret it.val.storageDevice.readSectors.val({it.val.storageDevice.adr}, firstSector, sectorsCount, pTarget)
 ;

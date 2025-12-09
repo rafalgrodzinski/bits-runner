@@ -1,7 +1,7 @@
 %define BIOS_SERVICE_REBOOT 0x00
 %define BIOS_SERVICE_SET_VIDEO_MODE 0x01
-%define BIOS_SERVICE_READ_SECTORS 0x02
-%define BIOS_SERVICE_SECTORS_COUNT 0x03
+%define BIOS_SERVICE_BOOT_STORAGE_READ_SECTORS 0x02
+%define BIOS_SERVICE_BOOT_STORAGE_SECTORS_COUNT 0x03
 
 %define BIOS_SERVICE_TEXT_MODE_80x25 0x00
 %define BIOS_SERVICE_TEXT_MODE_80x50 0x01
@@ -12,39 +12,40 @@
 ; BIOS Services
 ; in
 ;  ah: service code
-bits 32
+[bits 32]
 bios_service:
     ; Reboot
     cmp ah, BIOS_SERVICE_REBOOT
     jne .not_reboot
     call reboot
+    jmp .end
 .not_reboot:
 
     ; Video mode
     cmp ah, BIOS_SERVICE_SET_VIDEO_MODE
     jne .not_set_video_mode
     call set_video_mode
+    jmp .end
 .not_set_video_mode:
 
     ; Read sectors
-    cmp ah, BIOS_SERVICE_READ_SECTORS
+    cmp ah, BIOS_SERVICE_BOOT_STORAGE_READ_SECTORS
     jne .not_read_sectors
-    push edi ; target address
-    push ecx ; number of sectors
-    push ebx ; lba source address
-    and eax, 0xff
-    push eax ; drive number
-    call service_read_sectors
+    push edi ; target_adr
+    push ecx ; sectors_count
+    push ebx ; first_sector
+    call service_boot_storage_read_sectors
+    jmp .end
 .not_read_sectors:
 
     ; Sectors count
-    cmp ah, BIOS_SERVICE_SECTORS_COUNT
+    cmp ah, BIOS_SERVICE_BOOT_STORAGE_SECTORS_COUNT
     jne .not_sectors_count
-    and edx, 0xff
-    push edx ; drive number
-    call service_sectors_count
+    call service_boot_storage_sectors_count
+    jmp .end
 .not_sectors_count:
 
+.end:
     ret
 
 ;
@@ -104,99 +105,45 @@ bits 32
     ret
 
 ;
-; Read sectors from a given device
+; Read sectors from the boot storage
 ; in
-;  drive_number
-;  source_lba_address
+;  first_sector
 ;  sectors_count
 ;  target_address
-%define .drive_number [ebp + 8]
-%define .source_lba_address [ebp + 12]
-%define .sectors_count [ebp + 16]
-%define .target_address [ebp + 20]
+; out
+;  eax: read sectors count (0 on error)
+%define .args_count 3
+%define .first_sector [ebp + 8]
+%define .sectors_count [ebp + 12]
+%define .target_adr [ebp + 16]
 [bits 32]
-service_read_sectors:
+service_boot_storage_read_sectors:
     push ebp
     mov ebp, esp
 
-    mov ecx, 0 ; sectors counter
-.loop:
-    ; read one sector into a buffer
-    mov eax, .source_lba_address
-    add eax, ecx ; lba address
-    mov ebx, 1 ; read one sector
-    mov edi, buffer 
-    mov dl, .drive_number
-    ;call read_sectors
-
-    ; copy from buffer into the target addrss
-    mov ebx, 0 ; buffer bytes counter
-.buffer_copy_loop:
-    mov eax, 0x200
-    mul ecx
-    add eax, .target_address
-    add eax, ebx ; calculate target address in eax
-
-    mov dl, [buffer + ebx]
-    mov byte [eax], dl ; finally copy the byte
-
-    inc ebx
-    cmp ebx, 0x200
-    jb .buffer_copy_loop
-
-    inc ecx
-    cmp ecx, .sectors_count
-    jb .loop
+    push dword buffer ; buffer_adr
+    push dword .target_adr ; target_adr
+    push dword .sectors_count ; sectors_count
+    push dword .first_sector ; first_sector
+    call boot_storage_read_sectors_32
 
     mov esp, ebp
     pop ebp
-    ret 4 * 4
+    ret 4 * .args_count
 %undef .target_address
 %undef .sectors_count
 %undef .source_lba_address
-%undef .drive_number
+%undef .args_count
 
 ;
-; Get number of sectors for a given drive 
-; in
-;  drive_number
-%define .drive_number [ebp + 8]
+; Get number of sectors of the boot storage
+;  out
+;   sectors_count
+[bits 32]
+service_boot_storage_sectors_count:
+    ; eax <- cylinders * heads * sectors
+    mov eax, [boot_storage_drive_cylinders]
+    mul dword [boot_storage_drive_heads]
+    mul dword [boot_storage_drive_sectors]
 bits 32
-service_sectors_count:
-    push ebp
-    mov ebp, esp
-
-    call switch_to_v86_mode_32
-bits 16
-    mov ah, 0x08
-    mov edx, .drive_number
-    ;mov esi, buffer
-    int 0x13
-    ;mov eax, [buffer + 0x10]
-
-    ; heads
-    mov eax, 0
-    mov al, dh
-    inc al
-
-    ; sectors
-    mov bx, cx
-    and bx, 0x3f ; bits 5-0 sectors
-    mul bx
-
-    ; cylinders
-    mov bx, 0
-    mov bl, ch
-    shr cl, 6
-    mov bh, cl
-    inc bx
-    mul bx
-
-    ; eax <- heads * sectors * cylinders
-
-    call switch_to_protected_mode_16
-bits 32
-
-    mov esp, ebp
-    pop ebp
-    ret 4 * 1
+    ret

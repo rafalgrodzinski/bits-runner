@@ -2,41 +2,43 @@
 
 @import term
 
-StorageFs blob
-
-;
-
-MBR_FIRST_PARTITION_OFFSET u32 <- 0x01be
-MBR_PARTITION_SIZE u32 <- 0x10
-MBR_PARTITION_START_SECTOR_OFFSET u32 <- 0x08
+MBR_FIRST_PARTITION_ENTRY_OFFSET u32 <- 0x01be
+MBR_PARTITION_ENTRY_SIZE u32 <- 0x10
+MBR_PARTITION_FIRST_SECTOR_OFFSET u32 <- 0x08
 MBR_PARTITION_SECTORS_COUNT_OFFSET u32 <- 0x0c
 
-bootDriveNumber u32
-bootPartitionIndex u32
+buffer data<u8, 512>
 
-@export init fun: biosDriveNumber u32, mbrPartitionAddress u32
-    bootDriveNumber <- biosDriveNumber
-    if mbrPartitionAddress = 0x1be
-        bootPartitionIndex = 1
-    else if mbrPartitionAddress = 0x1ce
-        bootPartitionIndex = 2
-    else if mbrPartitionAddress = 0x1de
-        bootPartitionIndex = 3
-    else if mbrPartitionAddress = 0x1ee
-        bootPartitionIndex = 4
-    else
-        bootPartitionIndex = 0
+@export bootStorageFs fun: biosBootDriveNumber u32, bootPartitionFirstSector u32 //-> blob<StorageFs>
+    // First setup the storage device
+    storageDevice blob<StorageDevice> <- BiosBootStorageDevice(biosBootDriveNumber)
+
+    // if starting sector is > 0 then find matching partition entry
+    // otherwise claim the whole disk space for the area
+    storageAreaPartitionNumber u32 <- 0
+    storageAreaSectorsCount u32 <- storageDevice.sectorsCount
+    if bootPartitionFirstSector > 0
+      storageDevice.readSectors.val({storageDevice.adr}, 0, 1, {buffer.adr})
+      rep i u32 <- 0, i < 4, i <- i + 1
+        pFirstSector ptr<u32> <- {buffer.adr + MBR_FIRST_PARTITION_ENTRY_OFFSET + MBR_PARTITION_ENTRY_SIZE * i + MBR_PARTITION_FIRST_SECTOR_OFFSET}
+        pSectorsCount ptr<u32> <- {buffer.adr + MBR_FIRST_PARTITION_ENTRY_OFFSET + MBR_PARTITION_ENTRY_SIZE * i + MBR_PARTITION_SECTORS_COUNT_OFFSET}
+        // try matching first sector with the one passed by bios service
+        if pFirstSector.val = bootPartitionFirstSector
+          storageAreaPartitionNumber <- i + 1 // count from 1 to distinguish from no partition
+          storageAreaSectorsCount <- pSectorsCount.val
+        ;
+      ;
     ;
 
-    @term.printString("X", @term.FOREGROUND_GREEN)
-;
+    // Then the storage area
+    storageArea blob<StorageArea> <- StorageArea(storageDevice, storageAreaPartitionNumber, bootPartitionFirstSector, storageAreaSectorsCount)
 
-@export getBootStorageFs fun //-> blob<StorageFs>
-    bootDevice blob<StorageDevice> <- initBiosDevice(bootDriveNumber)
-    startSector u32
-    sectorsCount u32
+    // And finally the storage filesystem
 
-    if bootPartitionIndex > 0
+    //startSector u32
+    //sectorsCount u32
+
+    /*if bootPartitionIndex > 0
         mbr data<u8, 0x200>
         bootDevice.readSectors.val(0, 1, { mbr.adr })
         pStartSector ptr<u32> <- { mbr.adr + MBR_FIRST_PARTITION_OFFSET + MBR_PARTITION_START_SECTOR_OFFSET }
@@ -49,7 +51,7 @@ bootPartitionIndex u32
         sectorsCount <- bootDevice.sectorsCount
     ;
 
-    bootArea blob<StorageArea> <- initArea(bootDevice, startSector, sectorsCount)
+    bootArea blob<StorageArea> <- initArea(bootDevice, startSector, sectorsCount)*/
 ;
 
 /*

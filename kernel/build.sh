@@ -13,7 +13,6 @@ brb --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-init
 "${SCRIPT_DIR}/main.brc" \
 "${SCRIPT_DIR}/memory/mem.brc" \
 "${SCRIPT_DIR}/terminal/term.brc" \
-"${SCRIPT_DIR}/filesystem/fs_fat12.brc" \
 "${SCRIPT_DIR}/bios_service.brc" \
 "${SCRIPT_DIR}/drivers/drv_keyboard.brc" \
 "${SCRIPT_DIR}/interrupts/syscall.brc" \
@@ -21,7 +20,7 @@ brb --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-init
 "${SCRIPT_DIR}/drivers/drv_serial.brc" \
 "${SCRIPT_DIR}/processes/scheduler.brc" \
 "${SCRIPT_DIR}/Storage/Storage.brc" \
-"${SCRIPT_DIR}/Storage/StorageDevice.brc" \
+"${SCRIPT_DIR}/Storage/BiosBootStorageDevice.brc" \
 "${SCRIPT_DIR}/Storage/StorageArea.brc"
 
 check
@@ -32,7 +31,6 @@ term.o \
 main.o \
 mem.o \
 int.o \
-fs_fat12.o \
 bios_service.o \
 drv_keyboard.o \
 syscall.o \
