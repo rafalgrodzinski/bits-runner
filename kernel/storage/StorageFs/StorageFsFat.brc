@@ -65,19 +65,17 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     if pInfo.val & 0xff = '2': fatType <- FS_TYPE_FAT12
     else if pInfo.val & 0xff = '6': fatType <- FS_TYPE_FAT16
 
-    @term.printHex(fatFirstSector, @term.FOREGROUND_RED)
+    // load fat & root dir
+    storageFs.pFat <- @mem.allocateBytes(sectorsPerFat * bytesPerSector)
+    storageArea.readSectors.val({storageArea.adr}, fatFirstSector, sectorsPerFat, storageFs.pFat)
+
+    storageFs.pRootDir <- @mem.allocateBytes(rootDirSectorsCount * bytesPerSector)
+    storageArea.readSectors.val({storageArea.adr}, rootDirFirstSector, rootDirSectorsCount, storageFs.pRootDir)
+
+    @term.printHex(storageFs.pFat.vAdr, @term.FOREGROUND_RED)
     @term.printNewLine()
 
-    @term.printHex(rootDirFirstSector, @term.FOREGROUND_GREEN)
-    @term.printNewLine()
-
-    @term.printHex(rootDirSectorsCount, @term.FOREGROUND_BLUE)
-    @term.printNewLine()
-
-    @term.printHex(firstDataSector, @term.FOREGROUND_RED)
-    @term.printNewLine()
-
-    @term.printHex(fatType, @term.FOREGROUND_GREEN)
+    @term.printHex(storageFs.pRootDir.vAdr, @term.FOREGROUND_GREEN)
     @term.printNewLine()
 
     ret storageFs

@@ -2,4 +2,7 @@
 
 StorageFs blob
     storageArea blob<StorageArea>
+
+    pFat ptr<data<u8>>
+    pRootDir ptr<data<u8>>
 ;
