@@ -36,56 +36,9 @@ buffer data<u8, 512>
     // And finally the storage filesystem
     storageFs blob<StorageFs> <- StorageFsFat(storageArea)
 
-    //startSector u32
-    //sectorsCount u32
+    // TODO: this should work
+    // rootEntry blob<StorageFsEntry> <- storageFs.rootEntry.val({storageFs.adr})
+    // ret storageFs.subEntriesForEntry.val({storageFs.adr}, rootEntry)
 
-    /*if bootPartitionIndex > 0
-        mbr data<u8, 0x200>
-        bootDevice.readSectors.val(0, 1, { mbr.adr })
-        pStartSector ptr<u32> <- { mbr.adr + MBR_FIRST_PARTITION_OFFSET + MBR_PARTITION_START_SECTOR_OFFSET }
-        pSectorsCount ptr<u32> <- { mbr.adr + MBR_FIRST_PARTITION_OFFSET + MBR_PARTITION_SECTORS_COUNT_OFFSET }
-
-        startSector <- pStartSector.val
-        sectorsCount <- pSectorsCount.val
-    else
-        startSector <- 0
-        sectorsCount <- bootDevice.sectorsCount
-    ;
-
-    bootArea blob<StorageArea> <- initArea(bootDevice, startSector, sectorsCount)*/
+    storageFs.subEntriesForEntry.val({storageFs.adr})
 ;
-
-/*
-FsDriver blob
-  storageArea blob<Storage area>
-  file fun: it ptr<blob<FsDriver>>, fileName blob<String> -> blob<File>
-;
-
-StorageArea blob
-   storageDevice blob<StorageDevice>
-  startSector u32
-  sectorsCount u32
-  read fun: it ptr<blob<StorageArea>>, startSector u32, sectorsCount u32, target address ptr<data<u8>>
-;
-
-init fun:. ... -> blob<Storage Area>
-  storageArea blob<StorageArea>
-  storageArea.storageDevice <- storageDevice
-  ...
-  ret storageArea
-
-storageInit
-
-storageDevice blob<StorageDevice> <- @StorageDeviceFdd.biosDevice(deviceNum)
-
-mbr blob<Mbr> <- readMbr(storageDevice)
-
-storageArea blob<StorageArea> <- @StorageArea.init(device, mbr[i].start, mbr[i].count)
-
-fs blob<FsDriver> <- @FsDriverFat.init(storageArea)
-
-Storage FS
-fsDriver blob<FsDriver>
-
-file fun: fileName blob<String> -> blob<File>
-*/

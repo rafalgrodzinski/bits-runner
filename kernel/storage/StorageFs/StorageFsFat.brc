@@ -20,10 +20,24 @@ FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET u32 <- 0x11 // 2 bytes
 FAT_SECTORS_PER_FAT_OFFSET u32 <- 0x16 // 2 bytes
 FAT_FS_ID_OFFSET u32 <- 0x36 // 8 bytes
 
+// FAT Entry
+FAT_ENTRY_ATTRIB_OFFSET u32 <- 0x0b // 1 byte
+FAT_ENTRY_CLUSTER_OFFSET u32 <- 0x1a // 2 bytes
+FAT_ENTRY_SIZE_OFFSET u32 <- 0x1c // 4 bytes
+
+FAT_ATTRIB_HIDDEN u8 <- 0x02
+FAT_ATTRIB_VOLUME_ID u8 <- 0x08
+FAT_ATTRIB_LONG_FILE_NAME u8 <- 0x0f
+FAT_ATTRIB_DIR u8 <- 0x10
+
+FAT_FILE_FREE u8 <- 0xe5
+
 StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     storageFs blob<StorageFs>
 
     storageFs.storageArea <- storageArea
+    storageFs.rootEntry <- {storageFsFatRootEntry.adr}
+    storageFs.subEntriesForEntry <- {storageFsFatSubEntriesForEntry.adr}
 
     // Init FAT
     pFatBuffer ptr<data<u8>> <- @mem.allocateBytes(512)
@@ -46,6 +60,7 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
 
     pInfo <- {pFatBuffer.vAdr + FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET}
     rootDirEntriesCount u32 <- pInfo.val & 0xffff
+    storageFs.fatRootDirEntriesCount <- rootDirEntriesCount
 
     pInfo <- {pFatBuffer.vAdr + FAT_SECTORS_PER_FAT_OFFSET}
     sectorsPerFat u32 <- pInfo.val & 0xffff
@@ -69,14 +84,110 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     storageFs.pFat <- @mem.allocateBytes(sectorsPerFat * bytesPerSector)
     storageArea.readSectors.val({storageArea.adr}, fatFirstSector, sectorsPerFat, storageFs.pFat)
 
-    storageFs.pRootDir <- @mem.allocateBytes(rootDirSectorsCount * bytesPerSector)
-    storageArea.readSectors.val({storageArea.adr}, rootDirFirstSector, rootDirSectorsCount, storageFs.pRootDir)
-
-    @term.printHex(storageFs.pFat.vAdr, @term.FOREGROUND_RED)
-    @term.printNewLine()
-
-    @term.printHex(storageFs.pRootDir.vAdr, @term.FOREGROUND_GREEN)
-    @term.printNewLine()
+    storageFs.pFatRootDir <- @mem.allocateBytes(rootDirSectorsCount * bytesPerSector)
+    storageArea.readSectors.val({storageArea.adr}, rootDirFirstSector, rootDirSectorsCount, storageFs.pFatRootDir)
 
     ret storageFs
+;
+
+storageFsFatRootEntry fun: it ptr<blob<StorageFs>> -> blob<StorageFsEntry>
+    rootEntry blob<StorageFsEntry>
+    rootEntry.kind <- STORAGE_FS_ENTRY_KIND_DIR
+    rootEntry.name <- "\\"
+    ret rootEntry
+;
+
+// storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<StorageFs> -> ptr<data<blob<StorageFsEntry>>>
+storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>> -> ptr<data<blob<StorageFsEntry>>>
+    pSubEntries ptr<data<blob<StorageFsEntry>>> <- @mem.allocateBytes(blob<StorageFsEntry>.size * it.val.fatRootDirEntriesCount)
+
+    entriesCount u32 <- 0
+    pFatFileEntry ptr<data<u8>> <- it.val.pFatRootDir
+    rep i u32 <- 0, i < it.val.fatRootDirEntriesCount and pFatFileEntry.val[0] != 0x00, i <- i + 1
+        // first gather basic info about the entry
+        attribute u8 <- pFatFileEntry.val[FAT_ENTRY_ATTRIB_OFFSET]
+        isLongFileName bool <- attribute & FAT_ATTRIB_LONG_FILE_NAME = FAT_ATTRIB_LONG_FILE_NAME
+        isVolumeId bool <- attribute & FAT_ATTRIB_VOLUME_ID = FAT_ATTRIB_VOLUME_ID and not isLongFileName
+        isHidden bool <- attribute & FAT_ATTRIB_HIDDEN = FAT_ATTRIB_HIDDEN
+        isDirectory bool <- attribute & FAT_ATTRIB_DIR = FAT_ATTRIB_DIR
+        isNavigationDirectory bool <- (pFatFileEntry.val[0] = '.' and pFatFileEntry.val[1] = ' ') or (pFatFileEntry.val[0] = '.' and pFatFileEntry.val[1] = '.' and pFatFileEntry.val[2] = ' ') 
+        isFile bool <- not isLongFileName and not isVolumeId and not isNavigationDirectory and not isDirectory and pFatFileEntry.val[0] != FAT_FILE_FREE
+
+        name data<u8, 256>
+        // copy name
+        if isVolumeId or isDirectory or isFile
+            targetIndex u32 <- 0
+            sourceIndex u32 <- 0
+            // file name
+            rep sourceIndex < 8, sourceIndex <- sourceIndex + 1
+                if pFatFileEntry.val[sourceIndex] != ' '
+                    name[targetIndex] <- pFatFileEntry.val[sourceIndex]
+                    targetIndex <- targetIndex + 1
+                ;
+            ;
+            // dot
+            if not isDirectory and not isVolumeId
+                name[targetIndex] <- '.'
+                targetIndex <- targetIndex + 1
+            ;
+            // extension
+            rep sourceIndex < 11, sourceIndex <- sourceIndex + 1
+                if pFatFileEntry.val[sourceIndex] != ' '
+                    name[targetIndex] <- pFatFileEntry.val[sourceIndex]
+                    targetIndex <- targetIndex + 1
+                ;
+            ;
+            name[targetIndex] <- 0
+        ;
+
+        if isVolumeId
+            it.val.name <- name
+        else if isDirectory
+            // kind
+            pSubEntries.val[entriesCount].kind <- STORAGE_FS_ENTRY_KIND_DIR
+            // name
+            pSubEntries.val[entriesCount].name <- name
+            // size
+            pSize ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_SIZE_OFFSET}
+            pSubEntries.val[entriesCount].entrySize <- pSize.val
+            // cluster
+            pCluster ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_CLUSTER_OFFSET}
+            pSubEntries.val[entriesCount].fatCluster <- pCluster.val & 0xffff
+
+            entriesCount <- entriesCount + 1
+        else if isFile
+            // kind
+            pSubEntries.val[entriesCount].kind <- STORAGE_FS_ENTRY_KIND_FILE
+            //name
+            pSubEntries.val[entriesCount].name <- name
+            // size
+            pSize ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_SIZE_OFFSET}
+            pSubEntries.val[entriesCount].entrySize <- pSize.val
+            // cluster
+            pCluster ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_CLUSTER_OFFSET}
+            pSubEntries.val[entriesCount].fatCluster <- pCluster.val & 0xffff
+
+            entriesCount <- entriesCount + 1
+        ;
+
+        // go to the next entry
+        pFatFileEntry <- {pFatFileEntry.vAdr + FAT_BYTES_PER_ENTRY}
+    ;
+
+    // TODO: remove me
+    rep i u32 <- 0, i < entriesCount, i <- i + 1
+        @term.printString(pSubEntries.val[i].name, @term.FOREGROUND_GRAY)
+        @term.printString(", ", @term.FOREGROUND_GRAY)
+
+        @term.printCharacter(pSubEntries.val[i].kind, @term.FOREGROUND_GRAY)
+        @term.printString(", ", @term.FOREGROUND_GRAY)
+
+        @term.printNumber(pSubEntries.val[i].entrySize, @term.FOREGROUND_GRAY)
+        @term.printString(", ", @term.FOREGROUND_GRAY)
+
+        @term.printNumber(pSubEntries.val[i].fatCluster, @term.FOREGROUND_GRAY)
+        @term.printNewLine()
+    ;
+
+    ret pSubEntries
 ;
