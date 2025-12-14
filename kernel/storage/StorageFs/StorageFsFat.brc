@@ -1,14 +1,18 @@
 @module Storage
 
 @import mem
+@import term
 
 // Predefined
 FAT_BYTES_PER_ENTRY u32 <- 0x20
 FAT12_EOF u32 <- 0x0ff8
 FAT16_EOF u32 <- 0xfff8
 
-FS_TYPE_FAT12 u32 <- 12
-FS_TYPE_FAT16 u32 <- 16
+FS_KIND_FAT12 u32 <- 12
+FS_KIND_FAT16 u32 <- 16
+
+STORAGE_FS_ENTRY_KIND_FILE u32 <- 'f'
+STORAGE_FS_ENTRY_KIND_DIR u32 <- 'd'
 
 // FAT header offsets
 FAT_BYTES_PER_SECTOR_OFFSET u32 <- 0x0b // 2 bytes
@@ -48,9 +52,11 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     // read values
     pInfo <- {pFatBuffer.vAdr + FAT_BYTES_PER_SECTOR_OFFSET}
     bytesPerSector u32 <- pInfo.val & 0xffff
+    storageFs.fatBytesPerSector <- bytesPerSector
 
     pInfo <- {pFatBuffer.vAdr + FAT_SECTORS_PER_CLUSTER_OFFSET}
     sectorsPerCluster u32 <- pInfo.val & 0xff
+    storageFs.fatSectorsPerCluster <- sectorsPerCluster
 
     pInfo <- {pFatBuffer.vAdr + FAT_RESERVED_SECTORS_COUNT_OFFSET}
     reservedSectorsCount u32 <- pInfo.val & 0xff
@@ -72,13 +78,12 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
 
     rootDirSectorsCount u32 <- (rootDirEntriesCount * FAT_BYTES_PER_ENTRY) / bytesPerSector
 
-    firstDataSector u32 <- rootDirFirstSector + rootDirSectorsCount
+    storageFs.fatFirstDataSector <- rootDirFirstSector + rootDirSectorsCount
 
     // FAT type
     pInfo <- {pFatBuffer.vAdr + FAT_FS_ID_OFFSET + 4}
-    fatType u32
-    if pInfo.val & 0xff = '2': fatType <- FS_TYPE_FAT12
-    else if pInfo.val & 0xff = '6': fatType <- FS_TYPE_FAT16
+    if pInfo.val & 0xff = '2': storageFs.kind <- FS_KIND_FAT12
+    else if pInfo.val & 0xff = '6': storageFs.kind <- FS_KIND_FAT16
 
     // load fat & root dir
     storageFs.pFat <- @mem.allocateBytes(sectorsPerFat * bytesPerSector)
@@ -177,5 +182,38 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<St
 ;
 
 storageFsFatReadEntry fun: it ptr<blob<StorageFs>>, entry blob<StorageFsEntry>, targetAdr ptr<data<u8>> -> u32
+    @term.printHex(targetAdr.vAdr, @term.FOREGROUND_MAGENTA)
+    cluster u32 <- entry.fatCluster
+    isFinished bool <- false
+
+    rep not isFinished
+        @term.printHex(cluster, @term.FOREGROUND_CYAN)
+        @term.printString(" ", @term.FOREGROUND_CYAN)
+
+        sector u32 <- (cluster - 2) * it.val.fatSectorsPerCluster + it.val.fatFirstDataSector
+        it.val.storageArea.readSectors.val({it.val.storageArea.adr}, sector, it.val.fatSectorsPerCluster, targetAdr)
+        targetAdr <- {targetAdr.vAdr + it.val.fatBytesPerSector * it.val.fatSectorsPerCluster}
+
+        if it.val.kind = FS_KIND_FAT12
+            // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
+            clusterIndex u32 <- cluster * 3 / 2
+            // calculate next cluster depending on wethere cluster index is odd or even
+            pCluster ptr<u32> <- {it.val.pFat.vAdr + clusterIndex}
+
+            if cluster & 0x01 = 0
+                cluster <- pCluster.val & 0x0fff
+            else
+                cluster <- (pCluster.val & 0xfff0) >> 4
+            ;
+
+            isFinished <- cluster >= FAT12_EOF
+        else if it.val.kind = FS_KIND_FAT16
+            clusterIndex u32 <- cluster * 2
+            pCluster ptr<u32> <- {it.val.pFat.vAdr + clusterIndex}
+            cluster <- pCluster.val & 0xffff // just get 2 bytes
+
+            isFinished <- cluster >= FAT16_EOF
+        ;
+    ;
     ret 0
 ;

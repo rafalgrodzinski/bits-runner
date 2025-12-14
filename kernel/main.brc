@@ -45,15 +45,19 @@ call raw<"m">: entryAdr u32
     @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
 
     storageFs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
+    @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
+    
     rootEntry blob<@Storage.StorageFsEntry> <- storageFs.rootEntry.val({storageFs.adr})
     subEntries data<blob<@Storage.StorageFsEntry> > <- storageFs.subEntriesForEntry.val({storageFs.adr}, rootEntry)
 
-    rep i u32 <- 0, i < 16, i <- i + 1
+    rep i u32 <- 0, i < 16 and subEntries[i].name[0] != 0, i <- i + 1
         @term.printString(subEntries[i].name, @term.FOREGROUND_BROWN | @term.ATTRIB_LIGHT)
         @term.printNewLine()
     ;
 
-    @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
+    pApp ptr<data<u8>> <- @mem.allocateBytes(subEntries[0].entrySize)
+    storageFs.readEntry.val({storageFs.adr}, subEntries[0], pApp)
+
 
     /*pShell ptr<u8> <- @fs_fat12.loadFile("SHELL.BIN")
     if pShell.vAdr = 0
