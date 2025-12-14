@@ -8,8 +8,8 @@ STORAGE_FS_ENTRY_KIND_DIR u32 <- 'd'
     name data<u8, 256>
 
     rootEntry ptr<fun: ptr<blob<StorageFs>> -> blob<StorageFsEntry>>
-    // subEntriesForEntry ptr<fun: ptr<blob<StorageFs>>, blob<StorageFsEntry> -> ptr<data<blob<StorageFsEntry>>>>
-    subEntriesForEntry ptr<fun: ptr<blob<StorageFs>> -> ptr<data<blob<StorageFsEntry>>>>
+    subEntriesForEntry ptr<fun: ptr<blob<StorageFs>>, blob<StorageFsEntry> -> ptr<data<blob<StorageFsEntry>>>>
+    readEntry ptr<fun: ptr<blob<StorageFs>>, blob<StorageFsEntry>, ptr<data<u8>> -> u32>
 
     // FAT specific
     pFat ptr<data<u8>>

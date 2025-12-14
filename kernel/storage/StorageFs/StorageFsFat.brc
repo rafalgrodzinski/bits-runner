@@ -38,6 +38,7 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     storageFs.storageArea <- storageArea
     storageFs.rootEntry <- {storageFsFatRootEntry.adr}
     storageFs.subEntriesForEntry <- {storageFsFatSubEntriesForEntry.adr}
+    storageFs.readEntry <- {storageFsFatReadEntry.adr}
 
     // Init FAT
     pFatBuffer ptr<data<u8>> <- @mem.allocateBytes(512)
@@ -97,8 +98,7 @@ storageFsFatRootEntry fun: it ptr<blob<StorageFs>> -> blob<StorageFsEntry>
     ret rootEntry
 ;
 
-// storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<StorageFs> -> ptr<data<blob<StorageFsEntry>>>
-storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>> -> ptr<data<blob<StorageFsEntry>>>
+storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<StorageFs> -> ptr<data<blob<StorageFsEntry>>>
     pSubEntries ptr<data<blob<StorageFsEntry>>> <- @mem.allocateBytes(blob<StorageFsEntry>.size * it.val.fatRootDirEntriesCount)
 
     entriesCount u32 <- 0
@@ -190,4 +190,8 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>> -> ptr<data<blob<Sto
     ;
 
     ret pSubEntries
+;
+
+storageFsFatReadEntry fun: it ptr<blob<StorageFs>>, entry blob<StorageFsEntry>, targetAdr ptr<data<u8>> -> u32
+    ret 0
 ;

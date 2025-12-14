@@ -12,7 +12,7 @@ nop
 %define FAT16_EOF 0xfff8
 %define STACK_ADR 0x7c00 - 4
 
-%define ADDRESS_BIOS_SERVICE 0x1000 ; 4KiB
+%define ADDRESS_BIOS_SERVICE 0x2000 ; 8KiB
 
 %define boot_drive_number buffer ; 1 byte
 %define fat_first_data_sector buffer + 1 ; 2 bytes

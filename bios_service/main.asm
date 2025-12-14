@@ -1,10 +1,10 @@
-[org 0x1000]
+[org 0x2000]
 [cpu 386]
 
 %define RAM_MIN 0x1000000 ; 16MiB
 %define KERNEL_PHY_ADR 0x100000 ; 1MiB
 %define KERNEL_ADR 0x80000000
-%define STACK_ADR 0x1000 - 4
+%define STACK_ADR 0x2000 - 4
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
