@@ -35,10 +35,10 @@ echo
 
 ## Shell
 #echo "🛠️ Building shell..."
-#./shell/build.sh
-#check "Failed to build shell"
-#
-#echo
+./shell/build.sh
+check "Failed to build shell"
+
+echo
 
 
 # Create floppy image
@@ -59,7 +59,7 @@ diskutil eject "${DISK_FDD}" &&
 FDD_MOUNT_POINT=$(hdiutil attach fdd.img | grep -o '\/Volumes\/.*') &&
 cp bios_svc.bin "${FDD_MOUNT_POINT}/" &&
 cp kernel.bin "${FDD_MOUNT_POINT}/" &&
-#cp shell.bin "${FDD_MOUNT_POINT}/" && 
+cp shell.bin "${FDD_MOUNT_POINT}/" && 
 hdiutil eject "${FDD_MOUNT_POINT}"
 check "Failed to create FDD image"
 
@@ -91,14 +91,14 @@ diskutil eject "${DISK_HDD}" &&
 HDD_MOUNT_POINT=$(hdiutil attach hdd.img | grep -o '\/Volumes\/.*' | head -1) &&
 cp bios_svc.bin "${HDD_MOUNT_POINT}/" &&
 cp kernel.bin "${HDD_MOUNT_POINT}/" &&
-#cp shell.bin "${HDD_MOUNT_POINT}/" &&
+cp shell.bin "${HDD_MOUNT_POINT}/" &&
 hdiutil eject "${DISK_HDD}" &&
 
 # Mount and copy files to the second partition
 HDD_MOUNT_POINT=$(hdiutil attach hdd.img | grep -o '\/Volumes\/.*' | tail -1) &&
 cp bios_svc.bin "${HDD_MOUNT_POINT}/" &&
 cp kernel.bin "${HDD_MOUNT_POINT}/" &&
-#cp shell.bin "${HDD_MOUNT_POINT}/" &&
+cp shell.bin "${HDD_MOUNT_POINT}/" &&
 hdiutil eject "${DISK_HDD}" &&
 check "Failed to create HDD image"
 

@@ -55,17 +55,10 @@ call raw<"m">: entryAdr u32
         @term.printNewLine()
     ;
 
-    pApp ptr<data<u8>> <- @mem.allocateBytes(subEntries[0].entrySize)
-    storageFs.readEntry.val({storageFs.adr}, subEntries[0], pApp)
-
-
-    /*pShell ptr<u8> <- @fs_fat12.loadFile("SHELL.BIN")
-    if pShell.vAdr = 0
-        @term.printString("Could not load SHELL.BIN!", @term.FOREGROUND_RED)
-    else
-        pProcess ptr<blob<Process>> <- @scheduler.createProcess(pShell, 3_636)
-        @scheduler.switchToProcess(pProcess)
-    ;*/
+    pApp ptr<data<u8>> <- @mem.allocateBytes(subEntries[4].entrySize)
+    storageFs.readEntry.val({storageFs.adr}, subEntries[4], pApp)
+    pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess({pApp.vAdr}, subEntries[4].entrySize)
+    @scheduler.switchToProcess(pProcess)
 
     rep
     ;

@@ -17,7 +17,7 @@ Tss blob
     unused1 data<u32, 23>
 ;
 
-Process blob
+@export Process blob
     pageDirectory data<u32, 1024>
     cr3 u32
     eip u32
