@@ -5,10 +5,10 @@ STORAGE_FS_ENTRY_KIND_DIR u32 <- 'd'
 
 @export StorageFs blob
     storageArea blob<StorageArea>
-    name data<u8, 256>
+    name data<u8, 16>
 
     rootEntry ptr<fun: ptr<blob<StorageFs>> -> blob<StorageFsEntry>>
-    subEntriesForEntry ptr<fun: ptr<blob<StorageFs>>, blob<StorageFsEntry> -> ptr<data<blob<StorageFsEntry>>>>
+    subEntriesForEntry ptr<fun: ptr<blob<StorageFs>>, blob<StorageFsEntry> -> data<blob<StorageFsEntry>, 32> >
     readEntry ptr<fun: ptr<blob<StorageFs>>, blob<StorageFsEntry>, ptr<data<u8>> -> u32>
 
     // FAT specific
@@ -17,9 +17,9 @@ STORAGE_FS_ENTRY_KIND_DIR u32 <- 'd'
     fatRootDirEntriesCount u32
 ;
 
-StorageFsEntry blob
+@export StorageFsEntry blob
     kind u32
-    name data<u8, 256>
+    name data<u8, 16>
     entrySize u32
 
     // FAT specific

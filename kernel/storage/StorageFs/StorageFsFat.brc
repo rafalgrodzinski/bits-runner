@@ -1,7 +1,6 @@
 @module Storage
 
 @import mem
-@import term
 
 // Predefined
 FAT_BYTES_PER_ENTRY u32 <- 0x20
@@ -98,8 +97,8 @@ storageFsFatRootEntry fun: it ptr<blob<StorageFs>> -> blob<StorageFsEntry>
     ret rootEntry
 ;
 
-storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<StorageFs> -> ptr<data<blob<StorageFsEntry>>>
-    pSubEntries ptr<data<blob<StorageFsEntry>>> <- @mem.allocateBytes(blob<StorageFsEntry>.size * it.val.fatRootDirEntriesCount)
+storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<StorageFs> -> data<blob<StorageFsEntry>, 32>
+    subEntries data<blob<StorageFsEntry>, 32>
 
     entriesCount u32 <- 0
     pFatFileEntry ptr<data<u8>> <- it.val.pFatRootDir
@@ -113,7 +112,7 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<St
         isNavigationDirectory bool <- (pFatFileEntry.val[0] = '.' and pFatFileEntry.val[1] = ' ') or (pFatFileEntry.val[0] = '.' and pFatFileEntry.val[1] = '.' and pFatFileEntry.val[2] = ' ') 
         isFile bool <- not isLongFileName and not isVolumeId and not isNavigationDirectory and not isDirectory and pFatFileEntry.val[0] != FAT_FILE_FREE
 
-        name data<u8, 256>
+        name data<u8, 16>
         // copy name
         if isVolumeId or isDirectory or isFile
             targetIndex u32 <- 0
@@ -144,28 +143,28 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<St
             it.val.name <- name
         else if isDirectory
             // kind
-            pSubEntries.val[entriesCount].kind <- STORAGE_FS_ENTRY_KIND_DIR
+            subEntries[entriesCount].kind <- STORAGE_FS_ENTRY_KIND_DIR
             // name
-            pSubEntries.val[entriesCount].name <- name
+            subEntries[entriesCount].name <- name
             // size
             pSize ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_SIZE_OFFSET}
-            pSubEntries.val[entriesCount].entrySize <- pSize.val
+            subEntries[entriesCount].entrySize <- pSize.val
             // cluster
             pCluster ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_CLUSTER_OFFSET}
-            pSubEntries.val[entriesCount].fatCluster <- pCluster.val & 0xffff
+            subEntries[entriesCount].fatCluster <- pCluster.val & 0xffff
 
             entriesCount <- entriesCount + 1
         else if isFile
             // kind
-            pSubEntries.val[entriesCount].kind <- STORAGE_FS_ENTRY_KIND_FILE
+            subEntries[entriesCount].kind <- STORAGE_FS_ENTRY_KIND_FILE
             //name
-            pSubEntries.val[entriesCount].name <- name
+            subEntries[entriesCount].name <- name
             // size
             pSize ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_SIZE_OFFSET}
-            pSubEntries.val[entriesCount].entrySize <- pSize.val
+            subEntries[entriesCount].entrySize <- pSize.val
             // cluster
             pCluster ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_CLUSTER_OFFSET}
-            pSubEntries.val[entriesCount].fatCluster <- pCluster.val & 0xffff
+            subEntries[entriesCount].fatCluster <- pCluster.val & 0xffff
 
             entriesCount <- entriesCount + 1
         ;
@@ -174,22 +173,7 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<St
         pFatFileEntry <- {pFatFileEntry.vAdr + FAT_BYTES_PER_ENTRY}
     ;
 
-    // TODO: remove me
-    rep i u32 <- 0, i < entriesCount, i <- i + 1
-        @term.printString(pSubEntries.val[i].name, @term.FOREGROUND_GRAY)
-        @term.printString(", ", @term.FOREGROUND_GRAY)
-
-        @term.printCharacter(pSubEntries.val[i].kind, @term.FOREGROUND_GRAY)
-        @term.printString(", ", @term.FOREGROUND_GRAY)
-
-        @term.printNumber(pSubEntries.val[i].entrySize, @term.FOREGROUND_GRAY)
-        @term.printString(", ", @term.FOREGROUND_GRAY)
-
-        @term.printNumber(pSubEntries.val[i].fatCluster, @term.FOREGROUND_GRAY)
-        @term.printNewLine()
-    ;
-
-    ret pSubEntries
+    ret subEntries
 ;
 
 storageFsFatReadEntry fun: it ptr<blob<StorageFs>>, entry blob<StorageFsEntry>, targetAdr ptr<data<u8>> -> u32

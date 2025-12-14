@@ -1,8 +1,6 @@
 @module Storage
 
-@import term
-
-StorageArea blob
+@export StorageArea blob
     storageDevice blob<StorageDevice>
     partitionNum u32
     firstSector u32
@@ -18,26 +16,6 @@ StorageArea fun: device blob<StorageDevice>, partitionNum u32, firstSector u32, 
     storageArea.firstSector <- firstSector
     storageArea.sectorsCount <- sectorsCount
     storageArea.readSectors <- { storageAreaReadSectors.adr }
-
-    @term.printString("Device num: ", @term.FOREGROUND_GRAY)
-    @term.printHex(device.biosDriveNum, @term.FOREGROUND_GRAY)
-    @term.printNewLine()
-
-    @term.printString("Device sectors count: ", @term.FOREGROUND_GRAY)
-    @term.printHex(device.sectorsCount, @term.FOREGROUND_GRAY)
-    @term.printNewLine()
-
-    @term.printString("Area partition num: ", @term.FOREGROUND_GRAY)
-    @term.printHex(partitionNum, @term.FOREGROUND_GRAY)
-    @term.printNewLine()
-
-    @term.printString("Area start sector: ", @term.FOREGROUND_GRAY)
-    @term.printHex(firstSector, @term.FOREGROUND_GRAY)
-    @term.printNewLine()
-
-    @term.printString("Area sectors count: ", @term.FOREGROUND_GRAY)
-    @term.printHex(sectorsCount, @term.FOREGROUND_GRAY)
-    @term.printNewLine()
 
     ret storageArea
 ;

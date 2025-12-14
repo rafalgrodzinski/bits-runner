@@ -44,8 +44,14 @@ call raw<"m">: entryAdr u32
 
     @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
 
-    @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
-    //fs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
+    storageFs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
+    rootEntry blob<@Storage.StorageFsEntry> <- storageFs.rootEntry.val({storageFs.adr})
+    subEntries data<blob<@Storage.StorageFsEntry> > <- storageFs.subEntriesForEntry.val({storageFs.adr}, rootEntry)
+
+    rep i u32 <- 0, i < 16, i <- i + 1
+        @term.printString(subEntries[i].name, @term.FOREGROUND_BROWN | @term.ATTRIB_LIGHT)
+        @term.printNewLine()
+    ;
 
     @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
 

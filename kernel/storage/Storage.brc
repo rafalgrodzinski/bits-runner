@@ -1,7 +1,5 @@
 @module Storage
 
-@import term
-
 MBR_FIRST_PARTITION_ENTRY_OFFSET u32 <- 0x01be
 MBR_PARTITION_ENTRY_SIZE u32 <- 0x10
 MBR_PARTITION_FIRST_SECTOR_OFFSET u32 <- 0x08
@@ -9,7 +7,7 @@ MBR_PARTITION_SECTORS_COUNT_OFFSET u32 <- 0x0c
 
 buffer data<u8, 512>
 
-@export bootStorageFs fun: biosBootDriveNumber u32, bootPartitionFirstSector u32// -> blob<StorageFs>
+@export bootStorageFs fun: biosBootDriveNumber u32, bootPartitionFirstSector u32 -> blob<StorageFs>
     // First setup the storage device
     storageDevice blob<StorageDevice> <- BiosBootStorageDevice(biosBootDriveNumber)
 
@@ -34,9 +32,5 @@ buffer data<u8, 512>
     storageArea blob<StorageArea> <- StorageArea(storageDevice, storageAreaPartitionNumber, bootPartitionFirstSector, storageAreaSectorsCount)
 
     // And finally the storage filesystem
-    storageFs blob<StorageFs> <- StorageFsFat(storageArea)
-
-    rootEntry blob<StorageFsEntry> <- storageFs.rootEntry.val({storageFs.adr})
-    //ret storageFs.subEntriesForEntry.val({storageFs.adr}, rootEntry)
-    storageFs.subEntriesForEntry.val({storageFs.adr}, rootEntry)
+    ret StorageFsFat(storageArea)
 ;

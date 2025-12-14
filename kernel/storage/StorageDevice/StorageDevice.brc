@@ -1,6 +1,6 @@
 @module Storage
 
-StorageDevice blob
+@export StorageDevice blob
     biosDriveNum u32
     sectorsCount u32
     readSectors ptr<fun: ptr<blob<StorageDevice>>, u32, u32, ptr<data<u8>> -> u32>
