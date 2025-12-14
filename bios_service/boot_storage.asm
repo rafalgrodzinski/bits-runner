@@ -1,7 +1,3 @@
-[org 0x2000]
-[cpu 386]
-[bits 32]
-
 ; predefined values
 %define FS_TYPE_FAT12 12
 %define FS_TYPE_FAT16 16
