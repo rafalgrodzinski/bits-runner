@@ -57,7 +57,7 @@ call raw<"m">: entryAdr u32
 
     pApp ptr<data<u8>> <- @mem.allocateBytes(subEntries[4].entrySize)
     storageFs.readEntry.val({storageFs.adr}, subEntries[4], pApp)
-    pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess({pApp.vAdr}, subEntries[4].entrySize)
+    pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess(pApp, subEntries[4].entrySize)
     @scheduler.switchToProcess(pProcess)
 
     rep

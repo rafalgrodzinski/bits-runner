@@ -1,7 +1,6 @@
 @module Storage
 
 @import mem
-@import term
 
 // Predefined
 FAT_BYTES_PER_ENTRY u32 <- 0x20
@@ -182,14 +181,10 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<St
 ;
 
 storageFsFatReadEntry fun: it ptr<blob<StorageFs>>, entry blob<StorageFsEntry>, targetAdr ptr<data<u8>> -> u32
-    @term.printHex(targetAdr.vAdr, @term.FOREGROUND_MAGENTA)
     cluster u32 <- entry.fatCluster
     isFinished bool <- false
 
     rep not isFinished
-        @term.printHex(cluster, @term.FOREGROUND_CYAN)
-        @term.printString(" ", @term.FOREGROUND_CYAN)
-
         sector u32 <- (cluster - 2) * it.val.fatSectorsPerCluster + it.val.fatFirstDataSector
         it.val.storageArea.readSectors.val({it.val.storageArea.adr}, sector, it.val.fatSectorsPerCluster, targetAdr)
         targetAdr <- {targetAdr.vAdr + it.val.fatBytesPerSector * it.val.fatSectorsPerCluster}

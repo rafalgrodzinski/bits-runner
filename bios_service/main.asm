@@ -215,8 +215,9 @@ start_16:
     push dword [memory_map_entries_count] ; memory_map_entries_count
     push dword 0x1000 ; page_size
     push dword [memory_size] ; memory_size
-    add edi, [kernel_size]
-    push edi ; layout_data_adr
+    mov eax, KERNEL_PHY_ADR
+    add eax, [kernel_size]
+    push eax ; layout_data_adr
     call init_memory_layout_32
 
     ; Enable paging
