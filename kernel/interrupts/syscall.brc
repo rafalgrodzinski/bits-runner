@@ -4,7 +4,7 @@
 @import term
 @import drv_keyboard
 @import mem
-@import fs_fat12
+//@import fs_fat12
 
 CALL_REBOOT u32 <- 0x00
 CALL_PRINT_CHARACTER u32 <- 0x01
@@ -23,8 +23,8 @@ CALL_LIST_DIR u32 <- 0x09
         @term.printCharacter(character, attribute)
     else if call = CALL_READ_ASCII
         ret @drv_keyboard.readPressedAscii()
-    else if call = CALL_LIST_DIR
-        @fs_fat12.listDir()
+    //else if call = CALL_LIST_DIR
+        //@fs_fat12.listDir()
     else if call = CALL_PRINT_MEM_STATS
         @mem.printMemStats()
     ;

@@ -1,13 +1,14 @@
 @import term
 @import mem
-@import fs_fat12
 @import bios_service
-@import drv_serial
 @import scheduler
+@import Storage
 
 @extern interrupt_init_protected_mode fun
 
-copyEax raw<"=r"> -> u32
+STACK_ADR u32 <- 0x2000 - 4
+
+getEax raw<"=r"> -> u32
     mov $0, eax
 ;
 
@@ -15,31 +16,49 @@ getEbx raw<"=r"> -> u32
     mov $0, ebx
 ;
 
+getEcx raw<"=r"> -> u32
+    mov $0, ecx
+;
+
+getEdx raw<"=r"> -> u32
+    mov $0, edx
+;
+
 call raw<"m">: entryAdr u32
     call $0
 ;
 
 @export start fun
-    @bios_service.init(copyEax())
-    @scheduler.init(getEbx())
+    // Get boot parameters from BIOS Service
+    biosServiceAdr u32 <- getEax()
+    gdtTssAdr u32 <- getEbx()
+    bootPartitionFirstSector u32 <- getEcx()
+    biosBootDriveNumber u32 <- getEdx()
 
+    // Initialize subsystems
+    @bios_service.init(biosServiceAdr)
+    @scheduler.init(gdtTssAdr)
     @mem.init()
     @term.init(@term.MODE_80x25)
-    @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
-    @drv_serial.init()
-
     interrupt_init_protected_mode()
-    @fs_fat12.init()
 
+    @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
+
+    storageFs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
     @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
+    
+    rootEntry blob<@Storage.StorageFsEntry> <- storageFs.rootEntry.val({storageFs.adr})
+    subEntries data<blob<@Storage.StorageFsEntry> > <- storageFs.subEntriesForEntry.val({storageFs.adr}, rootEntry)
 
-    pShell ptr<u8> <- @fs_fat12.loadFile("SHELL.BIN")
-    if pShell.vAdr = 0
-        @term.printString("Could not load SHELL.BIN!", @term.FOREGROUND_RED)
-    else
-        pProcess ptr<blob<Process>> <- @scheduler.createProcess(pShell, 3_636)
-        @scheduler.switchToProcess(pProcess)
+    rep i u32 <- 0, i < 16 and subEntries[i].name[0] != 0, i <- i + 1
+        @term.printString(subEntries[i].name, @term.FOREGROUND_BROWN | @term.ATTRIB_LIGHT)
+        @term.printNewLine()
     ;
+
+    pApp ptr<data<u8>> <- @mem.allocateBytes(subEntries[4].entrySize)
+    storageFs.readEntry.val({storageFs.adr}, subEntries[4], pApp)
+    pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess(pApp, subEntries[4].entrySize)
+    @scheduler.switchToProcess(pProcess)
 
     rep
     ;

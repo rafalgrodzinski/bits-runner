@@ -111,7 +111,9 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
     shouldScroll bool <- false
 
     if character = '\n'.u8
-        if moveCursor(0, cursorY + 1): shouldScroll <- true
+        if moveCursor(0, cursorY + 1)
+            shouldScroll <- true
+        ;
     else if character = '\b'.u8
         if cursorX > 0
             moveCursor(cursorX - 1, cursorY)

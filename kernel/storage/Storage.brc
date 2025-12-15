@@ -1,0 +1,36 @@
+@module Storage
+
+MBR_FIRST_PARTITION_ENTRY_OFFSET u32 <- 0x01be
+MBR_PARTITION_ENTRY_SIZE u32 <- 0x10
+MBR_PARTITION_FIRST_SECTOR_OFFSET u32 <- 0x08
+MBR_PARTITION_SECTORS_COUNT_OFFSET u32 <- 0x0c
+
+buffer data<u8, 512>
+
+@export bootStorageFs fun: biosBootDriveNumber u32, bootPartitionFirstSector u32 -> blob<StorageFs>
+    // First setup the storage device
+    storageDevice blob<StorageDevice> <- BiosBootStorageDevice(biosBootDriveNumber)
+
+    // if starting sector is > 0 then find matching partition entry
+    // otherwise claim the whole disk space for the area
+    storageAreaPartitionNumber u32 <- 0
+    storageAreaSectorsCount u32 <- storageDevice.sectorsCount
+    if bootPartitionFirstSector > 0
+      storageDevice.readSectors.val({storageDevice.adr}, 0, 1, {buffer.adr})
+      rep i u32 <- 0, i < 4, i <- i + 1
+        pFirstSector ptr<u32> <- {buffer.adr + MBR_FIRST_PARTITION_ENTRY_OFFSET + MBR_PARTITION_ENTRY_SIZE * i + MBR_PARTITION_FIRST_SECTOR_OFFSET}
+        pSectorsCount ptr<u32> <- {buffer.adr + MBR_FIRST_PARTITION_ENTRY_OFFSET + MBR_PARTITION_ENTRY_SIZE * i + MBR_PARTITION_SECTORS_COUNT_OFFSET}
+        // try matching first sector with the one passed by bios service
+        if pFirstSector.val = bootPartitionFirstSector
+          storageAreaPartitionNumber <- i + 1 // count from 1 to distinguish from no partition
+          storageAreaSectorsCount <- pSectorsCount.val
+        ;
+      ;
+    ;
+
+    // Then the storage area
+    storageArea blob<StorageArea> <- StorageArea(storageDevice, storageAreaPartitionNumber, bootPartitionFirstSector, storageAreaSectorsCount)
+
+    // And finally the storage filesystem
+    ret StorageFsFat(storageArea)
+;

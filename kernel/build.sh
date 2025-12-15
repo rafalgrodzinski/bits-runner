@@ -9,17 +9,22 @@ function check {
     fi
 }
 
-brb -v --function-sections --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --reloc=static \
+brb --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --reloc=static \
 "${SCRIPT_DIR}/main.brc" \
 "${SCRIPT_DIR}/memory/mem.brc" \
 "${SCRIPT_DIR}/terminal/term.brc" \
-"${SCRIPT_DIR}/filesystem/fs_fat12.brc" \
 "${SCRIPT_DIR}/bios_service.brc" \
 "${SCRIPT_DIR}/drivers/drv_keyboard.brc" \
 "${SCRIPT_DIR}/interrupts/syscall.brc" \
 "${SCRIPT_DIR}/interrupts/int_handler.brc" \
 "${SCRIPT_DIR}/drivers/drv_serial.brc" \
-"${SCRIPT_DIR}/processes/scheduler.brc"
+"${SCRIPT_DIR}/processes/scheduler.brc" \
+"${SCRIPT_DIR}/Storage/Storage.brc" \
+"${SCRIPT_DIR}/Storage/StorageDevice/StorageDevice.brc" \
+"${SCRIPT_DIR}/Storage/StorageDevice/BiosBootStorageDevice.brc" \
+"${SCRIPT_DIR}/Storage/StorageArea/StorageArea.brc" \
+"${SCRIPT_DIR}/Storage/StorageFs/StorageFs.brc" \
+"${SCRIPT_DIR}/Storage/StorageFs/StorageFsFat.brc" \
 
 check
 nasm  -f elf32 -o int.o "${SCRIPT_DIR}/interrupts/int.asm"
@@ -29,10 +34,10 @@ term.o \
 main.o \
 mem.o \
 int.o \
-fs_fat12.o \
 bios_service.o \
 drv_keyboard.o \
 syscall.o \
 int_handler.o \
 drv_serial.o \
-scheduler.o
+scheduler.o \
+Storage.o

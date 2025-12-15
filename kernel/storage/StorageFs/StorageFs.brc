@@ -1,0 +1,28 @@
+@module Storage
+
+@export StorageFs blob
+    storageArea blob<StorageArea>
+    name data<u8, 16>
+    kind u32
+
+    rootEntry ptr<fun: ptr<blob<StorageFs>> -> blob<StorageFsEntry>>
+    subEntriesForEntry ptr<fun: ptr<blob<StorageFs>>, blob<StorageFsEntry> -> data<blob<StorageFsEntry>, 32> >
+    readEntry ptr<fun: ptr<blob<StorageFs>>, blob<StorageFsEntry>, ptr<data<u8>> -> u32>
+
+    // FAT specific
+    pFat ptr<data<u8>>
+    pFatRootDir ptr<data<u8>>
+    fatBytesPerSector u32
+    fatRootDirEntriesCount u32
+    fatSectorsPerCluster u32
+    fatFirstDataSector u32
+;
+
+@export StorageFsEntry blob
+    kind u32
+    name data<u8, 16>
+    entrySize u32
+
+    // FAT specific
+    fatCluster u32
+;

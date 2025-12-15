@@ -1,0 +1,26 @@
+@module Storage
+
+@export StorageArea blob
+    storageDevice blob<StorageDevice>
+    partitionNum u32
+    firstSector u32
+    sectorsCount u32
+    readSectors ptr<fun: ptr<blob<StorageArea>>, u32, u32, ptr<data<u8>> -> u32>
+;
+
+StorageArea fun: device blob<StorageDevice>, partitionNum u32, firstSector u32, sectorsCount u32 -> blob<StorageArea>
+    storageArea blob<StorageArea>
+
+    storageArea.storageDevice <- device
+    storageArea.partitionNum <- partitionNum
+    storageArea.firstSector <- firstSector
+    storageArea.sectorsCount <- sectorsCount
+    storageArea.readSectors <- { storageAreaReadSectors.adr }
+
+    ret storageArea
+;
+
+storageAreaReadSectors fun: it ptr<blob<StorageArea>>, firstSector u32, sectorsCount u32, pTarget ptr<data<u8>> -> u32
+    firstSector <- firstSector + it.val.firstSector
+    ret it.val.storageDevice.readSectors.val({it.val.storageDevice.adr}, firstSector, sectorsCount, pTarget)
+;
