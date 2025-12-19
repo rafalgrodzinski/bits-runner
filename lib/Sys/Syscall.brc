@@ -1,0 +1,13 @@
+@module Syscall
+
+CALL_REBOOT u32 <- 0
+
+syscallRaw raw<"r,~{eax}">: syscallNum u32
+    mov eax, $0
+    int 0x30
+;
+
+
+@export reboot fun
+    syscallRaw(CALL_REBOOT)
+;

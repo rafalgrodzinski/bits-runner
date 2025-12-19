@@ -1,7 +1,7 @@
-cpu 386
-bits 32
+[cpu 386]
+[bits 32]
 
-extern int_handler.handleInterrupt
+extern Int.handleInterrupt
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
@@ -470,7 +470,7 @@ interrupt_handler:
     push dword .ebx
     push dword .eax
 
-    call int_handler.handleInterrupt
+    call Int.handleInterrupt
     mov .eax, eax
 
     ; Acknowledge interrupt

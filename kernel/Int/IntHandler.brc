@@ -1,8 +1,7 @@
-@module int_handler
+@module Int
 
 @import term
 @import drv_keyboard
-@import syscall
 
 INT_PAGE_FAULT u32 <- 0x0e
 INT_IRQ0 u32 <- 0x20 // timer
@@ -29,7 +28,7 @@ copyCr2 raw<"=r"> -> u32
     else if interrupt = INT_IRQ1
         @drv_keyboard.handleInterrupt()
     else if interrupt = INT_SYSCALL
-        ret @syscall.handleInterrupt(eax, ebx)
+        ret handleSyscall(eax, ebx)
     else
         @term.printString("Unhandled interrupt: ", @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
         @term.printHex(interrupt, @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
