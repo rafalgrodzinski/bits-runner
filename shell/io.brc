@@ -1,6 +1,5 @@
 @module io
 
-// NOT WORKING???
 @export ATTRIB_BLACK u32 <- 0x00
 @export ATTRIB_BLUE u32 <- 0x01
 @export ATTRIB_GREEN u32 <- 0x02
@@ -23,7 +22,7 @@
 @export ATTRIB_BLINKING u32 <- 0x80
 
 readPressedAsciiRaw raw<"=r,~{eax}"> -> u32
-    mov ah, 0x07
+    mov eax, 0x07
     int 0x30
     mov $0, eax
 ;
@@ -32,10 +31,10 @@ readPressedAsciiRaw raw<"=r,~{eax}"> -> u32
     ret readPressedAsciiRaw()
 ;
 
-printCharRaw raw<"m,m,~{eax},~{ebx}">: character u32, attribute u32
-    mov ah, 0x01
-    mov al, $0
-    mov bl, $1
+printCharRaw raw<"m,m,~{eax},~{ebx},~{ecx}">: character u32, attribute u32
+    mov eax, 0x01
+    mov ebx, $0
+    mov ecx, $1
     int 0x30
 ;
 

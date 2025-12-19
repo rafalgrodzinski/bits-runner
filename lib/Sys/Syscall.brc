@@ -1,13 +1,18 @@
 @module Syscall
 
 CALL_REBOOT u32 <- 0
+CALL_GET_ELAPSED_MS u32 <- 0x10
 
-syscallRaw raw<"r,~{eax}">: syscallNum u32
-    mov eax, $0
+syscallRaw raw<"=r,m,~{eax}">: syscallNum u32/*$1*/ -> u32/*$0*/
+    mov eax, $1
     int 0x30
+    mov $0, eax
 ;
-
 
 @export reboot fun
     syscallRaw(CALL_REBOOT)
+;
+
+@export getElapsedMs fun -> u32
+    ret syscallRaw(CALL_GET_ELAPSED_MS)
 ;

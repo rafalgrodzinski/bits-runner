@@ -1,5 +1,6 @@
 @import io
 @import Syscall
+@import B
 
 printMemStatsRaw raw<"~{eax}">
     mov ah, 0x08
@@ -60,6 +61,10 @@ start fun
             printMemStatsRaw()
         else if isEqual(buffer, "ls")
             listRootRaw()
+        else if isEqual(buffer, "time")
+            elapsedMs u32 <- @Syscall.getElapsedMs()
+            message blob<@B.String> <- @B.StringForUInt(elapsedMs)
+            message.println.val({message.adr})
         else
             @io.printTextLine("Dunno", @io.ATTRIB_GRAY)
         ;

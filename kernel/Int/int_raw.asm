@@ -456,8 +456,13 @@ interrupt_handler_30:
 
 ;
 ; Aggregated handler for all interrupts
+; iret stack frame registers are arranged as follows:
+; gs, fs, es, ds
+; edi, esi, ebp, esp, ebx, edx, ecx, eax
 %define .eax [ebp + 4 * 7]
 %define .ebx [ebp + 4 * 4]
+%define .ecx [ebp + 4 * 6]
+%define .edx [ebp + 4 * 5]
 %define .interrupt [ebp + 4 * 8]
 %define .info [ebp + 4 * 9]
 interrupt_handler:
@@ -467,6 +472,8 @@ interrupt_handler:
 
     push dword .info
     push dword .interrupt
+    push dword .edx
+    push dword .ecx
     push dword .ebx
     push dword .eax
 

@@ -13,22 +13,18 @@ CALL_READ_ASCII u32 <- 0x07
 CALL_PRINT_MEM_STATS u32 <- 0x08
 CALL_LIST_DIR u32 <- 0x09
 
-handleSyscall fun: eax u32, ebx u32 -> u32
-    call u32 <- (eax & 0xff00) >> 8
-
-    if call = CALL_REBOOT
+handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
+    if eax = CALL_REBOOT
         @BiosService.reboot()
-    else if call = CALL_GET_ELAPSED_MS
-
-    else if call = CALL_PRINT_CHARACTER
-        character u8 <- (eax & 0xff).u8
-        attribute u8 <- (ebx & 0xff).u8
-        @term.printCharacter(character, attribute)
-    else if call = CALL_READ_ASCII
+    else if eax = CALL_GET_ELAPSED_MS
+        ret 1024
+    else if eax = CALL_PRINT_CHARACTER
+        @term.printCharacter(ebx, ecx)
+    else if eax = CALL_READ_ASCII
         ret @drv_keyboard.readPressedAscii()
     //else if call = CALL_LIST_DIR
         //@fs_fat12.listDir()
-    else if call = CALL_PRINT_MEM_STATS
+    else if eax = CALL_PRINT_MEM_STATS
         @mem.printMemStats()
     ;
 

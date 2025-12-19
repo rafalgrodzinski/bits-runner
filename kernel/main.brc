@@ -50,10 +50,10 @@ call raw<"m">: entryAdr u32
     rootEntry blob<@Storage.StorageFsEntry> <- storageFs.rootEntry.val({storageFs.adr})
     subEntries data<blob<@Storage.StorageFsEntry> > <- storageFs.subEntriesForEntry.val({storageFs.adr}, rootEntry)
 
-    rep i u32 <- 0, i < 16 and subEntries[i].name[0] != 0, i <- i + 1
+    /*rep i u32 <- 0, i < 16 and subEntries[i].name[0] != 0, i <- i + 1
         @term.printString(subEntries[i].name, @term.FOREGROUND_BROWN | @term.ATTRIB_LIGHT)
         @term.printNewLine()
-    ;
+    ;*/
 
     pApp ptr<data<u8>> <- @mem.allocateBytes(subEntries[4].entrySize)
     storageFs.readEntry.val({storageFs.adr}, subEntries[4], pApp)
