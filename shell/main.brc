@@ -1,72 +1,51 @@
-@import io
-@import Syscall
 @import B
+@import Syscall
 
-printMemStatsRaw raw<"~{eax}">
-    mov ah, 0x08
-    int 0x30
-;
-
-listRootRaw raw<"~{eax}">
-    mov ah, 0x09
-    int 0x30
-;
-
-isEqual fun: first data<u32, 16>, second data<u32, 16> -> bool
-    i u32 <- 0
-    rep i < 16 and first[i] = second[i] and first[i] != 0 and second[i] != 0
-        i <- i + 1
-    ;
-
-    ret first[i] = second[i]
-;
+CMD_REBOOT blob<@B.String>
+CMD_TIME blob<@B.String>
 
 start fun
+    CMD_REBOOT <- @B.String("reboot")
+    CMD_TIME <- @B.String("time")
+
     buffer data<u32, 16>
     count u32 <- 0
     character u32 <- 0
 
     rep
         rep character != '\n'
-            character <- @io.readPressedAscii()
+            character <- @Syscall.readPressedAscii()
             if character = '\b' and count > 0
                 count <- count - 1
-                @io.printChar(character, @io.ATTRIB_GRAY)
+                message blob<@B.String> <- @B.StringForChar(character)
+                message.print.val({message.adr})
             ;
             if character != '\n' and character != '\b' and character != 0 and count < 15
                 buffer[count] <- character
                 count <- count + 1
-                @io.printChar(character, @io.ATTRIB_GRAY)
+                message blob<@B.String> <- @B.StringForChar(character)
+                message.print.val({message.adr})
             ;
         ;
         buffer[count] <- 0
         count <- 0
         character <- 0
-        @io.printChar('\n', @io.ATTRIB_GRAY)
+        message blob<@B.String> <- @B.StringForChar('\n')
+        message.print.val({message.adr})
 
-        if isEqual(buffer, "reboot")
-            @io.printTextLine("Rebooting...", @io.ATTRIB_GRAY)
+        bufferString blob<@B.String> <- @B.String(buffer)
+
+        if bufferString.isEqual.val({bufferString.adr}, CMD_REBOOT)
+            message blob<@B.String> <- @B.String("Rebooting...")
+            message.println.val({message.adr})
             @Syscall.reboot()
-        else if isEqual(buffer, "pf")
-            p ptr<u8> <- { 0x80_00_00 }
-            p.val <- 42
-        else if isEqual(buffer, "div")
-            num1 u32 <- 5
-            num2 u32 <- 0
-            res u32 <- num1 / num2
-        else if isEqual(buffer, "km")
-            p2 ptr<u8> <- { 0x8000_0000 }
-            p2.val <- 42
-        else if isEqual(buffer, "mem")
-            printMemStatsRaw()
-        else if isEqual(buffer, "ls")
-            listRootRaw()
-        else if isEqual(buffer, "time")
-            elapsedMs u32 <- @Syscall.getElapsedMs()
+        else if bufferString.isEqual.val({bufferString.adr}, CMD_TIME)
+            elapsedMs u32 <- @Syscall.getTimestampMs()
             message blob<@B.String> <- @B.StringForUInt(elapsedMs)
             message.println.val({message.adr})
         else
-            @io.printTextLine("Dunno", @io.ATTRIB_GRAY)
+            message blob<@B.String> <- @B.String("Dunno")
+            message.println.val({message.adr})
         ;
     ;
 ;
