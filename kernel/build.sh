@@ -13,8 +13,8 @@ brb --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-init
 "${SCRIPT_DIR}/main.brc" \
 "${SCRIPT_DIR}/memory/mem.brc" \
 "${SCRIPT_DIR}/terminal/term.brc" \
-"${SCRIPT_DIR}/bios_service.brc" \
 "${SCRIPT_DIR}/drivers/drv_keyboard.brc" \
+"${SCRIPT_DIR}/BiosService.brc" \
 \
 "${SCRIPT_DIR}/Int/IntHandler.brc" \
 "${SCRIPT_DIR}/Int/SyscallHandler.brc" \
@@ -37,8 +37,8 @@ ld.lld -T "${SCRIPT_DIR}/kernel.ld" -o kernel.bin \
 term.o \
 main.o \
 mem.o \
-bios_service.o \
 drv_keyboard.o \
+BiosService.o \
 int_raw.o \
 Int.o \
 drv_serial.o \

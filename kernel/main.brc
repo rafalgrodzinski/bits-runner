@@ -1,6 +1,6 @@
 @import term
 @import mem
-@import bios_service
+@import BiosService
 @import scheduler
 @import Storage
 
@@ -36,7 +36,7 @@ call raw<"m">: entryAdr u32
     biosBootDriveNumber u32 <- getEdx()
 
     // Initialize subsystems
-    @bios_service.init(biosServiceAdr)
+    @BiosService.init(biosServiceAdr)
     @scheduler.init(gdtTssAdr)
     @mem.init()
     @term.init(@term.MODE_80x25)

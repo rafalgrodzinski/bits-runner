@@ -1,11 +1,6 @@
 @import io
 @import Syscall
 
-/*rebootRaw raw<"~{eax}">
-    mov ah, 0x00
-    int 0x30
-;*/
-
 printMemStatsRaw raw<"~{eax}">
     mov ah, 0x08
     int 0x30
@@ -50,7 +45,6 @@ start fun
 
         if isEqual(buffer, "reboot")
             @io.printTextLine("Rebooting...", @io.ATTRIB_GRAY)
-            //rebootRaw()
             @Syscall.reboot()
         else if isEqual(buffer, "pf")
             p ptr<u8> <- { 0x80_00_00 }

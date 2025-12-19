@@ -1,11 +1,12 @@
 @module Int
 
-@import bios_service
+@import BiosService
 @import term
 @import drv_keyboard
 @import mem
 
 CALL_REBOOT u32 <- 0x00
+CALL_GET_ELAPSED_MS u32 <- 0x10
 
 CALL_PRINT_CHARACTER u32 <- 0x01
 CALL_READ_ASCII u32 <- 0x07
@@ -16,7 +17,9 @@ handleSyscall fun: eax u32, ebx u32 -> u32
     call u32 <- (eax & 0xff00) >> 8
 
     if call = CALL_REBOOT
-        @bios_service.reboot()
+        @BiosService.reboot()
+    else if call = CALL_GET_ELAPSED_MS
+
     else if call = CALL_PRINT_CHARACTER
         character u8 <- (eax & 0xff).u8
         attribute u8 <- (ebx & 0xff).u8
