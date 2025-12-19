@@ -4,6 +4,7 @@
 @import term
 @import drv_keyboard
 @import mem
+@import DrvCmos
 
 CALL_REBOOT u32 <- 0x00
 CALL_GET_ELAPSED_MS u32 <- 0x10
@@ -17,7 +18,7 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
     if eax = CALL_REBOOT
         @BiosService.reboot()
     else if eax = CALL_GET_ELAPSED_MS
-        ret 1024
+        ret @DrvCmos.getTimestamp()
     else if eax = CALL_PRINT_CHARACTER
         @term.printCharacter(ebx, ecx)
     else if eax = CALL_READ_ASCII

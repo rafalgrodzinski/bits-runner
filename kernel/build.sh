@@ -27,6 +27,8 @@ brb --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-init
 "${SCRIPT_DIR}/Storage/StorageArea/StorageArea.brc" \
 "${SCRIPT_DIR}/Storage/StorageFs/StorageFs.brc" \
 "${SCRIPT_DIR}/Storage/StorageFs/StorageFsFat.brc" \
+\
+"${SCRIPT_DIR}/Drivers/Cmos/DrvCmos.brc" \
 
 check
 
@@ -43,4 +45,5 @@ int_raw.o \
 Int.o \
 drv_serial.o \
 scheduler.o \
-Storage.o
+Storage.o \
+DrvCmos.o \

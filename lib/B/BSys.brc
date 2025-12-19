@@ -1,6 +1,6 @@
 @module BSys
 
-printCharRaw raw<"m,m,~{eax},~{ebx}">: character u32, attribute u32
+printCharRaw raw<"m,m,~{eax},~{ebx}">: character u32/*$0*/, attribute u32/*$1*/
     mov eax, 0x01
     mov ebx, $0
     mov ecx, $1
