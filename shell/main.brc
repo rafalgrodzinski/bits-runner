@@ -40,8 +40,8 @@ start fun
             message.println.val({message.adr})
             @Syscall.reboot()
         else if bufferString.isEqual.val({bufferString.adr}, CMD_TIME)
-            elapsedMs u32 <- @Syscall.getTimestampMs()
-            message blob<@B.String> <- @B.StringForUInt(elapsedMs)
+            timestamp u32 <- @Syscall.getTimestamp()
+            message blob<@B.String> <- @B.StringForUInt(timestamp)
             message.println.val({message.adr})
         else
             message blob<@B.String> <- @B.String("Dunno")

@@ -2,6 +2,8 @@
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE}")"
 SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
+BRB_DIR="$(dirname "$(which brb)")/.."
+SYS_DIR="${SCRIPT_DIR}/.."
 
 function check {
     if [ $? -ne 0 ]; then
@@ -29,6 +31,10 @@ brb --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-init
 "${SCRIPT_DIR}/Storage/StorageFs/StorageFsFat.brc" \
 \
 "${SCRIPT_DIR}/Drivers/Cmos/DrvCmos.brc" \
+\
+"${BRB_DIR}/lib/B/String.brc" \
+"${BRB_DIR}/lib/B/Date.brc" \
+"${SYS_DIR}/lib/B/BSys.brc" \
 
 check
 
@@ -47,3 +53,5 @@ drv_serial.o \
 scheduler.o \
 Storage.o \
 DrvCmos.o \
+B.o \
+BSys.o \

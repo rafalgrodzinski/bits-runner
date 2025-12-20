@@ -1,7 +1,7 @@
 @module Syscall
 
 CALL_REBOOT u32 <- 0
-CALL_GET_TIMESTAMP_MS u32 <- 0x10
+CALL_GET_TIMESTAMP u32 <- 0x10
 
 syscallRaw raw<"=r,m,~{eax}">: syscallNum u32/*$1*/ -> u32/*$0*/
     mov eax, $1
@@ -13,8 +13,8 @@ syscallRaw raw<"=r,m,~{eax}">: syscallNum u32/*$1*/ -> u32/*$0*/
     syscallRaw(CALL_REBOOT)
 ;
 
-@export getTimestampMs fun -> u32
-    ret syscallRaw(CALL_GET_TIMESTAMP_MS)
+@export getTimestamp fun -> u32
+    ret syscallRaw(CALL_GET_TIMESTAMP)
 ;
 
 @export readPressedAscii fun -> u32
