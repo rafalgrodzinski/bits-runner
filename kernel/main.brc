@@ -3,6 +3,7 @@
 @import BiosService
 @import scheduler
 @import Storage
+@import B
 
 @extern interrupt_init_protected_mode fun
 
@@ -46,18 +47,12 @@ call raw<"m">: entryAdr u32
 
     storageFs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
     @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
-    
-    rootEntry blob<@Storage.StorageFsEntry> <- storageFs.rootEntry.val({storageFs.adr})
-    subEntries data<blob<@Storage.StorageFsEntry> > <- storageFs.subEntriesForEntry.val({storageFs.adr}, rootEntry)
 
-    /*rep i u32 <- 0, i < 16 and subEntries[i].name[0] != 0, i <- i + 1
-        @term.printString(subEntries[i].name, @term.FOREGROUND_BROWN | @term.ATTRIB_LIGHT)
-        @term.printNewLine()
-    ;*/
-
-    pApp ptr<data<u8>> <- @mem.allocateBytes(subEntries[4].entrySize)
-    storageFs.readEntry.val({storageFs.adr}, subEntries[4], pApp)
-    pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess(pApp, subEntries[4].entrySize)
+    // Load shell
+    appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/SHELL.BIN"))
+    pApp ptr<data<u8>> <- @mem.allocateBytes(appEntry.entrySize)
+    storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)
+    pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess(pApp, appEntry.entrySize)
     @scheduler.switchToProcess(pProcess)
 
     rep
