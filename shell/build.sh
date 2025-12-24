@@ -15,6 +15,7 @@ brb --verb=v2 --triple=i686-unknown-linux-gnu --function-sections --no-zero-init
 "${SCRIPT_DIR}/main.brc" \
 "${BRB_DIR}/lib/B/String.brc" \
 "${SYS_DIR}/lib/B/BSys.brc" \
+"${SYS_DIR}/lib/B/BStdLib.brc" \
 "${SYS_DIR}/lib/Sys/Syscall.brc" \
 &&
 

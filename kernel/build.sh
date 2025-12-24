@@ -35,6 +35,7 @@ brb --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-init
 "${BRB_DIR}/lib/B/String.brc" \
 "${BRB_DIR}/lib/B/Date.brc" \
 "${SYS_DIR}/lib/B/BSys.brc" \
+"${SYS_DIR}/lib/B/BStdLib.brc" \
 
 check
 
