@@ -1,9 +1,7 @@
-@module bios_service
+@module BiosService
 
-@import term
-
-SERVICE_REBOOT u8 <- 0x00
-SERVICE_SET_VIDEO_MODE u8 <- 0x01
+BIOS_SERVICE_REBOOT u8 <- 0x00
+BIOS_SERVICE_SET_VIDEO_MODE u8 <- 0x01
 BIOS_SERVICE_BOOT_STORAGE_READ_SECTORS u8 <- 0x02
 BIOS_SERVICE_SECTORS_COUNT u8 <- 0x03
 
@@ -18,23 +16,33 @@ serviceAdr u32
     serviceAdr <- biosServiceAdr
 ;
 
-rebootRaw raw<"m,m,~{eax}">: biosServiceAdr u32, serviceNum u8
+//
+// System
+//
+
+// reboot
+rebootRaw raw<"m,m,~{eax}">: biosServiceAdr u32/*$0*/, serviceNum u8/*$1*/
     mov ah, $1
     call $0
 ;
 
 @export reboot fun
-    rebootRaw(serviceAdr, SERVICE_REBOOT)
+    rebootRaw(serviceAdr, BIOS_SERVICE_REBOOT)
 ;
 
-setVideoModeRaw raw<"m, m, m">: biosServiceAdr u32, serviceNum u8, modeNum u8
+//
+// Display
+//
+
+// video mode
+setVideoModeRaw raw<"m, m, m">: biosServiceAdr u32/*$0*/, serviceNum u8/*$1*/, modeNum u8/*$2*/
     mov ah, $1
     mov al, $2
     call $0
 ;
 
 @export setVideoMode fun: videoMode u8
-    setVideoModeRaw(serviceAdr, SERVICE_SET_VIDEO_MODE, videoMode)
+    setVideoModeRaw(serviceAdr, BIOS_SERVICE_SET_VIDEO_MODE, videoMode)
 ;
 
 //

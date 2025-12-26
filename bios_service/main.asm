@@ -89,6 +89,11 @@ dd 0
 %define GDT_CODE_V86_MODE gdt_code_v86_mode - gdt
 %define GDT_DATA_V86_MODE gdt_data_v86_mode - gdt
 
+; store previous gdt values when going into v86 mode
+saved_gdt_code: dw GDT_CODE_PROTECTED_MODE
+saved_gdt_data: dw GDT_DATA_PROTECTED_MODE
+saved_gdt_stack: dw GDT_DATA_PROTECTED_MODE
+
 boot_drive_number: dd 0
 boot_partition_first_sector: dd 0
 kernel_file_name: db `KERNEL  BIN`
@@ -448,17 +453,20 @@ switch_to_protected_mode_16:
     pop eax
 
     ; Long jump to 32 bits
-    jmp GDT_CODE_PROTECTED_MODE:(.init_data_segment)
+    push word [saved_gdt_code] ; segment
+    push word .init_data_segment ; offset
+    retf
 
 [bits 32]
 .init_data_segment:
     ; Set protected mode 32 bit data segment
     push eax
-    mov ax, GDT_DATA_PROTECTED_MODE
+    mov ax, [saved_gdt_data]
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
+    mov ax, [saved_gdt_stack]
     mov ss, ax
 
     ; re-enable paging if already set up
@@ -525,6 +533,11 @@ restore_protected_mode_interrupts_32:
 ; Initialize 16 bit 8086 virtual mode
 [bits 32]
 switch_to_v86_mode_32:
+    ; keep current gdt values
+    mov [saved_gdt_code], cs
+    mov [saved_gdt_data], ds
+    mov [saved_gdt_stack], ss
+
     ; clear interrupts and set real mode code segment
     cli
     jmp GDT_CODE_V86_MODE:(.init_v86_data_segment)

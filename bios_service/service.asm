@@ -12,12 +12,17 @@
 ; BIOS Services
 ; in
 ;  ah: service code
+saved_esp: dd 0
 [bits 32]
 bios_service:
+    ; store old esp and use one that is in the first segment
+    mov [saved_esp], esp
+    mov esp, STACK_ADR
+
     ; Reboot
     cmp ah, BIOS_SERVICE_REBOOT
     jne .not_reboot
-    call reboot
+    call service_reboot_32
     jmp .end
 .not_reboot:
 
@@ -46,14 +51,15 @@ bios_service:
 .not_sectors_count:
 
 .end:
+    mov esp, [saved_esp]
     ret
 
 ;
 ; Reboot the system
-bits 32
-reboot:
+[bits 32]
+service_reboot_32:
     call switch_to_v86_mode_32
-bits 16
+[bits 16]
     jmp 0xffff:0
 
 ;
