@@ -4,8 +4,7 @@
 @import scheduler
 @import Storage
 @import B
-
-@extern interrupt_init_protected_mode fun
+@import Int
 
 STACK_ADR u32 <- 0x2000 - 4
 
@@ -40,11 +39,10 @@ call raw<"m">: entryAdr u32
     @BiosService.init(biosServiceAdr)
     @scheduler.init(gdtTssAdr)
     @mem.init()
+    @Int.init()
     @term.init(@term.MODE_80x25)
-    interrupt_init_protected_mode()
 
     @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
-
     storageFs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
     @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
 

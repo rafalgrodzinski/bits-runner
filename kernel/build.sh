@@ -35,11 +35,10 @@ brb --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-init
 "${BRB_DIR}/lib/B/String.brc" \
 "${BRB_DIR}/lib/B/Date.brc" \
 "${SYS_DIR}/lib/B/BSys.brc" \
-"${SYS_DIR}/lib/B/BStdLib.brc" \
 
 check
 
-nasm  -f elf32 -o int_raw.o "${SCRIPT_DIR}/Int/int_raw.asm"
+nasm -f elf32 -o int_raw.o "${SCRIPT_DIR}/Int/int_raw.asm"
 check
 
 ld.lld -T "${SCRIPT_DIR}/kernel.ld" -o kernel.bin \

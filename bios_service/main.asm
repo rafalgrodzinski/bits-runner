@@ -557,7 +557,7 @@ switch_to_v86_mode_32:
     ; Change to 16 bit real
     ; Clear PE flag
     mov eax, cr0
-    and eax, 0xfffe
+    and eax, 0x7ffffffe
     mov cr0, eax
     pop eax
 

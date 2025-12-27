@@ -172,7 +172,6 @@ interrupt_init_protected_mode:
     lidt [idt_descriptor_protected_mode]
     sti
     ret
-    db 0xDE, 0xAD, 0xBE, 0xEF
 
 ;
 ; ISR for each interrupt, puts together error, int number and passes it on

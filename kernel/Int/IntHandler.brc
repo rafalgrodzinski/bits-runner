@@ -3,6 +3,8 @@
 @import term
 @import drv_keyboard
 
+@extern interrupt_init_protected_mode fun
+
 INT_PAGE_FAULT u32 <- 0x0e
 INT_IRQ0 u32 <- 0x20 // timer
 INT_IRQ1 u32 <- 0x21 // keyboard
@@ -16,6 +18,10 @@ halt${:uid}:
 
 getCr2 raw<"=r"> -> u32
     mov $0, cr2
+;
+
+@export init fun
+    interrupt_init_protected_mode()
 ;
 
 @export handleInterrupt fun: eax u32, ebx u32, ecx u32, edx u32, interrupt u32, errorCode u32 -> u32

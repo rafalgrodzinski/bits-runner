@@ -50,7 +50,7 @@ setVideoModeRaw raw<"m, m, m">: biosServiceAdr u32/*$0*/, serviceNum u8/*$1*/, m
 //
 
 // Read sectors
-bootStorageReadSectorsRaw raw<"=r, m, m, m, m, m,~{eax},~{ebx},~{ecx},~{edi}">: biosServiceAdr u32 /*$1*/, biosServiceNumber u8 /*$2*/, firstSector u32 /*$3*/, sectorsCount u32 /*$4*/, targetAdr u32 /*$5*/ -> u32 /*$0*/
+bootStorageReadSectorsRaw raw<"=r, m, m, m, m, m,~{eax}">: biosServiceAdr u32 /*$1*/, biosServiceNumber u8 /*$2*/, firstSector u32 /*$3*/, sectorsCount u32 /*$4*/, targetAdr u32 /*$5*/ -> u32 /*$0*/
     mov ah, $2
     mov ebx, $3
     mov ecx, $4

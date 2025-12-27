@@ -16,8 +16,9 @@ saved_esp: dd 0
 [bits 32]
 bios_service:
     ; store old esp and use one that is in the first segment
-    mov [saved_esp], esp
-    mov esp, STACK_ADR
+    ;mov [saved_esp], esp
+    ;mov esp, STACK_ADR
+    pusha
 
     ; Reboot
     cmp ah, BIOS_SERVICE_REBOOT
@@ -51,7 +52,8 @@ bios_service:
 .not_sectors_count:
 
 .end:
-    mov esp, [saved_esp]
+    popa
+    ;mov esp, [saved_esp]
     ret
 
 ;

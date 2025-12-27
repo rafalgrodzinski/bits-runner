@@ -12,6 +12,9 @@ start fun
     count u32 <- 0
     character u32 <- 0
 
+    m blob<@B.String> <- @B.String("Shell loaded")
+    m.println.val({m.adr})
+
     rep
         rep character != '\n'
             character <- @Syscall.readPressedAscii()
