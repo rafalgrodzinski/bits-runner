@@ -1,6 +1,6 @@
 @module Syscall
 
-CALL_REBOOT u32 <- 0
+CALL_REBOOT u32 <- 0x00
 CALL_GET_TIMESTAMP u32 <- 0x10
 
 syscallRaw raw<"=r,m,~{eax}">: syscallNum u32/*$1*/ -> u32/*$0*/
