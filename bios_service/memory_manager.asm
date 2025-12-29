@@ -12,6 +12,7 @@ page_directory: times 1024 dd 0
 ; G: global (don't invalidate upon mov to cr3), PAT: caching type, D: dirty, A: accessed, PCD: cache disabled, PWT: write through, US: user/supervisor, RW: read/write, P: present
 page_table_0: times 1024 dd 0 ; 0x0000 0000 - 0x0040 0000 (0 - 4MiB)
 page_table_512: times 1024 dd 0 ; 0x8000 0000 - 0x8040 0000 (2048 - 2052 MiB)
+page_table_767: times 1024 dd 0 ; 0xbfc0 0000 - 0xc000 0000 (3068 - 3072 MiB)
 
 ;
 ; Initialize memory manager
@@ -26,6 +27,11 @@ memory_init:
     and eax, 0xfffff000
     or eax, 3
     mov [page_directory + 512 * 4], eax
+
+    mov eax, page_table_767
+    and eax, 0xfffff000
+    or eax, 3
+    mov [page_directory + 767 * 4], eax
 
     ; Identity map the first MiB
     mov ecx, 0
@@ -51,6 +57,17 @@ memory_init:
     inc ecx
     cmp ecx, 1024
     jb .loop_512
+
+    ; Map kernel stack
+    mov ecx, 0x400
+.loop_767:
+    mov eax, 0x1000
+    mul ecx
+    add eax, 0x500000 - 0x1000
+    or eax, 0x03 ; RW & P
+    mov [page_table_767 + (ecx - 1)  * 4], eax
+    loop .loop_767
+
 
     ; Point last entry to page directory
     mov eax, page_directory

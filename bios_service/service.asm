@@ -16,8 +16,8 @@ saved_esp: dd 0
 [bits 32]
 bios_service:
     ; store old esp and use one that is in the first segment
-    ;mov [saved_esp], esp
-    ;mov esp, STACK_ADR
+    mov [saved_esp], esp
+    mov esp, STACK_ADR
     pusha
 
     ; Reboot
@@ -53,7 +53,7 @@ bios_service:
 
 .end:
     popa
-    ;mov esp, [saved_esp]
+    mov esp, [saved_esp]
     ret
 
 ;

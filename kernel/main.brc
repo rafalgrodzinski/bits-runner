@@ -6,8 +6,6 @@
 @import B
 @import Int
 
-STACK_ADR u32 <- 0x2000 - 4
-
 getEax raw<"=r"> -> u32
     mov $0, eax
 ;
@@ -24,8 +22,8 @@ getEdx raw<"=r"> -> u32
     mov $0, edx
 ;
 
-call raw<"m">: entryAdr u32
-    call $0
+break raw<"">
+    xchg bx, bx
 ;
 
 @export start fun
@@ -49,8 +47,9 @@ call raw<"m">: entryAdr u32
     // Load shell
     appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/SHELL.BIN"))
     pApp ptr<data<u8>> <- @mem.allocateBytes(appEntry.entrySize)
-    storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)
+    /*storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)
     pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess(pApp, appEntry.entrySize)
+    break()
     @scheduler.switchToProcess(pProcess)
 
     rep
