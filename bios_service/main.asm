@@ -90,10 +90,11 @@ dd 0
 %define GDT_CODE_V86_MODE gdt_code_v86_mode - gdt
 %define GDT_DATA_V86_MODE gdt_data_v86_mode - gdt
 
-; store previous gdt values when going into v86 mode
+; store previous gdt and stack values when going into v86 mode
 saved_gdt_code: dw GDT_CODE_PROTECTED_MODE
 saved_gdt_data: dw GDT_DATA_PROTECTED_MODE
 saved_gdt_stack: dw GDT_DATA_PROTECTED_MODE
+saved_esp: dd 0
 
 boot_drive_number: dd 0
 boot_partition_first_sector: dd 0
@@ -188,10 +189,8 @@ start_16:
     
     ; Load GDT and switch to protected mode
     lgdt [gdt_descriptor]
-
     call switch_to_protected_mode_16
 [bits 32]
-
     ; Initialize storage
     push dword [boot_partition_first_sector]
     push dword [boot_drive_number]
@@ -228,9 +227,8 @@ start_16:
 
     ; Enable paging
     call memory_init
-
     ; pass boot parameters to kernel and start it
-    mov eax, bios_service
+    mov eax, bios_service_32
     mov ebx, gdt_tss
     mov ecx, [boot_partition_first_sector]
     mov edx, [boot_drive_number]
@@ -447,12 +445,13 @@ init_memory_layout_32:
 [bits 16]
 switch_to_protected_mode_16:
     cli
+
+    push eax ; preserve eax
+
     ; Enable protected mode
-    push eax
     mov eax, cr0
     or eax, 1
     mov cr0, eax
-    pop eax
 
     ; Long jump to 32 bits
     push word [saved_gdt_code] ; segment
@@ -462,7 +461,6 @@ switch_to_protected_mode_16:
 [bits 32]
 .init_data_segment:
     ; Set protected mode 32 bit data segment
-    push eax
     mov ax, [saved_gdt_data]
     mov ds, ax
     mov es, ax
@@ -480,22 +478,31 @@ switch_to_protected_mode_16:
     mov cr0, eax
 
 .skip_paging:
-    call restore_protected_mode_interrupts_32
-    pop eax
+    pop eax ; restore preserved eax
 
+    ; If we have a preserved stack, use it and append return address
+    cmp dword [saved_esp], 0
+    jz .no_stack_restore
+
+    push eax
+    mov eax, esp  ; +0 eax, +4 eip
+    mov esp, [saved_esp]
+    push dword [eax + 4] ; eip
+    mov eax, [eax]
+
+.no_stack_restore:
+    call restore_protected_mode_interrupts_32
     ret
 
 ;
 ; Restore interrupts for protected mode
 [bits 32]
 restore_protected_mode_interrupts_32:
-    cli
-
     ; Check if protected mode interrupts are initialized
     cmp dword [idt_descriptor_protected_mode + 2], 0
     je .end ; if not, skip the restore
 
-    push eax
+    push eax ; preserve eax
 
     ; ICW1, initialize
     mov al, 0x11
@@ -524,9 +531,10 @@ restore_protected_mode_interrupts_32:
     out PIC1_DATA_PORT, al
     out PIC2_DATA_PORT, al
 
-    pop eax
     lidt [idt_descriptor_protected_mode]
-    sti
+    sti ; only enable if interrupts got restored
+
+    pop eax ; restore preserved eax
 
 .end:
     ret
@@ -535,13 +543,29 @@ restore_protected_mode_interrupts_32:
 ; Initialize 16 bit 8086 virtual mode
 [bits 32]
 switch_to_v86_mode_32:
+    cli
+
+    ; re-intialized real-mode stack if required
+    cmp esp, STACK_ADR
+    jbe .no_stack_restore
+
+    mov [saved_esp], esp
+    add dword [saved_esp], 4 ; remove ret eip
+    push eax
+    mov eax, esp ; +0 eax, +4 eip
+
+    ; use default real mode stack and put the return address on it
+    mov esp, STACK_ADR
+    push dword [eax + 4] ; place ret eip
+    mov eax, [eax] ; restore eax
+.no_stack_restore:
+
     ; keep current gdt values
     mov [saved_gdt_code], cs
     mov [saved_gdt_data], ds
     mov [saved_gdt_stack], ss
 
-    ; clear interrupts and set real mode code segment
-    cli
+    ; set real mode code segment
     jmp GDT_CODE_V86_MODE:(.init_v86_data_segment)
 
 [bits 16]
@@ -561,20 +585,19 @@ switch_to_v86_mode_32:
     mov eax, cr0
     and eax, 0x7ffffffe
     mov cr0, eax
-    pop eax
 
     ; Flush CPU and jumpt to 16 bit code
     jmp 0:.v86_mode
 
 .v86_mode:
-    push ax
     mov ax, cs
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
     mov ss, ax
-    pop ax
+
+    pop eax ; restore preserved eax
 
     call restore_v86_mode_interrupts_16
     ret
@@ -583,8 +606,6 @@ switch_to_v86_mode_32:
 ; Restore interrupts for v86 mode
 [bits 16]
 restore_v86_mode_interrupts_16:
-    cli
-
     ; Check currently active interrupts descriptor
     sidt [idt_descriptor_current]
     cmp dword [idt_descriptor_current + 2], 0
@@ -620,11 +641,12 @@ restore_v86_mode_interrupts_16:
     out PIC1_DATA_PORT, al
     out PIC2_DATA_PORT, al
 
-    pop eax
     lidt [idt_descriptor_v86_mode]
-    sti
+
+    pop eax
 
 .end:
+    sti ; always restore real mode interrupts
     ret
 
 ;
@@ -667,7 +689,7 @@ fatal_error_16:
 %include "bios_service/term.asm"
 %include "bios_service/boot_storage.asm"
 %include "bios_service/memory_manager.asm"
-%include "bios_service/service.asm"
+%include "bios_service/bios_service.asm"
 
 memory_size: dd 0
 memory_map_entries_count: db 0 ; each entry is 24 bits
