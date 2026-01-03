@@ -21,7 +21,7 @@ bios_service_32:
     mov [saved_esp], esp
 
     ; use default real mode stack and put the return address on it
-    mov esp, STACK_ADR
+    mov esp, STACK_END_ADR
 
     sti
 

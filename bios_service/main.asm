@@ -2,12 +2,14 @@
 [cpu 386]
 
 %define RAM_MIN 0x1000000 ; 16MiB
-%define KERNEL_PHY_ADR 0x100000 ; 1MiB
-%define KERNEL_ADR 0x80000000
-%define KERNEL_STACK_PHY_ADR 0x500000 ; 5MiB
-%define KERNEL_STACK_ADR 0xc0000000 - 4 ; 4 GiB - 4
+%define STACK_END_ADR 0x2000 ; @ 8 KiB
+
+%define KERNEL_ADR 0x80000000 ; @ 2 GiB
+%define KERNEL_PHY_ADR 0x100000 ; @ 1MiB
+
+%define KERNEL_STACK_END_ADR 0xc0000000 ; @ 3 GiB
+%define KERNEL_STACK_PHY_END_ADR 0x500000 ; @ 4MiB
 %define KERNEL_STACK_SIZE 0x40000 ; 256 KiB
-%define STACK_ADR 0x2000 - 4 ; 8 KiB - 4
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
@@ -126,7 +128,7 @@ start_16:
     mov fs, bx
     mov gs, bx
     mov ss, bx
-    mov sp, STACK_ADR
+    mov sp, STACK_END_ADR
 
 	; store boot drive number
     and edx, 0xff
@@ -159,7 +161,6 @@ start_16:
     call fatal_error_16
 
 .after_a20_check:
-
     ; Get memory size and layout
     call scan_memory_16
 
@@ -171,24 +172,20 @@ start_16:
     mov si, msg_memory_detected1
     call term_print_string_16
     call term_print_new_line_16
-
     ; Check RAM size
     cmp dword [memory_size], RAM_MIN
     jge .ram_size_ok
     mov si, msg_error_memory_low
     call fatal_error_16 ; Too little RAM!
-
 .ram_size_ok:
     ; Initialization message
     mov si, msg_initializing
     call term_print_string_16
     call term_print_new_line_16
-
     cli
     ; Mark paging as uninitialized
     mov eax, 0x00
     mov cr3, eax
-    
     ; Load GDT and switch to protected mode
     lgdt [gdt_descriptor]
     call switch_to_protected_mode_16
@@ -228,13 +225,14 @@ start_16:
     call init_memory_layout_32
 
     ; Enable paging
-    call memory_init
+    call memory_setup_paging_32
+
     ; pass boot parameters to kernel and start it
     mov eax, bios_service_32
     mov ebx, gdt_tss
     mov ecx, [boot_partition_first_sector]
     mov edx, [boot_drive_number]
-    mov esp, KERNEL_STACK_ADR ; set kernel stack into paged area
+    mov esp, KERNEL_STACK_END_ADR ; set kernel stack into paged area
     jmp KERNEL_ADR
 
 .halt:
@@ -387,9 +385,9 @@ init_memory_layout_32:
 .not_kernel_memory:
 
     ; mark kernel stack
-    cmp eax, KERNEL_STACK_PHY_ADR + 0x400000 - KERNEL_STACK_SIZE
+    cmp eax, KERNEL_STACK_PHY_END_ADR - KERNEL_STACK_SIZE
     jb .not_kernel_stack_memory
-    cmp eax, KERNEL_STACK_PHY_ADR + 0x400000
+    cmp eax, KERNEL_STACK_PHY_END_ADR
     jnb .not_kernel_stack_memory
     mov al, 1
     jmp .set_entry
@@ -455,9 +453,19 @@ init_memory_layout_32:
 ; Initialize 32 bit protected mode
 [bits 16]
 switch_to_protected_mode_16:
+    ; in 16 bits only 2 bytest are pushed for return address
+    ; but we return in 32 bit mode
+    push word 0
+
     cli
 
     push eax ; preserve eax
+
+    ; shift the address bytes pushed by call so it's a correct valu
+    ; in 32 bit mode
+    mov eax, [esp + 4]
+    shr eax, 16
+    mov [esp + 4], eax
 
     ; Enable protected mode
     mov eax, cr0
@@ -611,7 +619,7 @@ switch_to_v86_mode_32:
     pop eax ; restore preserved eax
 
     call restore_v86_mode_interrupts_16
-    ret
+    ret 2 ; we entered in 32 bit mode, so there are 2 leftover bytes
 
 ;
 ; Restore interrupts for v86 mode
@@ -699,7 +707,7 @@ fatal_error_16:
 
 %include "bios_service/term.asm"
 %include "bios_service/boot_storage.asm"
-%include "bios_service/memory_manager.asm"
+%include "bios_service/memory.asm"
 %include "bios_service/bios_service.asm"
 
 memory_size: dd 0
