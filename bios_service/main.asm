@@ -4,7 +4,9 @@
 %define RAM_MIN 0x1000000 ; 16MiB
 %define KERNEL_PHY_ADR 0x100000 ; 1MiB
 %define KERNEL_ADR 0x80000000
+%define KERNEL_STACK_PHY_ADR 0x500000 ; 5MiB
 %define KERNEL_STACK_ADR 0xc0000000 - 4 ; 4 GiB - 4
+%define KERNEL_STACK_SIZE 0x40000 ; 256 KiB
 %define STACK_ADR 0x2000 - 4 ; 8 KiB - 4
 
 %define PIC1_CMD_PORT 0x20
@@ -384,6 +386,15 @@ init_memory_layout_32:
     jmp .set_entry
 .not_kernel_memory:
 
+    ; mark kernel stack
+    cmp eax, KERNEL_STACK_PHY_ADR + 0x400000 - KERNEL_STACK_SIZE
+    jb .not_kernel_stack_memory
+    cmp eax, KERNEL_STACK_PHY_ADR + 0x400000
+    jnb .not_kernel_stack_memory
+    mov al, 1
+    jmp .set_entry
+.not_kernel_stack_memory:
+
     ; mark bios service
     cmp eax, 0x1000
     jb .not_bios_service_memory
@@ -480,17 +491,17 @@ switch_to_protected_mode_16:
 .skip_paging:
     pop eax ; restore preserved eax
 
-    ; If we have a preserved stack, use it and append return address
-    cmp dword [saved_esp], 0
-    jz .no_stack_restore
-
-    push eax
-    mov eax, esp  ; +0 eax, +4 eip
-    mov esp, [saved_esp]
-    push dword [eax + 4] ; eip
-    mov eax, [eax]
-
-.no_stack_restore:
+;    ; If we have a preserved stack, use it and append return address
+;    cmp dword [saved_esp], 0
+;    jz .no_stack_restore
+;
+;    push eax
+;    mov eax, esp  ; +0 eax, +4 eip
+;    mov esp, [saved_esp]
+;    push dword [eax + 4] ; eip
+;    mov eax, [eax]
+;
+;.no_stack_restore:
     call restore_protected_mode_interrupts_32
     ret
 
@@ -545,20 +556,20 @@ restore_protected_mode_interrupts_32:
 switch_to_v86_mode_32:
     cli
 
-    ; re-intialized real-mode stack if required
-    cmp esp, STACK_ADR
-    jbe .no_stack_restore
-
-    mov [saved_esp], esp
-    add dword [saved_esp], 4 ; remove ret eip
-    push eax
-    mov eax, esp ; +0 eax, +4 eip
-
-    ; use default real mode stack and put the return address on it
-    mov esp, STACK_ADR
-    push dword [eax + 4] ; place ret eip
-    mov eax, [eax] ; restore eax
-.no_stack_restore:
+;    ; re-intialized real-mode stack if required
+;    cmp esp, STACK_ADR
+;    jbe .no_stack_restore
+;
+;    mov [saved_esp], esp
+;    add dword [saved_esp], 4 ; remove ret eip
+;    push eax
+;    mov eax, esp ; +0 eax, +4 eip
+;
+;    ; use default real mode stack and put the return address on it
+;    mov esp, STACK_ADR
+;    push dword [eax + 4] ; place ret eip
+;    mov eax, [eax] ; restore eax
+;.no_stack_restore:
 
     ; keep current gdt values
     mov [saved_gdt_code], cs

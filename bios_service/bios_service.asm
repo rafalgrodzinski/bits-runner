@@ -16,6 +16,15 @@
 bios_service_32:
     pusha
 
+    cli
+
+    mov [saved_esp], esp
+
+    ; use default real mode stack and put the return address on it
+    mov esp, STACK_ADR
+
+    sti
+
     ; Reboot
     cmp ah, BIOS_SERVICE_REBOOT
     jne .not_reboot
@@ -48,6 +57,12 @@ bios_service_32:
 .not_sectors_count:
 
 .end:
+    cli
+
+    mov esp, [saved_esp]
+
+    sti
+
     popa
     ret
 

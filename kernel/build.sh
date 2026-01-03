@@ -11,7 +11,7 @@ function check {
     fi
 }
 
-brb --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --reloc=static \
+brb --opt=o2 --gen=obj --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --reloc=static \
 "${SCRIPT_DIR}/main.brc" \
 "${SCRIPT_DIR}/memory/mem.brc" \
 "${SCRIPT_DIR}/terminal/term.brc" \

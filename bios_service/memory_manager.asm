@@ -50,7 +50,7 @@ memory_init:
 .loop_512:
     mov eax, 0x1000
     mul ecx
-    add eax, 0x100000
+    add eax, KERNEL_PHY_ADR
     or eax, 0x03 ; RW & P
     mov [page_table_512 + ecx * 4], eax
 
@@ -63,7 +63,7 @@ memory_init:
 .loop_767:
     mov eax, 0x1000
     mul ecx
-    add eax, 0x500000 - 0x1000
+    add eax, KERNEL_STACK_PHY_ADR - 0x1000
     or eax, 0x03 ; RW & P
     mov [page_table_767 + (ecx - 1)  * 4], eax
     loop .loop_767

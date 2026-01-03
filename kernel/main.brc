@@ -22,10 +22,6 @@ getEdx raw<"=r"> -> u32
     mov $0, edx
 ;
 
-break raw<"">
-    xchg bx, bx
-;
-
 @export start fun
     // Get boot parameters from BIOS Service
     biosServiceAdr u32 <- getEax()
@@ -47,10 +43,10 @@ break raw<"">
     // Load shell
     appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/SHELL.BIN"))
     pApp ptr<data<u8>> <- @mem.allocateBytes(appEntry.entrySize)
-    /*storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)
-    pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess(pApp, appEntry.entrySize)
-    break()
-    @scheduler.switchToProcess(pProcess)
+
+    storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)
+    //pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess(pApp, appEntry.entrySize)
+    //@scheduler.switchToProcess(pProcess)
 
     rep
     ;
