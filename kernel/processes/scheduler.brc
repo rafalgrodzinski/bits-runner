@@ -68,7 +68,7 @@ pGdtTss ptr<data<u8>>
     pProcess.val.esp <- USER_STACK_END_ADR - 5 * u32.size // 5 slots for iret frame
     pProcess.val.esp0 <- KERNEL_STACK_END_ADR
     pProcess.val.cr3 <- @mem.lAdrToPAdr(pProcess.val.pageDirectory.adr)
-    pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x03
+    pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x13 // PCD & RW & P
 
     // Setup new page directory
 

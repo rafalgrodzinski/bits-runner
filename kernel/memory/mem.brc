@@ -36,6 +36,11 @@ enableInterrupts raw<"">
     sti
 ;
 
+flushTlb raw<"~{eax}">
+    mov eax, cr3
+    mov cr3, eax
+;
+
 @export init fun
     pMemLayout <- { heap.adr }
     // Calculate free pages
@@ -124,13 +129,15 @@ registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory pt
     disableInterrupts()
     // use that last current directory page to self-reference the new directory tables
     oldSelfReference u32 <- pCurrentPageDirectory.val[1023]
-    selfReference u32 <- lAdrToPAdr(pPageDirectory.vAdr)
-    pCurrentPageDirectory.val[1023] <- selfReference | 3
+    selfReference u32 <- lAdrToPAdr(pPageDirectory.vAdr) | 0x13 // PCD & RW & P
+    pCurrentPageDirectory.val[1023] <- selfReference
+    flushTlb()
     // update new table entries relative to the last directory entry
     pPageTables ptr<data<u32>> <- { 0xffc0_0000 }
     pPageTables.val[directoryIndex * 0x400 + tableIndex] <- (page * pMemLayout.val.pageSize) | 0b111
     // and restore the original self-reference
     pCurrentPageDirectory.val[1023] <- oldSelfReference
+    flushTlb()
     enableInterrupts()
 ;
 

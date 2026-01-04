@@ -63,7 +63,7 @@ memory_setup_paging_32:
     ; Point last entry to page directory
     mov eax, page_directory
     and eax, 0xfffff000
-    or eax, 3
+    or eax, 0x13 ; PCD & RW & P
     mov [page_directory + 1023 * 4], eax
 
     ; Enable paging
