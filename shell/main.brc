@@ -4,7 +4,7 @@
 CMD_REBOOT blob<@B.String>
 CMD_TIME blob<@B.String>
 
-start fun
+@export start fun
     CMD_REBOOT <- @B.String("reboot")
     CMD_TIME <- @B.String("time")
 

@@ -45,8 +45,8 @@ getEdx raw<"=r"> -> u32
     pApp ptr<data<u8>> <- @mem.allocateBytes(appEntry.entrySize)
 
     storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)
-    //pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess(pApp, appEntry.entrySize)
-    //@scheduler.switchToProcess(pProcess)
+    pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess(pApp, appEntry.entrySize)
+    @scheduler.switchToProcess(pProcess)
 
     rep
     ;
