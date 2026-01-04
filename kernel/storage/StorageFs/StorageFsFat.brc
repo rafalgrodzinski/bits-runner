@@ -40,6 +40,7 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     storageFs.storageArea <- storageArea
     storageFs.rootEntry <- {storageFsFatRootEntry.adr}
     storageFs.subEntriesForEntry <- {storageFsFatSubEntriesForEntry.adr}
+    storageFs.entryForPath <- {storageFsFatEntryForPath.adr}
     storageFs.readEntry <- {storageFsFatReadEntry.adr}
 
     // Init FAT
@@ -178,6 +179,50 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<St
     ;
 
     ret subEntries
+;
+
+storageFsFatEntryForPath fun: it ptr<blob<StorageFs>>, path blob<@B.String> -> blob<StorageFsEntry>
+    emptyEntry blob<StorageFsEntry>
+    currentEntry blob<StorageFsEntry>
+    nextEntryName blob<@B.String>
+    isNextEntryFound bool
+
+    // path must start with a slash
+    if path.string[0] != '/': ret emptyEntry
+    currentEntry <- it.val.rootEntry.val(it)
+    path <- path.subStringFrom.val({path.adr}, 1)
+    isNextEntryFound <- true // asume true cause we start with the root dir
+
+    // go through each path components until the end or if one cannot be found
+    rep path.length.val({path.adr}) > 0 and isNextEntryFound
+        separatorIndex u32 <- path.find.val({path.adr}, @B.StringForChar('/'))
+        // if path components are still remaining, take name until the next slash /
+        if separatorIndex > 0
+            nextEntryName <- path.subStringTo.val({path.adr}, separatorIndex)
+            path <- path.subStringFrom.val({path.adr}, separatorIndex + 1)
+        // otherwise take the whole remaining path as the next entry name
+        else
+            nextEntryName <- path
+            path <- @B.String("")
+        ;
+
+        // get list of subentries for the current entry
+        subEntries data<blob<StorageFsEntry>> <- it.val.subEntriesForEntry.val(it, currentEntry)
+        // reset the check for the current directory
+        isNextEntryFound <- false
+        rep i u32 <- 0, i < subEntries.count and not isNextEntryFound, i <- i + 1
+            // for each of the entry check if the path component matches with it
+            if nextEntryName.isEqual.val({nextEntryName.adr}, @B.String(subEntries[i].name))
+                currentEntry <- subEntries[i]
+                isNextEntryFound <- true
+            ;
+        ;
+
+        // required entry in the path nt found
+        if not isNextEntryFound: ret emptyEntry
+    ;
+
+    ret currentEntry
 ;
 
 storageFsFatReadEntry fun: it ptr<blob<StorageFs>>, entry blob<StorageFsEntry>, targetAdr ptr<data<u8>> -> u32

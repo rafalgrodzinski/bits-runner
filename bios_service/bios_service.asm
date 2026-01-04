@@ -13,18 +13,29 @@
 ; in
 ;  ah: service code
 [bits 32]
-bios_service:
+bios_service_32:
+    pusha
+
+    cli
+
+    mov [saved_esp], esp
+
+    ; use default real mode stack and put the return address on it
+    mov esp, STACK_END_ADR
+
+    sti
+
     ; Reboot
     cmp ah, BIOS_SERVICE_REBOOT
     jne .not_reboot
-    call reboot
+    call bios_service_reboot_32
     jmp .end
 .not_reboot:
 
     ; Video mode
     cmp ah, BIOS_SERVICE_SET_VIDEO_MODE
     jne .not_set_video_mode
-    call set_video_mode
+    call bios_service_set_video_mode_32
     jmp .end
 .not_set_video_mode:
 
@@ -34,37 +45,44 @@ bios_service:
     push edi ; target_adr
     push ecx ; sectors_count
     push ebx ; first_sector
-    call service_boot_storage_read_sectors
+    call bios_service_boot_storage_read_sectors_32
     jmp .end
 .not_read_sectors:
 
     ; Sectors count
     cmp ah, BIOS_SERVICE_BOOT_STORAGE_SECTORS_COUNT
     jne .not_sectors_count
-    call service_boot_storage_sectors_count
+    call bios_service_boot_storage_sectors_count_32
     jmp .end
 .not_sectors_count:
 
 .end:
+    cli
+
+    mov esp, [saved_esp]
+
+    sti
+
+    popa
     ret
 
 ;
 ; Reboot the system
-bits 32
-reboot:
+[bits 32]
+bios_service_reboot_32:
     call switch_to_v86_mode_32
-bits 16
+[bits 16]
     jmp 0xffff:0
 
 ;
 ; Change video mode
 ; in
 ;  al: video mode
-bits 32
-set_video_mode:
+[bits 32]
+bios_service_set_video_mode_32:
     call switch_to_v86_mode_32
 
-bits 16
+[bits 16]
     ; text 80x25
     cmp al, BIOS_SERVICE_TEXT_MODE_80x25
     jne .not_80x25
@@ -101,7 +119,7 @@ bits 16
 
 .end:
     call switch_to_protected_mode_16
-bits 32
+[bits 32]
     ret
 
 ;
@@ -117,7 +135,7 @@ bits 32
 %define .sectors_count [ebp + 12]
 %define .target_adr [ebp + 16]
 [bits 32]
-service_boot_storage_read_sectors:
+bios_service_boot_storage_read_sectors_32:
     push ebp
     mov ebp, esp
 
@@ -140,7 +158,7 @@ service_boot_storage_read_sectors:
 ;  out
 ;   sectors_count
 [bits 32]
-service_boot_storage_sectors_count:
+bios_service_boot_storage_sectors_count_32:
     ; eax <- cylinders * heads * sectors
     mov eax, [boot_storage_drive_cylinders]
     mul dword [boot_storage_drive_heads]

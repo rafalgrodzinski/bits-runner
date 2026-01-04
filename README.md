@@ -5,6 +5,7 @@ Bits Runner is a 32bit operating system for x86 computers.
 
 ## Quick Links
 - [Extra Information](docs/Extra.md)
+- [Paging](docs/Paging.md)
 
 ## Overview
 Bits Runner is a simple, 32bit operating system for x86. It is built using assembly and [BRC (Bits Runner Code)](https://github.com/rafalgrodzinski/bits-runner-code) language.

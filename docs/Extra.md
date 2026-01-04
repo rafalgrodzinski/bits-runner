@@ -20,3 +20,6 @@
 
 - Getting to Ring 3:
 [https://wiki.osdev.org/Getting_to_Ring_3](https://wiki.osdev.org/Getting_to_Ring_3)
+
+## Paging
+- Paging: [https://wiki.osdev.org/Paging](https://wiki.osdev.org/Paging)

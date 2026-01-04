@@ -1,7 +1,7 @@
-cpu 386
-bits 32
+[cpu 386]
+[bits 32]
 
-extern int_handler.handleInterrupt
+extern Int.handleInterrupt
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
@@ -172,7 +172,6 @@ interrupt_init_protected_mode:
     lidt [idt_descriptor_protected_mode]
     sti
     ret
-    db 0xDE, 0xAD, 0xBE, 0xEF
 
 ;
 ; ISR for each interrupt, puts together error, int number and passes it on
@@ -456,8 +455,13 @@ interrupt_handler_30:
 
 ;
 ; Aggregated handler for all interrupts
+; iret stack frame registers are arranged as follows:
+; gs, fs, es, ds
+; edi, esi, ebp, esp, ebx, edx, ecx, eax
 %define .eax [ebp + 4 * 7]
 %define .ebx [ebp + 4 * 4]
+%define .ecx [ebp + 4 * 6]
+%define .edx [ebp + 4 * 5]
 %define .interrupt [ebp + 4 * 8]
 %define .info [ebp + 4 * 9]
 interrupt_handler:
@@ -467,10 +471,12 @@ interrupt_handler:
 
     push dword .info
     push dword .interrupt
+    push dword .edx
+    push dword .ecx
     push dword .ebx
     push dword .eax
 
-    call int_handler.handleInterrupt
+    call Int.handleInterrupt
     mov .eax, eax
 
     ; Acknowledge interrupt
