@@ -103,7 +103,7 @@ pGdtTss ptr<data<u8>>
 
     // setup iret frame
     pStack ptr<data<u32>> <- { pProcess.val.esp }
-    pStack.val[4] <- GDT_USER_DATA // ss 3f4
+    pStack.val[4] <- GDT_USER_DATA // ss
     pStack.val[3] <- USER_STACK_END_ADR
     pStack.val[2] <- 0x0202 // eflags IF & 1
     pStack.val[1] <- GDT_USER_CODE // cs

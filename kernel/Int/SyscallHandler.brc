@@ -20,7 +20,7 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
     else if eax = CALL_GET_TIMESTAMP
         ret @DrvCmos.getTimestamp()
     else if eax = CALL_PRINT_CHARACTER
-        @term.printCharacter(ebx, ecx)
+        @term.printCharacter(ebx.u8, ecx.u8)
     else if eax = CALL_READ_ASCII
         ret @drv_keyboard.readPressedAscii()
     //else if call = CALL_LIST_DIR

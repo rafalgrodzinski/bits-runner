@@ -79,17 +79,17 @@ flushTlb raw<"~{eax}">
 @export allocateAlignedBytes fun: bytes u32, alignment u32 -> ptr<u8>
     pBytes ptr<u8> <- { 0 }
 
-    fillerSize u32 <- if alignment > 1: (alignment - ((heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes) % alignment)) % alignment else: 0
+    fillerSize u32 <- if alignment > 1: (alignment - ((heapLayout.pHeapStart.vadr + heapLayout.allocatedBytes) % alignment)) % alignment else: 0
 
     if (heapLayout.heapSize - heapLayout.allocatedBytes) >= (bytes + fillerSize)
-        pBytes <- { heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes + fillerSize }
+        pBytes <- { heapLayout.pHeapStart.vadr + heapLayout.allocatedBytes + fillerSize }
         heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes + fillerSize
     else
         requiredBytes u32 <- (bytes + fillerSize) - (heapLayout.heapSize - heapLayout.allocatedBytes)
         allocatedBytes u32 <- allocatePageBytes(requiredBytes)
         if allocatedBytes > 0
             heapLayout.heapSize <- heapLayout.heapSize + allocatedBytes
-            pBytes <- { heapLayout.pHeapStart.vAdr + heapLayout.allocatedBytes + fillerSize }
+            pBytes <- { heapLayout.pHeapStart.vadr + heapLayout.allocatedBytes + fillerSize }
             heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes + fillerSize
         ;
     ;
@@ -123,13 +123,13 @@ registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory pt
     if pPageDirectory.val[directoryIndex] & 0x01 = 0
         pPageTable ptr<data<u32>> <- allocateAlignedBytes(u32.size * 1024, 0x1000)
         rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- 0
-        pPageDirectory.val[directoryIndex] <- lAdrToPAdr(pPageTable.vAdr) | 0b111
+        pPageDirectory.val[directoryIndex] <- lAdrToPAdr(pPageTable.vadr) | 0b111
     ;
 
     disableInterrupts()
     // use that last current directory page to self-reference the new directory tables
     oldSelfReference u32 <- pCurrentPageDirectory.val[1023]
-    selfReference u32 <- lAdrToPAdr(pPageDirectory.vAdr) | 0x13 // PCD & RW & P
+    selfReference u32 <- lAdrToPAdr(pPageDirectory.vadr) | 0x13 // PCD & RW & P
     pCurrentPageDirectory.val[1023] <- selfReference
     flushTlb()
     // update new table entries relative to the last directory entry
@@ -167,7 +167,7 @@ registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory pt
     @term.printNewLine()
 
     @term.printString("Heap start: ", 7)
-    @term.printHex(heapLayout.pHeapStart.vAdr, 7)
+    @term.printHex(heapLayout.pHeapStart.vadr, 7)
     @term.printNewLine()
 
     @term.printString("Heap size: ", 7)

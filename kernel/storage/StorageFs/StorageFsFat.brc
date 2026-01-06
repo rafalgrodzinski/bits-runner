@@ -50,25 +50,25 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     pInfo ptr<u32>
 
     // read values
-    pInfo <- {pFatBuffer.vAdr + FAT_BYTES_PER_SECTOR_OFFSET}
+    pInfo <- {pFatBuffer.vadr + FAT_BYTES_PER_SECTOR_OFFSET}
     bytesPerSector u32 <- pInfo.val & 0xffff
     storageFs.fatBytesPerSector <- bytesPerSector
 
-    pInfo <- {pFatBuffer.vAdr + FAT_SECTORS_PER_CLUSTER_OFFSET}
+    pInfo <- {pFatBuffer.vadr + FAT_SECTORS_PER_CLUSTER_OFFSET}
     sectorsPerCluster u32 <- pInfo.val & 0xff
     storageFs.fatSectorsPerCluster <- sectorsPerCluster
 
-    pInfo <- {pFatBuffer.vAdr + FAT_RESERVED_SECTORS_COUNT_OFFSET}
+    pInfo <- {pFatBuffer.vadr + FAT_RESERVED_SECTORS_COUNT_OFFSET}
     reservedSectorsCount u32 <- pInfo.val & 0xff
 
-    pInfo <- {pFatBuffer.vAdr + FAT_FATS_COUNT_OFFSET}
+    pInfo <- {pFatBuffer.vadr + FAT_FATS_COUNT_OFFSET}
     fatsCount u32 <- pInfo.val & 0xff
 
-    pInfo <- {pFatBuffer.vAdr + FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET}
+    pInfo <- {pFatBuffer.vadr + FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET}
     rootDirEntriesCount u32 <- pInfo.val & 0xffff
     storageFs.fatRootDirEntriesCount <- rootDirEntriesCount
 
-    pInfo <- {pFatBuffer.vAdr + FAT_SECTORS_PER_FAT_OFFSET}
+    pInfo <- {pFatBuffer.vadr + FAT_SECTORS_PER_FAT_OFFSET}
     sectorsPerFat u32 <- pInfo.val & 0xffff
 
     // calculated values
@@ -81,7 +81,7 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     storageFs.fatFirstDataSector <- rootDirFirstSector + rootDirSectorsCount
 
     // FAT type
-    pInfo <- {pFatBuffer.vAdr + FAT_FS_ID_OFFSET + 4}
+    pInfo <- {pFatBuffer.vadr + FAT_FS_ID_OFFSET + 4}
     if pInfo.val & 0xff = '2': storageFs.kind <- FS_KIND_FAT12
     else if pInfo.val & 0xff = '6': storageFs.kind <- FS_KIND_FAT16
 
@@ -152,10 +152,10 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<St
             // name
             subEntries[entriesCount].name <- name
             // size
-            pSize ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_SIZE_OFFSET}
+            pSize ptr<u32> <- {pFatFileEntry.vadr + FAT_ENTRY_SIZE_OFFSET}
             subEntries[entriesCount].entrySize <- pSize.val
             // cluster
-            pCluster ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_CLUSTER_OFFSET}
+            pCluster ptr<u32> <- {pFatFileEntry.vadr + FAT_ENTRY_CLUSTER_OFFSET}
             subEntries[entriesCount].fatCluster <- pCluster.val & 0xffff
 
             entriesCount <- entriesCount + 1
@@ -165,17 +165,17 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<St
             //name
             subEntries[entriesCount].name <- name
             // size
-            pSize ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_SIZE_OFFSET}
+            pSize ptr<u32> <- {pFatFileEntry.vadr + FAT_ENTRY_SIZE_OFFSET}
             subEntries[entriesCount].entrySize <- pSize.val
             // cluster
-            pCluster ptr<u32> <- {pFatFileEntry.vAdr + FAT_ENTRY_CLUSTER_OFFSET}
+            pCluster ptr<u32> <- {pFatFileEntry.vadr + FAT_ENTRY_CLUSTER_OFFSET}
             subEntries[entriesCount].fatCluster <- pCluster.val & 0xffff
 
             entriesCount <- entriesCount + 1
         ;
 
         // go to the next entry
-        pFatFileEntry <- {pFatFileEntry.vAdr + FAT_BYTES_PER_ENTRY}
+        pFatFileEntry <- {pFatFileEntry.vadr + FAT_BYTES_PER_ENTRY}
     ;
 
     ret subEntries
@@ -232,13 +232,13 @@ storageFsFatReadEntry fun: it ptr<blob<StorageFs>>, entry blob<StorageFsEntry>, 
     rep not isFinished
         sector u32 <- (cluster - 2) * it.val.fatSectorsPerCluster + it.val.fatFirstDataSector
         it.val.storageArea.readSectors.val({it.val.storageArea.adr}, sector, it.val.fatSectorsPerCluster, targetAdr)
-        targetAdr <- {targetAdr.vAdr + it.val.fatBytesPerSector * it.val.fatSectorsPerCluster}
+        targetAdr <- {targetAdr.vadr + it.val.fatBytesPerSector * it.val.fatSectorsPerCluster}
 
         if it.val.kind = FS_KIND_FAT12
             // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
             clusterIndex u32 <- cluster * 3 / 2
             // calculate next cluster depending on wethere cluster index is odd or even
-            pCluster ptr<u32> <- {it.val.pFat.vAdr + clusterIndex}
+            pCluster ptr<u32> <- {it.val.pFat.vadr + clusterIndex}
 
             if cluster & 0x01 = 0
                 cluster <- pCluster.val & 0x0fff
@@ -249,7 +249,7 @@ storageFsFatReadEntry fun: it ptr<blob<StorageFs>>, entry blob<StorageFsEntry>, 
             isFinished <- cluster >= FAT12_EOF
         else if it.val.kind = FS_KIND_FAT16
             clusterIndex u32 <- cluster * 2
-            pCluster ptr<u32> <- {it.val.pFat.vAdr + clusterIndex}
+            pCluster ptr<u32> <- {it.val.pFat.vadr + clusterIndex}
             cluster <- pCluster.val & 0xffff // just get 2 bytes
 
             isFinished <- cluster >= FAT16_EOF

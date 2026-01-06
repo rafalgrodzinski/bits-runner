@@ -5,17 +5,17 @@
 REGISTER_SELECT_PORT u32 <- 0x70
 DATA_PORT u32 <- 0x71
 
-REGISTER_B u32 <- 0x0b
+REGISTER_B u8 <- 0x0b
 
-REGISTER_SECONDS u32 <- 0x00
-REGISTER_MINUTES u32 <- 0x02
-REGISTER_HOURS u32 <- 0x04
-REGISTER_DAY u32 <- 0x07
-REGISTER_MONTH u32 <- 0x08
-REGISTER_YEAR u32 <- 0x09
-REGISTER_CENTURY u32 <- 0x32
+REGISTER_SECONDS u8 <- 0x00
+REGISTER_MINUTES u8 <- 0x02
+REGISTER_HOURS u8 <- 0x04
+REGISTER_DAY u8 <- 0x07
+REGISTER_MONTH u8 <- 0x08
+REGISTER_YEAR u8 <- 0x09
+REGISTER_CENTURY u8 <- 0x32
 
-REGISTER_FLOPPY u32 <- 0x10
+REGISTER_FLOPPY u8 <- 0x10
 
 in raw<"=r,m,~{eax},~{edx}">: portNum u32 -> u8
     mov dx, $1
@@ -30,7 +30,7 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
 ;
 
 @export getTimestamp fun -> u32
-    nmiFlag u32 <- in(REGISTER_SELECT_PORT) & 0x80
+    nmiFlag u8 <- in(REGISTER_SELECT_PORT) & 0x80
 
     out(REGISTER_SELECT_PORT, REGISTER_B | nmiFlag)
     state u32 <- in(DATA_PORT)
@@ -94,14 +94,14 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
 // 4: 1.44 MB 3.5 Drive
 // 5: 2.88 MB 3.5 drive
 @export getFloppyKindA fun -> u32
-    nmiFlag u32 <- in(REGISTER_SELECT_PORT) & 0x80
+    nmiFlag u8 <- in(REGISTER_SELECT_PORT) & 0x80
 
     out(REGISTER_SELECT_PORT, REGISTER_FLOPPY | nmiFlag)
     ret (in(DATA_PORT) & 0xf0) >> 4
 ;
 
 @export getFloppyKindB fun -> u32
-    nmiFlag u32 <- in(REGISTER_SELECT_PORT) & 0x80
+    nmiFlag u8 <- in(REGISTER_SELECT_PORT) & 0x80
 
     out(REGISTER_SELECT_PORT, REGISTER_FLOPPY | nmiFlag)
     ret in(DATA_PORT) & 0xf

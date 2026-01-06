@@ -60,7 +60,7 @@ bootStorageReadSectorsRaw raw<"=r, m, m, m, m, m,~{eax}">: biosServiceAdr u32 /*
 ;
 
 @export bootStorageReadSectors fun: firstSector u32, sectorsCount u32, pTarget ptr<data<u8>> -> u32
-    ret bootStorageReadSectorsRaw(serviceAdr, BIOS_SERVICE_BOOT_STORAGE_READ_SECTORS, firstSector, sectorsCount, pTarget.vAdr)
+    ret bootStorageReadSectorsRaw(serviceAdr, BIOS_SERVICE_BOOT_STORAGE_READ_SECTORS, firstSector, sectorsCount, pTarget.vadr.u32)
 ;
 
 // Sectors count

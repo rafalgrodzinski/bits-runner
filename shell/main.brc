@@ -8,13 +8,12 @@ CMD_TIME blob<@B.String>
     CMD_REBOOT <- @B.String("reboot")
     CMD_TIME <- @B.String("time")
 
-    buffer data<u32, 16>
+    buffer data<u8, 16>
     count u32 <- 0
-    character u32 <- 0
-
+    character u8 <- 0
     rep
         rep character != '\n'
-            character <- @Syscall.readPressedAscii()
+            character <- @Syscall.readPressedAscii().u8
             if character = '\b' and count > 0
                 count <- count - 1
                 message blob<@B.String> <- @B.StringForChar(character)
