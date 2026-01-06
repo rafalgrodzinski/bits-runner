@@ -40,7 +40,6 @@ check "Failed to build shell"
 
 echo
 
-
 # Create floppy image
 echo "🛠️ Building FDD image..."
 # Generate empty image file
@@ -64,7 +63,6 @@ hdiutil eject "${FDD_MOUNT_POINT}"
 check "Failed to create FDD image"
 
 echo
-
 
 # Create 64 MiB hard disk image
 echo "🛠️ Building HDD image..."
