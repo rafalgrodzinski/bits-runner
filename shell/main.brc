@@ -17,10 +17,12 @@ CMD_M_INFO blob<@B.String>
             character <- @Syscall.readPressedAscii().u8
             if character = '\b': command.removeLast.val({command.adr})
             else if character != '\n' and character != '\0': command.append.val({command.adr}, character)
+
+            if character != '\0'
+                charString blob<@B.String> <- @B.StringForChar(character)
+                charString.print.val({charString.adr})
+            ;
         ;
-        
-        message blob<@B.String> <- @B.StringForChar('\n')
-        message.print.val({message.adr})
 
         if command.isEqual.val({command.adr}, CMD_REBOOT)
             message blob<@B.String> <- @B.String("Rebooting...")
