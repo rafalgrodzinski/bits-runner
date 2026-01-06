@@ -1,7 +1,7 @@
 @module Int
 
-@import term
-@import drv_keyboard
+@import Term
+@import DrvKeyboard
 
 @extern interrupt_init_protected_mode fun
 
@@ -26,21 +26,21 @@ getCr2 raw<"=r"> -> u32
 
 @export handleInterrupt fun: eax u32, ebx u32, ecx u32, edx u32, interrupt u32, errorCode u32 -> u32
     if interrupt = INT_PAGE_FAULT
-        @term.printString("Page fault accessing memory at: ", @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
-        @term.printHex(getCr2(), @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
-        @term.printNewLine()
+        @Term.printString("Page fault accessing memory at: ", @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
+        @Term.printHex(getCr2(), @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
+        @Term.printNewLine()
         halt()
     else if interrupt = INT_IRQ0
     else if interrupt = INT_IRQ1
-        @drv_keyboard.handleInterrupt()
+        @DrvKeyboard.handleInterrupt()
     else if interrupt = INT_SYSCALL
         ret handleSyscall(eax, ebx, ecx, edx)
     else
-        @term.printString("Unhandled interrupt: ", @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
-        @term.printHex(interrupt, @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
-        @term.printString(", error code: ", @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
-        @term.printHex(errorCode, @term.FOREGROUND_RED + @term.ATTRIB_BLINKING)
-        @term.printNewLine()
+        @Term.printString("Unhandled interrupt: ", @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
+        @Term.printHex(interrupt, @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
+        @Term.printString(", error code: ", @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
+        @Term.printHex(errorCode, @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
+        @Term.printNewLine()
         halt()
     ;
 

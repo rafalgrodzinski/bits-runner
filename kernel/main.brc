@@ -1,7 +1,7 @@
-@import term
-@import mem
+@import Term
+@import Mem
 @import BiosService
-@import scheduler
+@import Sched
 @import Storage
 @import B
 @import Int
@@ -31,22 +31,22 @@ getEdx raw<"=r"> -> u32
 
     // Initialize subsystems
     @BiosService.init(biosServiceAdr)
-    @scheduler.init(gdtTssAdr)
-    @mem.init()
+    @Sched.init(gdtTssAdr)
+    @Mem.init()
     @Int.init()
-    @term.init(@term.MODE_80x25)
+    @Term.init(@Term.MODE_80x25)
 
-    @term.printString("Initializing Bits Runner...\n", @term.FOREGROUND_GRAY)
+    @Term.printString("Initializing Bits Runner...\n", @Term.FOREGROUND_GRAY)
     storageFs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
-    @term.printString("All ready, welcome to Bits Runner!\n", @term.FOREGROUND_GREEN)
+    @Term.printString("All ready, welcome to Bits Runner!\n", @Term.FOREGROUND_GREEN)
 
     // Load shell
     appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/SHELL.BIN"))
-    pApp ptr<data<u8>> <- @mem.allocateBytes(appEntry.entrySize)
+    pApp ptr<data<u8>> <- @Mem.allocateBytes(appEntry.entrySize)
 
     storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)
-    pProcess ptr<blob<@scheduler.Process> > <- @scheduler.createProcess(pApp, appEntry.entrySize)
-    @scheduler.switchToProcess(pProcess)
+    pProcess ptr<blob<@scheduler.Process> > <- @Sched.createProcess(pApp, appEntry.entrySize)
+    @Sched.switchToProcess(pProcess)
 
     rep
     ;

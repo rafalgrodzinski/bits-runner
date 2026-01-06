@@ -1,4 +1,4 @@
-@module drv_keyboard
+@module DrvKeyboard
 
 CMD_PORT u32 <- 0x64
 DATA_PORT u32 <- 0x60

@@ -1,6 +1,6 @@
 @module Storage
 
-@import mem
+@import Mem
 
 // Predefined
 FAT_BYTES_PER_ENTRY u32 <- 0x20
@@ -44,7 +44,7 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     storageFs.readEntry <- {storageFsFatReadEntry.adr}
 
     // Init FAT
-    pFatBuffer ptr<data<u8>> <- @mem.allocateBytes(512)
+    pFatBuffer ptr<data<u8>> <- @Mem.allocateBytes(512)
     storageArea.readSectors.val({storageArea.adr}, 0, 1, pFatBuffer)
 
     pInfo ptr<u32>
@@ -86,10 +86,10 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     else if pInfo.val & 0xff = '6': storageFs.kind <- FS_KIND_FAT16
 
     // load fat & root dir
-    storageFs.pFat <- @mem.allocateBytes(sectorsPerFat * bytesPerSector)
+    storageFs.pFat <- @Mem.allocateBytes(sectorsPerFat * bytesPerSector)
     storageArea.readSectors.val({storageArea.adr}, fatFirstSector, sectorsPerFat, storageFs.pFat)
 
-    storageFs.pFatRootDir <- @mem.allocateBytes(rootDirSectorsCount * bytesPerSector)
+    storageFs.pFatRootDir <- @Mem.allocateBytes(rootDirSectorsCount * bytesPerSector)
     storageArea.readSectors.val({storageArea.adr}, rootDirFirstSector, rootDirSectorsCount, storageFs.pFatRootDir)
 
     ret storageFs

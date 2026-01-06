@@ -1,9 +1,9 @@
 @module Int
 
 @import BiosService
-@import term
-@import drv_keyboard
-@import mem
+@import Term
+@import DrvKeyboard
+@import Mem
 @import DrvCmos
 
 CALL_REBOOT u32 <- 0x00
@@ -20,13 +20,13 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
     else if eax = CALL_GET_TIMESTAMP
         ret @DrvCmos.getTimestamp()
     else if eax = CALL_PRINT_CHARACTER
-        @term.printCharacter(ebx.u8, ecx.u8)
+        @Term.printCharacter(ebx.u8, ecx.u8)
     else if eax = CALL_READ_ASCII
-        ret @drv_keyboard.readPressedAscii()
+        ret @DrvKeyboard.readPressedAscii()
     //else if call = CALL_LIST_DIR
         //@fs_fat12.listDir()
     else if eax = CALL_PRINT_MEM_STATS
-        @mem.printMemStats()
+        @Mem.printMemStats()
     ;
 
     ret 0

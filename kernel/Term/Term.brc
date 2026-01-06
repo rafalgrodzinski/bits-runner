@@ -1,4 +1,4 @@
-@module term
+@module Term
 
 @import BiosService
 
