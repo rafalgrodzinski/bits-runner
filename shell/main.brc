@@ -3,48 +3,39 @@
 
 CMD_REBOOT blob<@B.String>
 CMD_TIME blob<@B.String>
+CMD_M_INFO blob<@B.String>
 
 @export start fun
     CMD_REBOOT <- @B.String("reboot")
     CMD_TIME <- @B.String("time")
+    CMD_M_INFO <- @B.String("minfo")
 
-    buffer data<u8, 16>
-    count u32 <- 0
     character u8 <- 0
+    command blob<@B.String> <- @B.String("")
     rep
         rep character != '\n'
             character <- @Syscall.readPressedAscii().u8
-            if character = '\b' and count > 0
-                count <- count - 1
-                message blob<@B.String> <- @B.StringForChar(character)
-                message.print.val({message.adr})
-            ;
-            if character != '\n' and character != '\b' and character != 0 and count < 15
-                buffer[count] <- character
-                count <- count + 1
-                message blob<@B.String> <- @B.StringForChar(character)
-                message.print.val({message.adr})
-            ;
+            if character = '\b': command.removeLast.val({command.adr})
+            else if character != '\n' and character != '\0': command.append.val({command.adr}, character)
         ;
-        buffer[count] <- 0
-        count <- 0
-        character <- 0
+        
         message blob<@B.String> <- @B.StringForChar('\n')
         message.print.val({message.adr})
 
-        bufferString blob<@B.String> <- @B.String(buffer)
-
-        if bufferString.isEqual.val({bufferString.adr}, CMD_REBOOT)
+        if command.isEqual.val({command.adr}, CMD_REBOOT)
             message blob<@B.String> <- @B.String("Rebooting...")
             message.println.val({message.adr})
             @Syscall.reboot()
-        else if bufferString.isEqual.val({bufferString.adr}, CMD_TIME)
+        else if command.isEqual.val({command.adr}, CMD_TIME)
             timestamp u32 <- @Syscall.getTimestamp()
             message blob<@B.String> <- @B.StringForU32(timestamp)
             message.println.val({message.adr})
         else
-            message blob<@B.String> <- @B.String("Dunno")
+            message blob<@B.String> <- @B.String("Unknown command")
             message.println.val({message.adr})
         ;
+
+        character <- '\0'
+        command.clear.val({command.adr})
     ;
 ;
