@@ -1,4 +1,4 @@
-@module mem
+@module Memory
 
 @import term
 
