@@ -67,7 +67,7 @@ pGdtTss ptr<data<u8>>
     pProcess.val.eip <- USER_ADR
     pProcess.val.esp <- USER_STACK_END_ADR - 5 * u32.size // 5 slots for iret frame
     pProcess.val.esp0 <- KERNEL_STACK_END_ADR
-    pProcess.val.cr3 <- @mem.lAdrToPAdr(pProcess.val.pageDirectory.adr)
+    pProcess.val.cr3 <- @mem.lAdrToPAdr(pProcess.val.pageDirectory.adr.u32)
     pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x13 // PCD & RW & P
 
     // Setup new page directory
@@ -89,12 +89,12 @@ pGdtTss ptr<data<u8>>
 
     pGdtTss.val[0] <- (blob<Tss>.size & 0x0000_00ff)
     pGdtTss.val[1] <- (blob<Tss>.size & 0x0000_ff00) >> 8
-    pGdtTss.val[2] <- (tss.adr & 0x0000_00ff)
-    pGdtTss.val[3] <- (tss.adr & 0x0000_ff00) >> 8
-    pGdtTss.val[4] <- (tss.adr & 0x00ff_0000) >> 16
+    pGdtTss.val[2] <- (tss.adr & 0x0000_00ff).u8
+    pGdtTss.val[3] <- ((tss.adr & 0x0000_ff00) >> 8).u8
+    pGdtTss.val[4] <- ((tss.adr & 0x00ff_0000) >> 16).u8
     pGdtTss.val[5] <- 0b1000_1001 // <7: present> <6-5: Priviledge Level> <4: 0 for TSS> <3: 32bit> <2-1: 0 for TSS> <0: 1 for TSS>
     pGdtTss.val[6] <- (blob<Tss>.size & 0x000f_0000) >> 16
-    pGdtTss.val[7] <- (tss.adr & 0xff00_0000) >> 24
+    pGdtTss.val[7] <- ((tss.adr & 0xff00_0000) >> 24).u8
 
     // Copy user image to target address
     disableInterrupts()
