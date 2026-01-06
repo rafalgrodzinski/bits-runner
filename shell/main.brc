@@ -32,6 +32,39 @@ CMD_M_INFO blob<@B.String>
             timestamp u32 <- @Syscall.getTimestamp()
             message blob<@B.String> <- @B.StringForU32(timestamp)
             message.println.val({message.adr})
+        else if command.isEqual.val({command.adr}, CMD_M_INFO)
+            info blob<@Syscall.InfoMem> <- @Syscall.getInfoMem()
+            text blob<@B.String>
+
+            text <- @B.String("Total size: ")
+            text.print.val({text.adr})
+            text <- @B.StringForU32(info.totalSize)
+            text.println.val({text.adr})
+
+            text <- @B.String("Total pages: ")
+            text.print.val({text.adr})
+            text <- @B.StringForU32(info.totalPages)
+            text.println.val({text.adr})
+
+            text <- @B.String("Free pages: ")
+            text.print.val({text.adr})
+            text <- @B.StringForU32(info.freePages)
+            text.println.val({text.adr})
+
+            text <- @B.String("Heap start: ")
+            text.print.val({text.adr})
+            text <- @B.StringForU32(info.heapStart)
+            text.println.val({text.adr})
+
+            text <- @B.String("Heap size: ")
+            text.print.val({text.adr})
+            text <- @B.StringForU32(info.heapSize)
+            text.println.val({text.adr})
+
+            text <- @B.String("Allocated bytes: ")
+            text.print.val({text.adr})
+            text <- @B.StringForU32(info.allocateBytes)
+            text.println.val({text.adr})
         else
             message blob<@B.String> <- @B.String("Unknown command")
             message.println.val({message.adr})

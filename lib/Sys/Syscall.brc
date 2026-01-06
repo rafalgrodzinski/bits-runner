@@ -2,21 +2,38 @@
 
 CALL_REBOOT u32 <- 0x00
 CALL_GET_TIMESTAMP u32 <- 0x10
+CALL_GET_INFO_MEM u32 <- 0x20
 
-syscallRaw raw<"=r,m,~{eax}">: syscallNum u32/*$1*/ -> u32/*$0*/
+@export InfoMem blob
+    totalSize u32
+    totalPages u32
+    freePages u32
+    heapStart u32
+    heapSize u32
+    allocateBytes u32
+;
+
+syscallRaw raw<"=r,m,m,~{eax},~{ebx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/ -> u32/*$0*/
     mov eax, $1
+    mov ebx, $2
     int 0x30
     mov $0, eax
 ;
 
 @export reboot fun
-    syscallRaw(CALL_REBOOT)
+    syscallRaw(CALL_REBOOT, 0)
 ;
 
 @export getTimestamp fun -> u32
-    ret syscallRaw(CALL_GET_TIMESTAMP)
+    ret syscallRaw(CALL_GET_TIMESTAMP, 0)
 ;
 
 @export readPressedAscii fun -> u32
-    ret syscallRaw(0x07)
+    ret syscallRaw(0x07, 0)
+;
+
+@export getInfoMem fun -> blob<InfoMem>
+    info blob<InfoMem>
+    syscallRaw(CALL_GET_INFO_MEM, info.adr.u32)
+    ret info
 ;

@@ -1,7 +1,5 @@
 @module Mem
 
-@import Term
-
 @export heap u32 // marks start of the kernel heap
 
 Layout blob
@@ -153,28 +151,26 @@ registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory pt
     ret pageEntry & 0xffff_fc00 + offset
 ;
 
-@export printMemStats fun
-    @Term.printString("Memory size: ", 7)
-    @Term.printHex(pMemLayout.val.memSize, 7)
-    @Term.printNewLine()
+@export getInfoTotalSize fun -> u32
+    ret pMemLayout.val.memSize
+;
 
-    @Term.printString("Total pages: ", 7)
-    @Term.printHex(pMemLayout.val.pagesCount, 7)
-    @Term.printNewLine()
+@export getInfoTotalPages fun -> u32
+    ret pMemLayout.val.pagesCount
+;
 
-    @Term.printString("Free pages: ", 7)
-    @Term.printHex(freePagesCount, 7)
-    @Term.printNewLine()
+@export getInfoFreePages fun -> u32
+    ret freePagesCount
+;
 
-    @Term.printString("Heap start: ", 7)
-    @Term.printHex(heapLayout.pHeapStart.vadr.u32, 7)
-    @Term.printNewLine()
+@export getInfoHeapStart fun -> a
+    ret heapLayout.pHeapStart.vadr
+;
 
-    @Term.printString("Heap size: ", 7)
-    @Term.printHex(heapLayout.heapSize, 7)
-    @Term.printNewLine()
+@export getInfoHeapSize fun -> u32
+    ret heapLayout.heapSize
+;
 
-    @Term.printString("Allocated bytes: ", 7)
-    @Term.printHex(heapLayout.allocatedBytes, 7)
-    @Term.printNewLine()
+@export getInfoAllocatedBytes fun -> u32
+    ret heapLayout.allocatedBytes
 ;

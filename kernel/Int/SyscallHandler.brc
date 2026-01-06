@@ -11,8 +11,9 @@ CALL_GET_TIMESTAMP u32 <- 0x10
 
 CALL_PRINT_CHARACTER u32 <- 0x01
 CALL_READ_ASCII u32 <- 0x07
-CALL_PRINT_MEM_STATS u32 <- 0x08
 CALL_LIST_DIR u32 <- 0x09
+
+CALL_GET_INFO_MEM u32 <- 0x20
 
 handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
     if eax = CALL_REBOOT
@@ -25,8 +26,16 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         ret @DrvKeyboard.readPressedAscii()
     //else if call = CALL_LIST_DIR
         //@fs_fat12.listDir()
-    else if eax = CALL_PRINT_MEM_STATS
-        @Mem.printMemStats()
+    else if eax = CALL_GET_INFO_MEM
+        //ebx.a.ptr<data<u32>>.val[0] <- @Mem.getInfoTotalSize()
+        //pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
+        pInfoMem ptr<data<u32>> <- {ebx}
+        pInfoMem.val[0] <- @Mem.getInfoTotalSize()
+        pInfoMem.val[1] <- @Mem.getInfoTotalPages()
+        pInfoMem.val[2] <- @Mem.getInfoFreePages()
+        pInfoMem.val[3] <- @Mem.getInfoHeapStart().u32
+        pInfoMem.val[4] <- @Mem.getInfoHeapSize()
+        pInfoMem.val[5] <- @Mem.getInfoAllocatedBytes()
     ;
 
     ret 0
