@@ -4,11 +4,13 @@
 CMD_REBOOT blob<@B.String>
 CMD_TIME blob<@B.String>
 CMD_M_INFO blob<@B.String>
+CMD_F_INFO blob<@B.String>
 
 @export start fun
     CMD_REBOOT <- @B.String("reboot")
     CMD_TIME <- @B.String("time")
     CMD_M_INFO <- @B.String("minfo")
+    CMD_F_INFO <- @B.String("finfo")
 
     character u8 <- 0
     command blob<@B.String> <- @B.String("")
@@ -65,6 +67,8 @@ CMD_M_INFO blob<@B.String>
             text.print.val({text.adr})
             text <- @B.StringForU32(info.allocateBytes)
             text.println.val({text.adr})
+        else if command.isEqual.val({command.adr}, CMD_F_INFO)
+            info blob<@Syscall.InfoFsEntry> <- @Syscall.getInfoFsEntry(@B.String("/shell.bin"))
         else
             message blob<@B.String> <- @B.String("Unknown command")
             message.println.val({message.adr})

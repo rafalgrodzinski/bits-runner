@@ -1,8 +1,13 @@
 @module Syscall
 
+@import B
+
 CALL_REBOOT u32 <- 0x00
 CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_GET_INFO_MEM u32 <- 0x20
+
+// Storage
+CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
 
 @export InfoMem blob
     totalSize u32
@@ -13,27 +18,39 @@ CALL_GET_INFO_MEM u32 <- 0x20
     allocateBytes u32
 ;
 
-syscallRaw raw<"=r,m,m,~{eax},~{ebx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/ -> u32/*$0*/
+@export InfoFsEntry blob
+    kind u32
+    sizeBytes u32
+;
+
+syscallRaw raw<"=r,m,m,m,~{eax},~{ebx},~{ecx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/, arg2 u32/*s3*/ -> u32/*$0*/
     mov eax, $1
     mov ebx, $2
+    mov ecx, $3
     int 0x30
     mov $0, eax
 ;
 
 @export reboot fun
-    syscallRaw(CALL_REBOOT, 0)
+    syscallRaw(CALL_REBOOT, 0, 0)
 ;
 
 @export getTimestamp fun -> u32
-    ret syscallRaw(CALL_GET_TIMESTAMP, 0)
+    ret syscallRaw(CALL_GET_TIMESTAMP, 0, 0)
 ;
 
 @export readPressedAscii fun -> u32
-    ret syscallRaw(0x07, 0)
+    ret syscallRaw(0x07, 0, 0)
 ;
 
 @export getInfoMem fun -> blob<InfoMem>
     info blob<InfoMem>
-    syscallRaw(CALL_GET_INFO_MEM, info.adr.u32)
+    syscallRaw(CALL_GET_INFO_MEM, info.adr.u32, 0)
+    ret info
+;
+
+@export getInfoFsEntry fun: entryPath blob<@B.String> -> blob<InfoFsEntry>
+    info blob<InfoFsEntry>
+    syscallRaw(CALL_STORAGE_GET_INFO_FS_ENTRY, info.adr.u32, entryPath.adr.u32)
     ret info
 ;
