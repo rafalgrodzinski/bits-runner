@@ -38,6 +38,7 @@ getEdx raw<"=r"> -> u32
 
     @Term.printString("Initializing Bits Runner...\n", @Term.FOREGROUND_GRAY)
     storageFs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
+    @Int.initSyscallHandler(storageFs)
     @Term.printString("All ready, welcome to Bits Runner!\n", @Term.FOREGROUND_GREEN)
 
     // Load shell

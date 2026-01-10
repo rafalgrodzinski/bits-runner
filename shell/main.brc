@@ -68,7 +68,18 @@ CMD_F_INFO blob<@B.String>
             text <- @B.StringForU32(info.allocateBytes)
             text.println.val({text.adr})
         else if command.isEqual.val({command.adr}, CMD_F_INFO)
-            info blob<@Syscall.InfoFsEntry> <- @Syscall.getInfoFsEntry(@B.String("/shell.bin"))
+            info blob<@Syscall.InfoFsEntry> <- @Syscall.getInfoFsEntry(@B.String("/SHELL.BIN"))
+            text blob<@B.String>
+
+            text <- @B.String("Kind: ")
+            text.print.val({text.adr})
+            text <- @B.StringForU32(info.kind)
+            text.println.val({text.adr})
+
+            text <- @B.String("Size: ")
+            text.print.val({text.adr})
+            text <- @B.StringForU32(info.entrySize)
+            text.println.val({text.adr})
         else
             message blob<@B.String> <- @B.String("Unknown command")
             message.println.val({message.adr})

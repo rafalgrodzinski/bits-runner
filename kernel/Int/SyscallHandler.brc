@@ -2,10 +2,11 @@
 
 @import B
 @import BiosService
-@import Term
+@import DrvCmos
 @import DrvKeyboard
 @import Mem
-@import DrvCmos
+@import Storage
+@import Term
 
 // System
 CALL_REBOOT u32 <- 0x00
@@ -13,12 +14,17 @@ CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_PRINT_CHARACTER u32 <- 0x01
 CALL_READ_ASCII u32 <- 0x07
 
-
 // Memory
 CALL_GET_INFO_MEM u32 <- 0x20
 
 // Storage
 CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
+
+storageFs blob<@Storage.StorageFs>
+
+@export initSyscallHandler fun: _storageFs blob<@Storage.StorageFs>
+    storageFs <- _storageFs
+;
 
 handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
     if eax = CALL_REBOOT
@@ -30,8 +36,6 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
     else if eax = CALL_READ_ASCII
         ret @DrvKeyboard.readPressedAscii()
     else if eax = CALL_GET_INFO_MEM
-        //ebx.a.ptr<data<u32>>//.val[0] <- @Mem.getInfoTotalSize()
-        //pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
         pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
         pInfoMem.val[0] <- @Mem.getInfoTotalSize()
         pInfoMem.val[1] <- @Mem.getInfoTotalPages()
@@ -41,8 +45,11 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         pInfoMem.val[5] <- @Mem.getInfoAllocatedBytes()
     else if eax = CALL_STORAGE_GET_INFO_FS_ENTRY
         pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
-        pEntryPath ptr<blob<@B.String> >
-        @Term.printString("fi", @Term.FOREGROUND_MAGENTA)
+        pEntryPath ptr<blob<@B.String>> <- ecx.a.ptr<blob<@B.String>>
+
+        entry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, pEntryPath.val)
+        pInfo.val[0] <- entry.kind
+        pInfo.val[1] <- entry.entrySize
     ;
 
     ret 0

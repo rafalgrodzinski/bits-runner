@@ -20,7 +20,7 @@ CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
 
 @export InfoFsEntry blob
     kind u32
-    sizeBytes u32
+    entrySize u32
 ;
 
 syscallRaw raw<"=r,m,m,m,~{eax},~{ebx},~{ecx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/, arg2 u32/*s3*/ -> u32/*$0*/
