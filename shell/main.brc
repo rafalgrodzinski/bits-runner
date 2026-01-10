@@ -13,12 +13,14 @@ CMD_F_INFO blob<@B.String>
     CMD_F_INFO <- @B.String("finfo")
 
     character u8 <- 0
-    command blob<@B.String> <- @B.String("")
+    input blob<@B.String> <- @B.String("")
+    cmd blob<@B.String> <- @B.String("")
+    arg blob<@B.String> <- @B.String("")
     rep
         rep character != '\n'
             character <- @Syscall.readPressedAscii().u8
-            if character = '\b': command.removeLast.val({command.adr})
-            else if character != '\n' and character != '\0': command.append.val({command.adr}, character)
+            if character = '\b': input.removeLast.val({input.adr})
+            else if character != '\n' and character != '\0': input.append.val({input.adr}, character)
 
             if character != '\0'
                 charString blob<@B.String> <- @B.StringForChar(character)
@@ -26,15 +28,24 @@ CMD_F_INFO blob<@B.String>
             ;
         ;
 
-        if command.isEqual.val({command.adr}, CMD_REBOOT)
+        // split into cmd and arg
+        loc u32 <- input.find.val({input.adr}, @B.String(" "))
+        if loc > 0
+            cmd <- input.subStringTo.val({input.adr}, loc)
+            arg <- input.subStringFrom.val({input.adr}, loc + 1)
+        else
+            cmd <- input
+        ;
+
+        if cmd.isEqual.val({cmd.adr}, CMD_REBOOT)
             message blob<@B.String> <- @B.String("Rebooting...")
             message.println.val({message.adr})
             @Syscall.reboot()
-        else if command.isEqual.val({command.adr}, CMD_TIME)
+        else if cmd.isEqual.val({cmd.adr}, CMD_TIME)
             timestamp u32 <- @Syscall.getTimestamp()
             message blob<@B.String> <- @B.StringForU32(timestamp)
             message.println.val({message.adr})
-        else if command.isEqual.val({command.adr}, CMD_M_INFO)
+        else if cmd.isEqual.val({cmd.adr}, CMD_M_INFO)
             info blob<@Syscall.InfoMem> <- @Syscall.getInfoMem()
             text blob<@B.String>
 
@@ -67,8 +78,8 @@ CMD_F_INFO blob<@B.String>
             text.print.val({text.adr})
             text <- @B.StringForU32(info.allocateBytes)
             text.println.val({text.adr})
-        else if command.isEqual.val({command.adr}, CMD_F_INFO)
-            info blob<@Syscall.InfoFsEntry> <- @Syscall.getInfoFsEntry(@B.String("/SHELL.BIN"))
+        else if cmd.isEqual.val({cmd.adr}, CMD_F_INFO)
+            info blob<@Syscall.InfoFsEntry> <- @Syscall.getInfoFsEntry(arg)
             text blob<@B.String>
 
             text <- @B.String("Kind: ")
@@ -86,6 +97,6 @@ CMD_F_INFO blob<@B.String>
         ;
 
         character <- '\0'
-        command.clear.val({command.adr})
+        input.clear.val({input.adr})
     ;
 ;
