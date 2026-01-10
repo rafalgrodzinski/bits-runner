@@ -8,7 +8,7 @@
     kind u32
 
     rootEntry ptr<fun: ptr<blob<StorageFs>> -> blob<StorageFsEntry>>
-    subEntriesForEntry ptr<fun: ptr<blob<StorageFs>>, blob<StorageFsEntry> -> data<blob<StorageFsEntry>, 32> >
+    subEntriesForEntry ptr<fun: ptr<blob<StorageFs>>, blob<StorageFsEntry> -> data<blob<StorageFsEntry>, 32>>
     entryForPath ptr<fun: ptr<blob<StorageFs>>, blob<@B.String> -> blob<StorageFsEntry>>
     readEntry ptr<fun: ptr<blob<StorageFs>>, blob<StorageFsEntry>, ptr<data<u8>> -> u32>
 
