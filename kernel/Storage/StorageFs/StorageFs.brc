@@ -14,11 +14,12 @@
 
     // FAT specific
     pFat ptr<data<u8>>
-    pFatRootDir ptr<data<u8>>
     fatBytesPerSector u32
     fatRootDirEntriesCount u32
     fatSectorsPerCluster u32
     fatFirstDataSector u32
+    fatRootDirFirstSector u32
+    fatRootDirSectorsCount u32
 ;
 
 @export StorageFsEntry blob
