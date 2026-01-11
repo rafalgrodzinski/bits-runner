@@ -63,7 +63,7 @@ pGdtTss ptr<data<u8>>
 @export createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32 -> ptr<blob<Process>>
     pCurrentPageDirectory ptr<data<u32>> <- {getCr3()}
 
-    pProcess ptr<blob<Process>> <- @Mem.allocateAlignedBytes(blob<Process>.size, 0x1000)
+    pProcess ptr<blob<Process>> <- @Mem.allocateAlignedBytes(blob<Process>.size, 0x1000).vadr.ptr<blob<Process>>
     pProcess.val.eip <- USER_ADR
     pProcess.val.esp <- USER_STACK_END_ADR - 5 * u32.size // 5 slots for iret frame
     pProcess.val.esp0 <- KERNEL_STACK_END_ADR

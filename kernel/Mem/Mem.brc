@@ -119,7 +119,7 @@ registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory pt
 
     // create directory page if it doesn't exist
     if pPageDirectory.val[directoryIndex] & 0x01 = 0
-        pPageTable ptr<data<u32>> <- allocateAlignedBytes(u32.size * 1024, 0x1000)
+        pPageTable ptr<data<u32>> <- allocateAlignedBytes(u32.size * 1024, 0x1000).vadr.ptr<data<u32>>
         rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- 0
         pPageDirectory.val[directoryIndex] <- lAdrToPAdr(pPageTable.vadr.u32) | 0b111
     ;

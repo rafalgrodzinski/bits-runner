@@ -43,10 +43,10 @@ getEdx raw<"=r"> -> u32
 
     // Load shell
     appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/SHELL.BIN"))
-    pApp ptr<data<u8>> <- @Mem.allocateBytes(appEntry.entrySize)
+    pApp ptr<data<u8>> <- @Mem.allocateBytes(appEntry.entrySize).vadr.ptr<data<u8>>
 
     storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)
-    pProcess ptr<blob<@scheduler.Process>> <- @Sched.createProcess(pApp, appEntry.entrySize)
+    pProcess ptr<blob<@Sched.Process>> <- @Sched.createProcess(pApp, appEntry.entrySize)
     @Sched.switchToProcess(pProcess)
 
     rep
