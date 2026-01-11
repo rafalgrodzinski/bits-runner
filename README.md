@@ -1,7 +1,7 @@
 # Bits Runner
-Bits Runner is a 32bit operating system for x86 computers.
+Bits Runner is a 32bit operating system for x86 computers written in BRC language.
 
-<img width="800" src="https://github.com/user-attachments/assets/7e593201-c37a-4a2d-8fcd-d435bf4734d3" />
+https://github.com/user-attachments/assets/e14b9e52-6a4e-43ad-8768-2606df7f3601
 
 ## Quick Links
 - [Extra Information](docs/Extra.md)
@@ -24,7 +24,7 @@ It is under early development but the the desired design includes:
 ## How to build & run
 Building works on macOS. Support for Linux may be added at a later point.
 
-Make sure you have [nasm](https://github.com/netwide-assembler/nasm) and [BRC](https://github.com/rafalgrodzinski/bits-runner-code) in your run path. Execute `/.make.sh`, which should produce a `floppy.img`, which is a FAT12 formatted floppy disk image. Run on your favourite virtual machine (tested on VM Ware and Bochs).
+Make sure you have [nasm](https://github.com/netwide-assembler/nasm) and [BRC](https://github.com/rafalgrodzinski/bits-runner-code) in your run path. Execute `/.make.sh`, which should produce a `fdd.img`, which is a FAT12 formatted floppy disk image. It will also produce `hdd.img` which contains a hard drive image with two partitions, one FAT12  and one FAT16. Run on your favourite virtual machine or real hardware (tested on VM Ware and Bochs).
 
 ## Notes
 The HDD image uses [MBiRa](https://github.com/alexfru/MBiRa) as the MBR boot manager.
