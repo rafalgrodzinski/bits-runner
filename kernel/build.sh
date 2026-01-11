@@ -2,6 +2,7 @@
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE}")"
 SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
+BRB_DIR="$(dirname "$(which brb)")/.."
 
 function check {
     if [ $? -ne 0 ]; then
@@ -9,35 +10,63 @@ function check {
     fi
 }
 
-brb --verb=v2 --function-sections --triple=i686-unknown-linux-gnu --no-zero-initialized-in-bss --reloc=static \
-"${SCRIPT_DIR}/main.brc" \
-"${SCRIPT_DIR}/memory/mem.brc" \
-"${SCRIPT_DIR}/terminal/term.brc" \
-"${SCRIPT_DIR}/bios_service.brc" \
-"${SCRIPT_DIR}/drivers/drv_keyboard.brc" \
-"${SCRIPT_DIR}/interrupts/syscall.brc" \
-"${SCRIPT_DIR}/interrupts/int_handler.brc" \
-"${SCRIPT_DIR}/drivers/drv_serial.brc" \
-"${SCRIPT_DIR}/processes/scheduler.brc" \
-"${SCRIPT_DIR}/Storage/Storage.brc" \
-"${SCRIPT_DIR}/Storage/StorageDevice/StorageDevice.brc" \
-"${SCRIPT_DIR}/Storage/StorageDevice/BiosBootStorageDevice.brc" \
-"${SCRIPT_DIR}/Storage/StorageArea/StorageArea.brc" \
-"${SCRIPT_DIR}/Storage/StorageFs/StorageFs.brc" \
-"${SCRIPT_DIR}/Storage/StorageFs/StorageFsFat.brc" \
+# gather all the required build flags
+FLAGS=(
+    --opt=o2
+    --gen=obj
+    --verb=v2
+    --function-sections
+    --triple=i686-unknown-linux-gnu
+    --no-zero-initialized-in-bss
+    --reloc=static
+)
 
+# and resulting object files
+OBJS=(
+    main.o
+    B.o
+    BSys.o
+    BiosService.o
+    DrvCmos.o
+    DrvKeyboard.o
+    Int.o
+    int_raw.o
+    Mem.o
+    Sched.o
+    Storage.o
+    Term.o
+)
+
+# don't split on spaces, only on new lines
+IFS=$'\n'
+
+SOURCES=()
+
+# For each of these directories
+SOURCES_DIRS=(
+    "${SCRIPT_DIR}/"
+    "${BRB_DIR}/lib/B"
+    "${SCRIPT_DIR}/../lib/B/"
+)
+
+for SOURCES_DIR in "${SOURCES_DIRS[@]}"; do
+    # find .brc files (except for BSys.brc, cause it is specific per system)
+    FILES=`find "${SOURCES_DIR}" -name *.brc ! -name "BSys.brc" -type f`
+    for FILE in ${FILES}; do
+        # and add them to the list
+        SOURCES+=("${FILE}")
+    done
+done
+# and add the Bits Runner specific BSys.brc
+SOURCES+=("${SCRIPT_DIR}/../lib/B/BSys.brc")
+
+# build the source
+brb ${FLAGS[@]} ${SOURCES[@]}
 check
-nasm  -f elf32 -o int.o "${SCRIPT_DIR}/interrupts/int.asm"
+
+# and the assembly files
+nasm -f elf32 -o int_raw.o "${SCRIPT_DIR}/Int/int_raw.asm"
 check
-ld.lld -T "${SCRIPT_DIR}/kernel.ld" -o kernel.bin \
-term.o \
-main.o \
-mem.o \
-int.o \
-bios_service.o \
-drv_keyboard.o \
-syscall.o \
-int_handler.o \
-drv_serial.o \
-scheduler.o \
-Storage.o
+
+# and finally link everything
+ld.lld -T "${SCRIPT_DIR}/kernel.ld" -o kernel.bin ${OBJS[@]}

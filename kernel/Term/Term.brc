@@ -1,6 +1,6 @@
-@module term
+@module Term
 
-@import bios_service
+@import BiosService
 
 @export MODE_80x25 u32 <- 1
 @export MODE_80x50 u32 <- 2
@@ -44,11 +44,11 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
     if mode = MODE_80x50
         termWidth <- 80
         termHeight <- 50
-        @bios_service.setVideoMode(@bios_service.VIDEO_MODE_TEXT_80x50)
+        @BiosService.setVideoMode(@BiosService.VIDEO_MODE_TEXT_80x50)
     else
         termWidth <- 80
         termHeight <- 25
-        @bios_service.setVideoMode(@bios_service.VIDEO_MODE_TEXT_80x25)
+        @BiosService.setVideoMode(@BiosService.VIDEO_MODE_TEXT_80x25)
     ;
 
     clear(FOREGROUND_GRAY)

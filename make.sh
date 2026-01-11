@@ -40,7 +40,6 @@ check "Failed to build shell"
 
 echo
 
-
 # Create floppy image
 echo "🛠️ Building FDD image..."
 # Generate empty image file
@@ -59,12 +58,14 @@ diskutil eject "${DISK_FDD}" &&
 FDD_MOUNT_POINT=$(hdiutil attach fdd.img | grep -o '\/Volumes\/.*') &&
 cp bios_svc.bin "${FDD_MOUNT_POINT}/" &&
 cp kernel.bin "${FDD_MOUNT_POINT}/" &&
-cp shell.bin "${FDD_MOUNT_POINT}/" && 
+cp shell.bin "${FDD_MOUNT_POINT}/" &&
+# Create a dummy folder, just for testing
+mkdir "${FDD_MOUNT_POINT}/test" &&
+cp kernel/main.brc "${FDD_MOUNT_POINT}/test/" &&
 hdiutil eject "${FDD_MOUNT_POINT}"
 check "Failed to create FDD image"
 
 echo
-
 
 # Create 64 MiB hard disk image
 echo "🛠️ Building HDD image..."

@@ -1,0 +1,108 @@
+@module DrvCmos
+
+@import B
+
+REGISTER_SELECT_PORT u32 <- 0x70
+DATA_PORT u32 <- 0x71
+
+REGISTER_B u8 <- 0x0b
+
+REGISTER_SECONDS u8 <- 0x00
+REGISTER_MINUTES u8 <- 0x02
+REGISTER_HOURS u8 <- 0x04
+REGISTER_DAY u8 <- 0x07
+REGISTER_MONTH u8 <- 0x08
+REGISTER_YEAR u8 <- 0x09
+REGISTER_CENTURY u8 <- 0x32
+
+REGISTER_FLOPPY u8 <- 0x10
+
+in raw<"=r,m,~{eax},~{edx}">: portNum u32 -> u8
+    mov dx, $1
+    in al, dx
+    mov $0, al
+;
+
+out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
+    mov dx, $0
+    mov al, $1
+    out dx, al
+;
+
+@export getTimestamp fun -> u32
+    nmiFlag u8 <- in(REGISTER_SELECT_PORT) & 0x80
+
+    out(REGISTER_SELECT_PORT, REGISTER_B | nmiFlag)
+    state u32 <- in(DATA_PORT)
+    isBcdEncoded bool <- state & 0x04 = 0
+    is12HourClock bool <- state & 0x02 = 0
+
+    out(REGISTER_SELECT_PORT, REGISTER_SECONDS | nmiFlag)
+    seconds u32 <- in(DATA_PORT)
+
+    out(REGISTER_SELECT_PORT, REGISTER_MINUTES | nmiFlag)
+    minutes u32 <- in(DATA_PORT)
+
+    out(REGISTER_SELECT_PORT, REGISTER_HOURS | nmiFlag)
+    hours u32 <- in(DATA_PORT)
+    isHoursPm bool <- hours & 0x80 = 0x80
+
+    out(REGISTER_SELECT_PORT, REGISTER_DAY | nmiFlag)
+    day u32 <- in(DATA_PORT)
+
+    out(REGISTER_SELECT_PORT, REGISTER_MONTH | nmiFlag)
+    month u32 <- in(DATA_PORT)
+
+    out(REGISTER_SELECT_PORT, REGISTER_YEAR | nmiFlag)
+    year u32 <- in(DATA_PORT)
+
+    out(REGISTER_SELECT_PORT, REGISTER_CENTURY | nmiFlag)
+    century u32 <- in(DATA_PORT)
+
+    // handle bcd encoding
+    if isBcdEncoded
+        seconds <- (seconds & 0x0f) + ((seconds / 16) * 10)
+        minutes <- (minutes & 0x0f) + ((minutes / 16) * 10)
+        hours <- (hours & 0x0f) + ((hours / 16) * 10)
+        day <- (day & 0x0f) + ((day / 16) * 10)
+        month <- (month & 0x0f) + ((month / 16) * 10)
+        year <- (year & 0x0f) + ((year / 16) * 10)
+        century <- (century & 0x0f) + ((century / 16) * 10)
+    ;
+
+    // handle 12 hour clock
+    if is12HourClock and isHoursPm
+        hours <- ((hours & 0x7f) + 12) % 24
+    ;
+
+    // handle century
+    if century > 0
+        year <- year + century * 100
+    else
+        year <- year + 1900
+    ;
+
+    date blob<@B.Date> <- @B.DateForComponents(year, month, day, hours, minutes, seconds)
+
+    ret date.timestamp
+;
+
+// 0: no drive
+// 1: 360 KB 5.25 Drive
+// 2: 1.2 MB 5.25 Drive
+// 3: 720 KB 3.5 Drive
+// 4: 1.44 MB 3.5 Drive
+// 5: 2.88 MB 3.5 drive
+@export getFloppyKindA fun -> u32
+    nmiFlag u8 <- in(REGISTER_SELECT_PORT) & 0x80
+
+    out(REGISTER_SELECT_PORT, REGISTER_FLOPPY | nmiFlag)
+    ret (in(DATA_PORT) & 0xf0) >> 4
+;
+
+@export getFloppyKindB fun -> u32
+    nmiFlag u8 <- in(REGISTER_SELECT_PORT) & 0x80
+
+    out(REGISTER_SELECT_PORT, REGISTER_FLOPPY | nmiFlag)
+    ret in(DATA_PORT) & 0xf
+;
