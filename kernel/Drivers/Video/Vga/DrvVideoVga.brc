@@ -1,0 +1,42 @@
+@module DrvVideo
+
+@import BiosService
+
+@export VGA_MODE_640x480x4 u8 <- 0x03
+
+SC_INDEX_PORT u16 <- 0x3c4
+GC_INDEX_PORT u16 <- 0x3ce
+
+MAP_MASK_REG u8 <- 0x02
+BIT_MASK_REG u8 <- 0x08
+
+pBuffer ptr<data<u8>> <- { 0x0a0000 }
+width u32 <- 640
+height u32 <- 480
+
+out8 raw<"r,r,~{eax},~{edx}">: port u16, value u8
+    mov dx, $0
+    mov al, $1
+    out dx, al
+;
+
+@export vgaSetMode fun: mode u8
+    @BiosService.setVideoMode(mode)
+;
+
+flush raw<"r,~{eax}">: loc u32
+    mov al, [0x0a0000 + $0]
+;
+
+@export vgaDrawPixel fun: x u32, y u32, color u32
+    offset u32 <- (y * width + x) / 8
+
+    out8(GC_INDEX_PORT, BIT_MASK_REG)
+    out8(GC_INDEX_PORT+1, 0x80 >> (x % 8))
+
+    out8(SC_INDEX_PORT, MAP_MASK_REG)
+    out8(SC_INDEX_PORT+1, color.u8 & 0x0f)
+
+    flush(offset)
+    pBuffer.val[offset] <- 0xff
+;

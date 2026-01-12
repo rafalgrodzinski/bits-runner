@@ -5,6 +5,7 @@
 @import Storage
 @import B
 @import Int
+@import DrvVideo
 
 getEax raw<"=r"> -> u32
     mov $0, eax
@@ -42,12 +43,19 @@ getEdx raw<"=r"> -> u32
     @Term.printString("All ready, welcome to Bits Runner!\n", @Term.FOREGROUND_GREEN)
 
     // Load shell
-    appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/SHELL.BIN"))
+    /*appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/SHELL.BIN"))
     pApp ptr<data<u8>> <- @Mem.allocateBytes(appEntry.entrySize).vadr.ptr<data<u8>>
 
     storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)
     pProcess ptr<blob<@Sched.Process>> <- @Sched.createProcess(pApp, appEntry.entrySize)
-    @Sched.switchToProcess(pProcess)
+    @Sched.switchToProcess(pProcess)*/
+
+    @DrvVideo.vgaSetMode(@DrvVideo.VGA_MODE_640x480x4)
+    rep y u32 <- 0, y < 480, y <- y + 1
+        rep x u32 <- 0, x < 640 * y / 480, x <- x + 1
+            @DrvVideo.vgaDrawPixel(x, y, y / 30)
+        ;
+    ;
 
     rep
     ;

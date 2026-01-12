@@ -29,6 +29,7 @@ OBJS=(
     BiosService.o
     DrvCmos.o
     DrvKeyboard.o
+    DrvVideo.o
     Int.o
     int_raw.o
     Mem.o
