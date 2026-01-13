@@ -51,9 +51,43 @@ getEdx raw<"=r"> -> u32
     @Sched.switchToProcess(pProcess)*/
 
     @DrvVideo.vgaSetMode(@DrvVideo.VGA_MODE_640x480x4)
-    rep y u32 <- 0, y < 480, y <- y + 1
+    /*rep y u32 <- 0, y < 480, y <- y + 1
         rep x u32 <- 0, x < 640 * y / 480, x <- x + 1
             @DrvVideo.vgaDrawPixel(x, y, y / 30)
+        ;
+    ;*/
+
+    xPos u32 <- 100
+    yPos u32 <- 100
+    xVel s32 <- 5
+    yVel s32 <- 5
+    rep
+        @DrvVideo.vgaWaitForVSync()
+        @DrvVideo.vgaClear(0)
+
+        xPos <- (xPos + xVel).u32
+        yPos <- (yPos + yVel).u32
+
+        if xPos > @DrvVideo.width - 10
+            xPos <- @DrvVideo.width - 10
+            xVel <- -xVel
+        else if xPos < 10
+            xPos <- 10
+            xVel <- -xVel
+        ;
+
+        if yPos > @DrvVideo.height - 10
+            yPos <- @DrvVideo.height - 10
+            yVel <- -yVel
+        else if yPos < 10
+            yPos <- 10
+            yVel <- -yVel
+        ;
+
+        rep iy u32 <- 0, iy < 20, iy <- iy + 1
+            rep ix u32 <- 0, ix < 20, ix <- ix + 1
+                @DrvVideo.vgaDrawPixel(ix + xPos - 10, iy + yPos - 10, 2)
+            ;
         ;
     ;
 

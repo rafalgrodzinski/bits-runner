@@ -5,19 +5,30 @@
 @export VGA_MODE_640x480x4 u8 <- 0x03
 
 SC_INDEX_PORT u16 <- 0x3c4
+SC_INDEX_DATA_PORT u16 <- 0x3c5
 GC_INDEX_PORT u16 <- 0x3ce
+GC_INDEX_DATA_PORT u16 <- 0x3cf
 
+SET_RESET_VALUE_REG u8 <- 0x00
+SET_RESET_REG u8 <- 0x01
 MAP_MASK_REG u8 <- 0x02
+MODE_REG u8 <- 0x05
 BIT_MASK_REG u8 <- 0x08
 
 pBuffer ptr<data<u8>> <- { 0x0a0000 }
-width u32 <- 640
-height u32 <- 480
+@export width u32 <- 640
+@export height u32 <- 480
 
 out8 raw<"r,r,~{eax},~{edx}">: port u16, value u8
     mov dx, $0
     mov al, $1
     out dx, al
+;
+
+in8 raw<"=r,r,~{eax},~{edx}">: port u16 -> u8
+    mov dx, $1
+    in al, dx
+    mov $0, al
 ;
 
 @export vgaSetMode fun: mode u8
@@ -30,13 +41,40 @@ flush raw<"r,~{eax}">: loc u32
 
 @export vgaDrawPixel fun: x u32, y u32, color u32
     offset u32 <- (y * width + x) / 8
+    out8(GC_INDEX_PORT, MODE_REG)
+    out8(GC_INDEX_DATA_PORT, 0x00)
 
     out8(GC_INDEX_PORT, BIT_MASK_REG)
-    out8(GC_INDEX_PORT+1, 0x80 >> (x % 8))
+    out8(GC_INDEX_DATA_PORT, 0x80 >> (x % 8))
 
     out8(SC_INDEX_PORT, MAP_MASK_REG)
-    out8(SC_INDEX_PORT+1, color.u8 & 0x0f)
+    out8(SC_INDEX_DATA_PORT, color.u8 & 0x0f)
 
     flush(offset)
     pBuffer.val[offset] <- 0xff
+;
+
+@export vgaClear fun: color u32
+    out8(GC_INDEX_PORT, BIT_MASK_REG)
+    out8(GC_INDEX_PORT+1, 0xff)
+
+    rep i u32 <- 0, i < width * height / 8, i <- i + 1
+        out8(SC_INDEX_PORT, MAP_MASK_REG)
+        out8(SC_INDEX_DATA_PORT, 0x0f)
+        pBuffer.val[i] <- 0x00
+
+        /*out8(SC_INDEX_PORT, MAP_MASK_REG)
+        out8(SC_INDEX_DATA_PORT, color.u8 & 0x0f)
+        pBuffer.val[i] <- 0xff*/
+    ;
+;
+
+@export vgaWaitForVSync fun
+    // wait for current vsync to finish
+    rep in8(0x03da) & 0x08 != 0
+    ;
+
+    // wait for vsync to start
+    rep in8(0x03da) & 0x08 = 0
+    ;
 ;
