@@ -1,0 +1,16 @@
+@module DeviceVideo
+
+@export MODE_VGA_640x480x4 u32 <- 0x00
+
+@export DeviceVideo blob
+    initMode ptr<fun: ptr<blob<DeviceVideo>>, u32>
+    drawPixel ptr<fun: ptr<blob<DeviceVideo>>, u32, u32, u32>
+    clear ptr<fun: ptr<blob<DeviceVideo>>, u32>
+    waitForVSync ptr<fun: ptr<blob<DeviceVideo>>>
+    getWidth ptr<fun: ptr<blob<DeviceVideo>> -> u32>
+    getHeight ptr<fun: ptr<blob<DeviceVideo>> -> u32>
+;
+
+@export vgaDeviceVideo fun -> blob<DeviceVideo>
+    ret VgaDeviceVideo()
+;
