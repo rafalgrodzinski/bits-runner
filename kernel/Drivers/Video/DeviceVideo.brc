@@ -1,12 +1,13 @@
 @module DeviceVideo
 
 @export MODE_VGA_640x480x4 u32 <- 0x00
+@export MODE_VGA_320x240x8 u32 <- 0x01
 
 @export DeviceVideo blob
     initMode ptr<fun: ptr<blob<DeviceVideo>>, u32>
     drawPixel ptr<fun: ptr<blob<DeviceVideo>>, u32, u32, u32>
     clear ptr<fun: ptr<blob<DeviceVideo>>, u32>
-    waitForVSync ptr<fun: ptr<blob<DeviceVideo>>>
+    swapBuffers ptr<fun: ptr<blob<DeviceVideo>>>
     getWidth ptr<fun: ptr<blob<DeviceVideo>> -> u32>
     getHeight ptr<fun: ptr<blob<DeviceVideo>> -> u32>
 ;
