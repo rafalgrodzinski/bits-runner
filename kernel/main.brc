@@ -51,8 +51,8 @@ getEdx raw<"=r"> -> u32
     @Sched.switchToProcess(pProcess)*/
 
     deviceVideo blob<@DeviceVideo.DeviceVideo> <- @DeviceVideo.vgaDeviceVideo()
-    deviceVideo.initMode.val({deviceVideo.adr}, @DeviceVideo.MODE_VGA_640x480x4)
-    //deviceVideo.initMode.val({deviceVideo.adr}, @DeviceVideo.MODE_VGA_320x240x8)
+    //deviceVideo.initMode.val({deviceVideo.adr}, @DeviceVideo.MODE_VGA_640x480x4)
+    deviceVideo.initMode.val({deviceVideo.adr}, @DeviceVideo.MODE_VGA_320x240x8)
 
     xPos u32 <- 100
     yPos u32 <- 100

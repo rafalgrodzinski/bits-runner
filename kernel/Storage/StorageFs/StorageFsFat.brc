@@ -111,7 +111,7 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<St
     pFatDirEntries ptr<data<u8>>
     dirEntriesCount u32
     parentEntryName blob<@B.String> <- @B.String(parentEntry.name)
-    if parentEntryName.isEqual.val({parentEntryName.adr}, @B.String("/"))
+    if parentEntryName.isEqual(@B.String("/"))
         dirEntriesCount <- it.val.fatRootDirEntriesCount
         pFatDirEntries <- @Mem.allocateBytes(dirEntriesCount * FAT_BYTES_PER_ENTRY).vadr.ptr<data<u8>>
         it.val.storageArea.readSectors.val({it.val.storageArea.adr}, it.val.fatRootDirFirstSector, it.val.fatRootDirSectorsCount, pFatDirEntries)
@@ -206,16 +206,16 @@ storageFsFatEntryForPath fun: it ptr<blob<StorageFs>>, path blob<@B.String> -> b
     // path must start with a slash
     if path.string[0] != '/': ret emptyEntry
     currentEntry <- it.val.rootEntry.val(it)
-    path <- path.subStringFrom.val({path.adr}, 1)
+    path <- path.subStringFrom(1)
     isNextEntryFound <- true // asume true cause we start with the root dir
 
     // go through each path components until the end or if one cannot be found
-    rep path.length.val({path.adr}) > 0 and isNextEntryFound
-        separatorIndex u32 <- path.find.val({path.adr}, @B.StringForChar('/'))
+    rep path.length() > 0 and isNextEntryFound
+        separatorIndex u32 <- path.find(@B.StringForChar('/'))
         // if path components are still remaining, take name until the next slash /
         if separatorIndex > 0
-            nextEntryName <- path.subStringTo.val({path.adr}, separatorIndex)
-            path <- path.subStringFrom.val({path.adr}, separatorIndex + 1)
+            nextEntryName <- path.subStringTo(separatorIndex)
+            path <- path.subStringFrom(separatorIndex + 1)
         // otherwise take the whole remaining path as the next entry name
         else
             nextEntryName <- path
@@ -228,7 +228,7 @@ storageFsFatEntryForPath fun: it ptr<blob<StorageFs>>, path blob<@B.String> -> b
         isNextEntryFound <- false
         rep i u32 <- 0, i < subEntries.count and not isNextEntryFound, i <- i + 1
             // for each of the entry check if the path component matches with it
-            if nextEntryName.isEqual.val({nextEntryName.adr}, @B.String(subEntries[i].name))
+            if nextEntryName.isEqual(@B.String(subEntries[i].name))
                 currentEntry <- subEntries[i]
                 isNextEntryFound <- true
             ;
