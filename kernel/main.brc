@@ -34,8 +34,8 @@ getEdx raw<"=r"> -> u32
     @BiosService.init(biosServiceAdr)
     @Sched.init(gdtTssAdr)
     @Mem.init()
-    @Int.init()
     @Term.init(@Term.MODE_80x25)
+    @Int.init()
 
     @Term.printString("Initializing Bits Runner...\n", @Term.FOREGROUND_GRAY)
     storageFs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
@@ -50,6 +50,7 @@ getEdx raw<"=r"> -> u32
     pProcess ptr<blob<@Sched.Process>> <- @Sched.createProcess(pApp, appEntry.entrySize)
     @Sched.switchToProcess(pProcess)*/
 
+    /*
     deviceVideo blob<@DeviceVideo.DeviceVideo> <- @DeviceVideo.vgaDeviceVideo()
     //deviceVideo.initMode.val({deviceVideo.adr}, @DeviceVideo.MODE_VGA_640x480x4)
     deviceVideo.initMode.val({deviceVideo.adr}, @DeviceVideo.MODE_VGA_320x240x8)
@@ -88,6 +89,7 @@ getEdx raw<"=r"> -> u32
 
         deviceVideo.swapBuffers.val({deviceVideo.adr})
     ;
+    */
 
     rep
     ;

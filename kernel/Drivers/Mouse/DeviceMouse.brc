@@ -1,0 +1,187 @@
+@module DeviceMouse
+
+@import B
+@import Term
+
+CMD_PORT u16 <- 0x64
+DATA_PORT u16 <- 0x60
+
+STANDARD_MODE u8 <- 0x00
+SCROLL_WHEEL_MODE u8 <- 0x03
+5_BUTTON_MODE u8 <- 0x04
+
+out8 raw<"r,r,~{eax},~{edx}">: port u16, value u8
+    mov dx, $0
+    mov al, $1
+    out dx, al
+;
+
+in8 raw<"=r,r,~{eax},~{edx}">: port u16 -> u8
+    mov dx, $1
+    in al, dx
+    mov $0, al
+;
+
+waitForWriteReady fun
+    rep in8(CMD_PORT) & 0x02 != 0:
+;
+
+waitForReadReady fun
+    //rep in8(CMD_PORT) & 0x01 = 0:
+;
+
+writeMouse fun: value u8
+    waitForWriteReady()
+    out8(CMD_PORT, 0xd4)
+
+    waitForWriteReady()
+    out8(DATA_PORT, value)
+
+    waitForReadReady()
+    in8(DATA_PORT) // get ACK 0xfa
+;
+
+@export DeviceMouse blob
+    mode u8
+
+    status data<u8, 4>
+    currentStatusIndex u32
+
+    isPressedStates data<bool, 5>
+    offsets data<s32, 3>
+
+    init fun
+        // Enable aux input
+        waitForWriteReady()
+        out8(CMD_PORT, 0xa8)
+
+        // set defaults
+        writeMouse(0xf6)
+
+        // Get device mode
+        it.val.mode <- STANDARD_MODE
+
+        // first try enabling scroll wheel mode
+        writeMouse(0xf3)
+        writeMouse(200)
+
+        writeMouse(0xf3)
+        writeMouse(100)
+
+        writeMouse(0xf3)
+        writeMouse(80)
+
+        writeMouse(0xf2)
+        waitForReadReady()
+        it.val.mode <- in8(DATA_PORT)
+
+        // if succeeded, try enableing 5-button mode
+        if it.val.mode = SCROLL_WHEEL_MODE
+            writeMouse(0xf3)
+            writeMouse(200)
+
+            writeMouse(0xf3)
+            writeMouse(200)
+
+            writeMouse(0xf3)
+            writeMouse(80)
+
+            writeMouse(0xf2)
+            waitForReadReady()
+            it.val.mode <- in8(DATA_PORT)    
+        ;
+
+        @Term.printHex(it.val.mode, @Term.BACKGROUND_GREEN)
+
+        // Enable interrupts
+        waitForWriteReady()
+        out8(CMD_PORT, 0x20)
+
+        waitForReadReady()
+        status u8 <- in8(DATA_PORT)
+
+        // Enable mouse
+        status <- status | 0b0000_0010 // enable IRQ 12
+        status <- status & 0b1011_1111 // enable mouse clock
+
+        waitForWriteReady()
+        out8(CMD_PORT, 0x60)
+
+        waitForWriteReady()
+        out8(DATA_PORT, status)
+
+        // Enable data reporting
+        writeMouse(0xf4)
+
+        it.val.currentStatusIndex <- 0
+    ;
+
+    handleInterrupt fun
+        it.val.status[it.val.currentStatusIndex] <- in8(DATA_PORT)
+        @Term.printHex(it.val.status[it.val.currentStatusIndex], @Term.BACKGROUND_GREEN)
+
+        it.val.currentStatusIndex <- it.val.currentStatusIndex + 1
+        if it.val.mode = STANDARD_MODE and it.val.currentStatusIndex < 3: ret
+        if (it.val.mode = SCROLL_WHEEL_MODE or it.val.mode = 5_BUTTON_MODE) and it.val.currentStatusIndex < 4: ret
+
+        it.val.currentStatusIndex <- 0
+
+        @Term.printHex(it.val.status[0], @Term.BACKGROUND_CYAN)
+
+        it.val.isPressedStates[0] <- it.val.status[0] & 0b0000_0001 != 0
+        it.val.isPressedStates[1] <- it.val.status[0] & 0b0000_0010 != 0
+        it.val.isPressedStates[2] <- it.val.status[0] & 0b0000_0100 != 0
+
+        if it.val.mode = 5_BUTTON_MODE
+            it.val.isPressedStates[3] <- it.val.status[3] & 0b0001_0000 != 0
+            it.val.isPressedStates[4] <- it.val.status[3] & 0b0010_0000 != 0
+        ;
+
+        it.val.offsets[0] <- it.val.status[1]
+        if it.val.status[0] & 0b0001_0000 != 0
+            it.val.offsets[0] <- it.val.offsets[0] | 0xffff_ff00
+        ;
+
+        it.val.offsets[1] <- it.val.status[2]
+        if it.val.status[0] & 0b0010_0000 != 0
+            it.val.offsets[1] <- it.val.offsets[1] | 0xffff_ff00
+        ;
+
+        if it.val.mode = SCROLL_WHEEL_MODE
+            it.val.offsets[2] <- it.val.status[3] & 0b0000_0111
+            if it.val.status[3] & 0b1000_0000 != 0
+                it.val.offsets[2] <- it.val.offsets[2] | 0xffff_fff0
+            ;
+        else if it.val.mode = 5_BUTTON_MODE
+            it.val.offsets[2] <- it.val.status[3] & 0b0000_0111
+            if it.val.status[3] & 0b0000_1000 != 0
+                it.val.offsets[2] <- it.val.offsets[2] | 0xffff_fff0
+            ;
+        ;
+
+        // debug
+        text blob<@B.String>
+
+        rep i u32 <- 0, i < 5, i <- i + 1
+            if it.val.isPressedStates[i]
+                text <- @B.String("true ")
+            else
+                text <- @B.String("false ")
+            ;
+            text.print()
+        ;
+
+        rep i u32 <- 0, i < 3, i <- i + 1
+            text <- @B.StringForS32(it.val.offsets[i])
+            text.print()
+
+            text <- @B.String(" ")
+            text.print()
+        ;
+
+        text<- @B.String("")
+        text.println()
+
+        it.val.currentStatusIndex <- 0
+    ;
+;

@@ -27,6 +27,7 @@ OBJS=(
     B.o
     BSys.o
     BiosService.o
+    DeviceMouse.o
     DeviceVideo.o
     DrvCmos.o
     DrvKeyboard.o

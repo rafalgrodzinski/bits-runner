@@ -6,6 +6,7 @@ https://github.com/user-attachments/assets/e14b9e52-6a4e-43ad-8768-2606df7f3601
 ## Quick Links
 - [Extra Information](docs/Extra.md)
 - [Paging](docs/Paging.md)
+- [PS/2 HID](docs/PS2HID.md)
 
 ## Overview
 Bits Runner is a simple, 32bit operating system for x86. It is built using assembly and [BRC (Bits Runner Code)](https://github.com/rafalgrodzinski/bits-runner-code) language.

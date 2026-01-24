@@ -4,6 +4,8 @@
 [https://pages.cs.wisc.edu/~remzi/OSTEP/](https://pages.cs.wisc.edu/~remzi/OSTEP/)
 - Osdev Notes:
 [https://github.com/dreamportdev/Osdev-Notes](https://github.com/dreamportdev/Osdev-Notes)
+- The Art of Assembly Language:
+[https://flint.cs.yale.edu/cs422/doc/art-of-asm/pdf/](https://flint.cs.yale.edu/cs422/doc/art-of-asm/pdf/)
 
 ## FAT Filesystem
 - FAT Filesystem:

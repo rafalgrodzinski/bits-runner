@@ -2,13 +2,17 @@
 
 @import Term
 @import DrvKeyboard
+@import DeviceMouse
 
 @extern interrupt_init_protected_mode fun
 
 INT_PAGE_FAULT u32 <- 0x0e
 INT_IRQ0 u32 <- 0x20 // timer
 INT_IRQ1 u32 <- 0x21 // keyboard
+INT_IRQ12 u32 <- 0x2c // mouse
 INT_SYSCALL u32 <- 0x30
+
+deviceMouse blob<@DeviceMouse.DeviceMouse>
 
 halt raw<"">
 halt${:uid}:
@@ -22,6 +26,7 @@ getCr2 raw<"=r"> -> u32
 
 @export init fun
     interrupt_init_protected_mode()
+    deviceMouse.init()
 ;
 
 @export handleInterrupt fun: eax u32, ebx u32, ecx u32, edx u32, interrupt u32, errorCode u32 -> u32
@@ -32,7 +37,9 @@ getCr2 raw<"=r"> -> u32
         halt()
     else if interrupt = INT_IRQ0
     else if interrupt = INT_IRQ1
-        @DrvKeyboard.handleInterrupt()
+        //@DrvKeyboard.handleInterrupt()
+    else if interrupt = INT_IRQ12
+        deviceMouse.handleInterrupt()
     else if interrupt = INT_SYSCALL
         ret handleSyscall(eax, ebx, ecx, edx)
     else
