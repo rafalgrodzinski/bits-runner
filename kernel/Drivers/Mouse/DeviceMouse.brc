@@ -60,7 +60,7 @@ writeMouse fun: value u8
     init fun
         disableInterrupts()
 
-        // Enable aux input
+        // Enable second PS/2 port
         waitForWriteReady()
         out8(CMD_PORT, 0xa8)
     
