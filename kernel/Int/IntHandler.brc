@@ -37,7 +37,7 @@ getCr2 raw<"=r"> -> u32
         halt()
     else if interrupt = INT_IRQ0
     else if interrupt = INT_IRQ1
-        //@DrvKeyboard.handleInterrupt()
+        @DrvKeyboard.handleInterrupt()
     else if interrupt = INT_IRQ12
         deviceMouse.handleInterrupt()
     else if interrupt = INT_SYSCALL

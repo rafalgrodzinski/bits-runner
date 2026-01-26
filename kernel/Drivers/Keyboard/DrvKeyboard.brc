@@ -1,7 +1,9 @@
 @module DrvKeyboard
 
-CMD_PORT u32 <- 0x64
-DATA_PORT u32 <- 0x60
+@import Term
+
+CMD_PORT u16 <- 0x64
+DATA_PORT u16 <- 0x60
 
 CMD_SET_LED u8 <- 0xed
 CMD_ECHO u8 <- 0xee
@@ -139,7 +141,7 @@ SHIFTED_ASCII_MAP data<u8> <- {
 keyboardStatus data<bool, 128>
 pressedAscii u8
 
-in raw<"=r,m,~{eax},~{edx}">: portNum u32 -> u8
+in raw<"=r,r,~{eax},~{edx}">: portNum u16 -> u8
     mov dx, $1
     in al, dx
     mov $0, al
@@ -156,6 +158,9 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
     //if in(CMD_PORT) & 0x02.u8 != 1.u8: ret
 
     scanCode u32 <- in(DATA_PORT)
+
+    @Term.printHex(scanCode, @Term.BACKGROUND_BLUE)
+
     isPressed bool <- scanCode & 0x80 = 0
     scanCode <- scanCode & 0x7f // get rid of the flag
 
@@ -175,7 +180,7 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
         pressedAscii <- if isShiftPressed: SHIFTED_ASCII_MAP[scanCode] else: ASCII_MAP[scanCode]
     ;
 
-    if pressedAscii = 'a'.u8
+    /*if pressedAscii = 'a'.u8
         out(DATA_PORT, CMD_SET_LED)
         out(DATA_PORT, LED_CAPS_LOCK)
         if in(DATA_PORT) != ACK
@@ -187,7 +192,7 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
         if in(DATA_PORT) != ACK
             out(DATA_PORT, 0.u8)
         ;
-    ;
+    ;*/
 ;
 
 @export readPressedAscii fun -> u32

@@ -1,7 +1,6 @@
 @module DeviceMouse
 
 @import B
-@import Term
 
 CMD_PORT u16 <- 0x64
 DATA_PORT u16 <- 0x60
@@ -22,12 +21,20 @@ in8 raw<"=r,r,~{eax},~{edx}">: port u16 -> u8
     mov $0, al
 ;
 
+disableInterrupts raw<"">
+    cli
+;
+
+enableInterrupts raw<"">
+    sti
+;
+
 waitForWriteReady fun
     rep in8(CMD_PORT) & 0x02 != 0:
 ;
 
 waitForReadReady fun
-    //rep in8(CMD_PORT) & 0x01 = 0:
+    rep in8(CMD_PORT) & 0x01 = 0:
 ;
 
 writeMouse fun: value u8
@@ -51,16 +58,12 @@ writeMouse fun: value u8
     offsets data<s32, 3>
 
     init fun
+        disableInterrupts()
+
         // Enable aux input
         waitForWriteReady()
         out8(CMD_PORT, 0xa8)
-
-        // set defaults
-        writeMouse(0xf6)
-
-        // Get device mode
-        it.val.mode <- STANDARD_MODE
-
+    
         // first try enabling scroll wheel mode
         writeMouse(0xf3)
         writeMouse(200)
@@ -91,8 +94,6 @@ writeMouse fun: value u8
             it.val.mode <- in8(DATA_PORT)    
         ;
 
-        @Term.printHex(it.val.mode, @Term.BACKGROUND_GREEN)
-
         // Enable interrupts
         waitForWriteReady()
         out8(CMD_PORT, 0x20)
@@ -113,49 +114,54 @@ writeMouse fun: value u8
         // Enable data reporting
         writeMouse(0xf4)
 
+        enableInterrupts()
         it.val.currentStatusIndex <- 0
     ;
 
     handleInterrupt fun
+        // store received data in current slot
         it.val.status[it.val.currentStatusIndex] <- in8(DATA_PORT)
-        @Term.printHex(it.val.status[it.val.currentStatusIndex], @Term.BACKGROUND_GREEN)
 
         it.val.currentStatusIndex <- it.val.currentStatusIndex + 1
         if it.val.mode = STANDARD_MODE and it.val.currentStatusIndex < 3: ret
         if (it.val.mode = SCROLL_WHEEL_MODE or it.val.mode = 5_BUTTON_MODE) and it.val.currentStatusIndex < 4: ret
 
+        // received all the required data bytes, reset the counter
         it.val.currentStatusIndex <- 0
 
-        @Term.printHex(it.val.status[0], @Term.BACKGROUND_CYAN)
-
+        // get standard pressed buttons
         it.val.isPressedStates[0] <- it.val.status[0] & 0b0000_0001 != 0
         it.val.isPressedStates[1] <- it.val.status[0] & 0b0000_0010 != 0
         it.val.isPressedStates[2] <- it.val.status[0] & 0b0000_0100 != 0
 
+        // get extended pressed buttons
         if it.val.mode = 5_BUTTON_MODE
             it.val.isPressedStates[3] <- it.val.status[3] & 0b0001_0000 != 0
             it.val.isPressedStates[4] <- it.val.status[3] & 0b0010_0000 != 0
         ;
 
+        // decode X delta
         it.val.offsets[0] <- it.val.status[1]
         if it.val.status[0] & 0b0001_0000 != 0
             it.val.offsets[0] <- it.val.offsets[0] | 0xffff_ff00
         ;
 
+        // decode Y delta
         it.val.offsets[1] <- it.val.status[2]
         if it.val.status[0] & 0b0010_0000 != 0
             it.val.offsets[1] <- it.val.offsets[1] | 0xffff_ff00
         ;
 
+        // decode scroll wheel delta
         if it.val.mode = SCROLL_WHEEL_MODE
-            it.val.offsets[2] <- it.val.status[3] & 0b0000_0111
+            it.val.offsets[2] <- it.val.status[3] & 0b0111_1111
             if it.val.status[3] & 0b1000_0000 != 0
-                it.val.offsets[2] <- it.val.offsets[2] | 0xffff_fff0
+                it.val.offsets[2] <- it.val.offsets[2] | 0xffff_ff80
             ;
         else if it.val.mode = 5_BUTTON_MODE
             it.val.offsets[2] <- it.val.status[3] & 0b0000_0111
             if it.val.status[3] & 0b0000_1000 != 0
-                it.val.offsets[2] <- it.val.offsets[2] | 0xffff_fff0
+                it.val.offsets[2] <- it.val.offsets[2] | 0xffff_fff8
             ;
         ;
 
