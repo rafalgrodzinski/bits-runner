@@ -169,11 +169,7 @@ writeMouse fun: value u8
         text blob<@B.String>
 
         rep i u32 <- 0, i < 5, i <- i + 1
-            if it.val.isPressedStates[i]
-                text <- @B.String("true ")
-            else
-                text <- @B.String("false ")
-            ;
+            text <- if it.val.isPressedStates[i]: @B.String("true ") else: @B.String("false ")
             text.print()
         ;
 
