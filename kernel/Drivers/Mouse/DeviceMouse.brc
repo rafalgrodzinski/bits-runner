@@ -30,11 +30,11 @@ enableInterrupts raw<"">
 ;
 
 waitForWriteReady fun
-    rep in8(CMD_PORT) & 0x02 != 0:
+    rep in8(CMD_PORT) &? 0x02:
 ;
 
 waitForReadReady fun
-    rep in8(CMD_PORT) & 0x01 = 0:
+    rep not in8(CMD_PORT) &? 0x01:
 ;
 
 writeMouse fun: value u8
@@ -130,37 +130,37 @@ writeMouse fun: value u8
         it.val.currentStatusIndex <- 0
 
         // get standard pressed buttons
-        it.val.isPressedStates[0] <- it.val.status[0] & 0b0000_0001 != 0
-        it.val.isPressedStates[1] <- it.val.status[0] & 0b0000_0010 != 0
-        it.val.isPressedStates[2] <- it.val.status[0] & 0b0000_0100 != 0
+        it.val.isPressedStates[0] <- it.val.status[0] &? 0b0000_0001
+        it.val.isPressedStates[1] <- it.val.status[0] &? 0b0000_0010
+        it.val.isPressedStates[2] <- it.val.status[0] &? 0b0000_0100
 
         // get extended pressed buttons
         if it.val.mode = 5_BUTTON_MODE
-            it.val.isPressedStates[3] <- it.val.status[3] & 0b0001_0000 != 0
-            it.val.isPressedStates[4] <- it.val.status[3] & 0b0010_0000 != 0
+            it.val.isPressedStates[3] <- it.val.status[3] &? 0b0001_0000
+            it.val.isPressedStates[4] <- it.val.status[3] &? 0b0010_0000
         ;
 
         // decode X delta
         it.val.offsets[0] <- it.val.status[1]
-        if it.val.status[0] & 0b0001_0000 != 0
+        if it.val.status[0] &? 0b0001_0000
             it.val.offsets[0] <- it.val.offsets[0] | 0xffff_ff00
         ;
 
         // decode Y delta
         it.val.offsets[1] <- it.val.status[2]
-        if it.val.status[0] & 0b0010_0000 != 0
+        if it.val.status[0] &? 0b0010_0000
             it.val.offsets[1] <- it.val.offsets[1] | 0xffff_ff00
         ;
 
         // decode scroll wheel delta
         if it.val.mode = SCROLL_WHEEL_MODE
             it.val.offsets[2] <- it.val.status[3] & 0b0111_1111
-            if it.val.status[3] & 0b1000_0000 != 0
+            if it.val.status[3] &? 0b1000_0000
                 it.val.offsets[2] <- it.val.offsets[2] | 0xffff_ff80
             ;
         else if it.val.mode = 5_BUTTON_MODE
             it.val.offsets[2] <- it.val.status[3] & 0b0000_0111
-            if it.val.status[3] & 0b0000_1000 != 0
+            if it.val.status[3] &? 0b0000_1000
                 it.val.offsets[2] <- it.val.offsets[2] | 0xffff_fff8
             ;
         ;
