@@ -50,6 +50,8 @@ Commands:
 - `0x20` Get status
 - `0x60` Set status
 - `0xf4` Enable data reporting
+- `0xff` Reset
+- `0xf6` Set defaults
 
 ## Mouse interrupt received data
 Standard 3 buttons mode

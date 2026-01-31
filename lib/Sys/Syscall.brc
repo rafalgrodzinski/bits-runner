@@ -6,6 +6,9 @@ CALL_REBOOT u32 <- 0x00
 CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_GET_INFO_MEM u32 <- 0x20
 
+// Input
+CALL_INPUT_GET_MOUSE_STATE u32 <- 0x101
+
 // Storage
 CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
 
@@ -21,6 +24,12 @@ CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
 @export InfoFsEntry blob
     kind u32
     entrySize u32
+;
+
+@export MouseState blob
+    buttonsState u32
+    deltaX s32
+    deltaY s32
 ;
 
 syscallRaw raw<"=r,m,m,m,~{eax},~{ebx},~{ecx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/, arg2 u32/*s3*/ -> u32/*$0*/
@@ -53,4 +62,10 @@ syscallRaw raw<"=r,m,m,m,~{eax},~{ebx},~{ecx}">: syscallNum u32/*$1*/, arg1 u32/
     info blob<InfoFsEntry>
     syscallRaw(CALL_STORAGE_GET_INFO_FS_ENTRY, info.adr.u32, entryPath.adr.u32)
     ret info
+;
+
+@export getMouseState fun -> blob<MouseState>
+    mouseState blob<MouseState>
+    syscallRaw(CALL_INPUT_GET_MOUSE_STATE, mouseState.adr.u32, 0)
+    ret mouseState
 ;

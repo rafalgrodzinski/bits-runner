@@ -159,8 +159,6 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
 
     scanCode u32 <- in(DATA_PORT)
 
-    @Term.printHex(scanCode, @Term.BACKGROUND_BLUE)
-
     isPressed bool <- scanCode & 0x80 = 0
     scanCode <- scanCode & 0x7f // get rid of the flag
 

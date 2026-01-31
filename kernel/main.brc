@@ -43,12 +43,12 @@ getEdx raw<"=r"> -> u32
     @Term.printString("All ready, welcome to Bits Runner!\n", @Term.FOREGROUND_GREEN)
 
     // Load shell
-    /*appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/SHELL.BIN"))
+    appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/SHELL.BIN"))
     pApp ptr<data<u8>> <- @Mem.allocateBytes(appEntry.entrySize).vadr.ptr<data<u8>>
 
     storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)
     pProcess ptr<blob<@Sched.Process>> <- @Sched.createProcess(pApp, appEntry.entrySize)
-    @Sched.switchToProcess(pProcess)*/
+    @Sched.switchToProcess(pProcess)
 
     /*
     deviceVideo blob<@DeviceVideo.DeviceVideo> <- @DeviceVideo.vgaDeviceVideo()

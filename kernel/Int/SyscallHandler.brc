@@ -12,7 +12,10 @@
 CALL_REBOOT u32 <- 0x00
 CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_PRINT_CHARACTER u32 <- 0x01
+
+// Input
 CALL_READ_ASCII u32 <- 0x07
+CALL_INPUT_GET_MOUSE u32 <- 0x101
 
 // Memory
 CALL_GET_INFO_MEM u32 <- 0x20
@@ -35,6 +38,11 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         @Term.printCharacter(ebx.u8, ecx.u8)
     else if eax = CALL_READ_ASCII
         ret @DrvKeyboard.readPressedAscii()
+    else if eax = CALL_INPUT_GET_MOUSE
+        pStateMouse ptr<data<s32>> <- ebx.a.ptr<data<s32>>
+        pStateMouse.val[0] <- deviceMouse.getButtonsState()
+        pStateMouse.val[1] <- deviceMouse.getDeltaX()
+        pStateMouse.val[2] <- deviceMouse.getDeltaY()
     else if eax = CALL_GET_INFO_MEM
         pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
         pInfoMem.val[0] <- @Mem.getInfoTotalSize()
