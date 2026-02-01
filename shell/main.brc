@@ -34,7 +34,7 @@ CMD_F_INFO blob<@B.String>
 
     rep
         rep character != '\n'
-            character <- @Syscall.readPressedAscii().u8
+            character <- @Syscall.getAscii().u8
             if character = '\b': input.removeLast()
             else if character != '\n' and character != '\0': input.append(character)
 

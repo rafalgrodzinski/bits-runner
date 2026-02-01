@@ -3,7 +3,6 @@
 @import B
 @import BiosService
 @import DrvCmos
-@import DrvKeyboard
 @import Mem
 @import Storage
 @import Term
@@ -14,8 +13,9 @@ CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_PRINT_CHARACTER u32 <- 0x01
 
 // Input
-CALL_READ_ASCII u32 <- 0x07
-CALL_INPUT_GET_MOUSE_STATE u32 <- 0x101
+CALL_INPUT_KEYBOARD_GET_STATE u32 <- 0x100
+CALL_INPUT_KEYBOARD_GET_ASCII u32 <- 0x101
+CALL_INPUT_MOUSE_GET_STATE u32 <- 0x110
 
 // Memory
 CALL_GET_INFO_MEM u32 <- 0x20
@@ -36,9 +36,13 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         ret @DrvCmos.getTimestamp()
     else if eax = CALL_PRINT_CHARACTER
         @Term.printCharacter(ebx.u8, ecx.u8)
-    else if eax = CALL_READ_ASCII
-        ret @DrvKeyboard.readPressedAscii()
-    else if eax = CALL_INPUT_GET_MOUSE_STATE
+    else if eax = CALL_INPUT_KEYBOARD_GET_STATE
+        // TODO
+    else if eax = CALL_INPUT_KEYBOARD_GET_ASCII
+        ascii u32 <- deviceKeyboard.getAscii()
+        deviceKeyboard.resetState()
+        ret ascii
+    else if eax = CALL_INPUT_MOUSE_GET_STATE
         pMouseState ptr<data<s32>> <- ebx.a.ptr<data<s32>>
         pMouseState.val[0] <- deviceMouse.getButtonsState()
         pMouseState.val[1] <- deviceMouse.getDeltaX()

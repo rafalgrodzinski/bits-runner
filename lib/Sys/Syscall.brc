@@ -7,7 +7,8 @@ CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_GET_INFO_MEM u32 <- 0x20
 
 // Input
-CALL_INPUT_GET_MOUSE_STATE u32 <- 0x101
+CALL_INPUT_KEYBOARD_GET_ASCII u32 <- 0x101
+CALL_INPUT_MOUSE_GET_STATE u32 <- 0x110
 
 // Storage
 CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
@@ -61,12 +62,12 @@ syscallRaw raw<"=r,m,m,m,~{eax},~{ebx},~{ecx}">: syscallNum u32/*$1*/, arg1 u32/
 ;
 
 // Input
-@export readPressedAscii fun -> u32
-    ret syscallRaw(0x07, 0, 0)
+@export getAscii fun -> u32
+    ret syscallRaw(CALL_INPUT_KEYBOARD_GET_ASCII, 0, 0)
 ;
 
 @export getMouseState fun -> blob<MouseState>
     mouseState blob<MouseState>
-    syscallRaw(CALL_INPUT_GET_MOUSE_STATE, mouseState.adr.u32, 0)
+    syscallRaw(CALL_INPUT_MOUSE_GET_STATE, mouseState.adr.u32, 0)
     ret mouseState
 ;

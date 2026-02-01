@@ -1,7 +1,7 @@
 @module Int
 
 @import Term
-@import DrvKeyboard
+@import DeviceKeyboard
 @import DeviceMouse
 
 @extern interrupt_init_protected_mode fun
@@ -12,6 +12,7 @@ INT_IRQ1 u32 <- 0x21 // keyboard
 INT_IRQ12 u32 <- 0x2c // mouse
 INT_SYSCALL u32 <- 0x30
 
+deviceKeyboard blob<@DeviceKeyboard.DeviceKeyboard>
 deviceMouse blob<@DeviceMouse.DeviceMouse>
 
 halt raw<"">
@@ -26,6 +27,7 @@ getCr2 raw<"=r"> -> u32
 
 @export init fun
     interrupt_init_protected_mode()
+    deviceKeyboard.init()
     deviceMouse.init()
 ;
 
@@ -37,7 +39,7 @@ getCr2 raw<"=r"> -> u32
         halt()
     else if interrupt = INT_IRQ0
     else if interrupt = INT_IRQ1
-        @DrvKeyboard.handleInterrupt()
+        deviceKeyboard.handleInterrupt()
     else if interrupt = INT_IRQ12
         deviceMouse.handleInterrupt()
     else if interrupt = INT_SYSCALL

@@ -27,10 +27,10 @@ OBJS=(
     B.o
     BSys.o
     BiosService.o
+    DeviceKeyboard.o
     DeviceMouse.o
     DeviceVideo.o
     DrvCmos.o
-    DrvKeyboard.o
     Int.o
     int_raw.o
     Mem.o
