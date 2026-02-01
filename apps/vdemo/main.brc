@@ -1,0 +1,9 @@
+@import B
+@import Syscall
+
+@export start fun
+    text blob<@B.String> <- @B.String("hello vdemo")
+    text.println()
+
+    rep:
+;
