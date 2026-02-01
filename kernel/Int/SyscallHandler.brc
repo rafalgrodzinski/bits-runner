@@ -23,6 +23,12 @@ CALL_GET_INFO_MEM u32 <- 0x20
 // Storage
 CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
 
+// GFX
+CALL_GFX_SET_MODE u32 <- 0x300
+CALL_GFX_SWAP_BUFFERS u32 <- 0x310
+CALL_GFX_CLEAR_SCREEN u32 <- 0x320
+CALL_GFX_DRAW_PIXEL u32 <- 0x321
+
 storageFs blob<@Storage.StorageFs>
 
 @export initSyscallHandler fun: _storageFs blob<@Storage.StorageFs>
@@ -63,6 +69,14 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         entry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, pEntryPath.val)
         pInfo.val[0] <- entry.kind
         pInfo.val[1] <- entry.entrySize
+    else if eax = CALL_GFX_SET_MODE
+        deviceVideo.initMode.val({deviceVideo.adr}, ebx)
+    else if eax = CALL_GFX_SWAP_BUFFERS
+        deviceVideo.swapBuffers.val({deviceVideo.adr})
+    else if eax = CALL_GFX_CLEAR_SCREEN
+        deviceVideo.clear.val({deviceVideo.adr}, ebx)
+    else if eax = CALL_GFX_DRAW_PIXEL
+        deviceVideo.drawPixel.val({deviceVideo.adr}, ebx, ecx, edx)
     ;
 
     ret 0

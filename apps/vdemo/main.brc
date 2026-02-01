@@ -2,8 +2,55 @@
 @import Syscall
 
 @export start fun
-    text blob<@B.String> <- @B.String("hello vdemo")
-    text.println()
+    @Syscall.gfxSetMode(@Syscall.GFX_MODE_320x240x8)
 
-    rep:
+    xPos s32 <- 100
+    yPos s32 <- 100
+    xVel s32 <- 5
+    yVel s32 <- 5
+
+    width s32 <- 320
+    height s32 <- 240
+
+    bgColor u32 <- 0
+    fgColor u32 <- 1
+
+    rep
+        @Syscall.gfxClearScreen(bgColor)
+        
+        mouseState blob<@Syscall.MouseState> <- @Syscall.getMouseState()
+
+        if mouseState.buttonsState &? 0x01
+            fgColor <- fgColor + 1
+            if fgColor > 15: fgColor <- 0
+        ;
+
+        if mouseState.buttonsState &? 0x02
+            bgColor <- bgColor + 1
+            if bgColor > 15: bgColor <- 0
+        ;
+
+        xPos <- xPos + mouseState.deltaX
+        yPos <- yPos - mouseState.deltaY
+
+        if xPos > width - 10
+            xPos <- width - 10
+        else if xPos < 10
+            xPos <- 10
+        ;
+
+        if yPos > height - 10
+            yPos <- height - 10
+        else if yPos < 10
+            yPos <- 10
+        ;
+
+        rep iy u32 <- 0, iy < 20, iy <- iy + 1
+            rep ix u32 <- 0, ix < 20, ix <- ix + 1
+                @Syscall.gfxDrawPixel((ix + xPos - 10).u32, (iy + yPos - 10).u32, fgColor)
+            ;
+        ;
+
+        @Syscall.gfxSwapBuffers()
+    ;
 ;

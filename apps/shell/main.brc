@@ -17,21 +17,6 @@ CMD_F_INFO blob<@B.String>
     cmd blob<@B.String> <- @B.String("")
     arg blob<@B.String> <- @B.String("")
 
-    /*rep
-        mouseState blob<@Syscall.MouseState> <- @Syscall.getMouseState()
-        msg blob<@B.String>
-        rep i u32 <- 0, i < 7, i <- i + 1
-            msg <- if mouseState.buttonsState &? 1 << i: @B.String("true ") else: @B.String("false ")
-            msg.print()
-        ;
-        msg <- @B.StringForS32(mouseState.deltaX)
-        msg.print()
-        msg <- @B.String(" ")
-        msg.print()
-        msg <- @B.StringForS32(mouseState.deltaY)
-        msg.println()
-    ;*/
-
     rep
         rep character != '\n'
             character <- @Syscall.getAscii().u8

@@ -3,6 +3,7 @@
 @import Term
 @import DeviceKeyboard
 @import DeviceMouse
+@import DeviceVideo
 
 @extern interrupt_init_protected_mode fun
 
@@ -14,6 +15,7 @@ INT_SYSCALL u32 <- 0x30
 
 deviceKeyboard blob<@DeviceKeyboard.DeviceKeyboard>
 deviceMouse blob<@DeviceMouse.DeviceMouse>
+deviceVideo blob<@DeviceVideo.DeviceVideo>
 
 halt raw<"">
 halt${:uid}:
@@ -29,6 +31,7 @@ getCr2 raw<"=r"> -> u32
     interrupt_init_protected_mode()
     deviceKeyboard.init()
     deviceMouse.init()
+    deviceVideo <- @DeviceVideo.vgaDeviceVideo()
 ;
 
 @export handleInterrupt fun: eax u32, ebx u32, ecx u32, edx u32, interrupt u32, errorCode u32 -> u32

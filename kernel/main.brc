@@ -1,4 +1,3 @@
-@import DeviceVideo
 @import Term
 @import Mem
 @import BiosService
@@ -50,47 +49,6 @@ getEdx raw<"=r"> -> u32
     storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)
     pProcess ptr<blob<@Sched.Process>> <- @Sched.createProcess(pApp, appEntry.entrySize)
     @Sched.switchToProcess(pProcess)
-
-    /*
-    deviceVideo blob<@DeviceVideo.DeviceVideo> <- @DeviceVideo.vgaDeviceVideo()
-    //deviceVideo.initMode.val({deviceVideo.adr}, @DeviceVideo.MODE_VGA_640x480x4)
-    deviceVideo.initMode.val({deviceVideo.adr}, @DeviceVideo.MODE_VGA_320x240x8)
-
-    xPos u32 <- 100
-    yPos u32 <- 100
-    xVel s32 <- 5
-    yVel s32 <- 5
-    rep
-        deviceVideo.clear.val({deviceVideo.adr}, 1)
-
-        xPos <- (xPos + xVel).u32
-        yPos <- (yPos + yVel).u32
-
-        if xPos > deviceVideo.getWidth.val({deviceVideo.adr}) - 10
-            xPos <- deviceVideo.getWidth.val({deviceVideo.adr}) - 10
-            xVel <- -xVel
-        else if xPos < 10
-            xPos <- 10
-            xVel <- -xVel
-        ;
-
-        if yPos > deviceVideo.getHeight.val({deviceVideo.adr}) - 10
-            yPos <- deviceVideo.getHeight.val({deviceVideo.adr}) - 10
-            yVel <- -yVel
-        else if yPos < 10
-            yPos <- 10
-            yVel <- -yVel
-        ;
-
-        rep iy u32 <- 0, iy < 20, iy <- iy + 1
-            rep ix u32 <- 0, ix < 20, ix <- ix + 1
-                deviceVideo.drawPixel.val({deviceVideo.adr}, ix + xPos - 10, iy + yPos - 10, 2)
-            ;
-        ;
-
-        deviceVideo.swapBuffers.val({deviceVideo.adr})
-    ;
-    */
 
     rep
     ;
