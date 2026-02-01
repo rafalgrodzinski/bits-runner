@@ -61,7 +61,7 @@ writeMouse fun: value u8
         // Enable second PS/2 port
         waitForWriteReady()
         out8(CMD_PORT, 0xa8)
-    
+
         // first try enabling scroll wheel mode
         writeMouse(0xf3)
         writeMouse(200)
@@ -101,7 +101,7 @@ writeMouse fun: value u8
 
         // Enable mouse
         status <- status | 0b0000_0010 // enable IRQ 12
-        status <- status & 0b1011_1111 // enable mouse clock
+        status <- status & 0b1101_1111 // enable mouse clock
 
         waitForWriteReady()
         out8(CMD_PORT, 0x60)
@@ -184,5 +184,9 @@ writeMouse fun: value u8
 
     getDeltaY fun -> s32
         ret it.val.offsets[1]
+    ;
+
+    resetState fun
+        rep i u32 <- 0, i < 3, i <- i + 1: it.val.offsets[i] <- 0
     ;
 ;

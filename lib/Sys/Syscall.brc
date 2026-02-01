@@ -48,10 +48,6 @@ syscallRaw raw<"=r,m,m,m,~{eax},~{ebx},~{ecx}">: syscallNum u32/*$1*/, arg1 u32/
     ret syscallRaw(CALL_GET_TIMESTAMP, 0, 0)
 ;
 
-@export readPressedAscii fun -> u32
-    ret syscallRaw(0x07, 0, 0)
-;
-
 @export getInfoMem fun -> blob<InfoMem>
     info blob<InfoMem>
     syscallRaw(CALL_GET_INFO_MEM, info.adr.u32, 0)
@@ -62,6 +58,11 @@ syscallRaw raw<"=r,m,m,m,~{eax},~{ebx},~{ecx}">: syscallNum u32/*$1*/, arg1 u32/
     info blob<InfoFsEntry>
     syscallRaw(CALL_STORAGE_GET_INFO_FS_ENTRY, info.adr.u32, entryPath.adr.u32)
     ret info
+;
+
+// Input
+@export readPressedAscii fun -> u32
+    ret syscallRaw(0x07, 0, 0)
 ;
 
 @export getMouseState fun -> blob<MouseState>

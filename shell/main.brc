@@ -17,7 +17,7 @@ CMD_F_INFO blob<@B.String>
     cmd blob<@B.String> <- @B.String("")
     arg blob<@B.String> <- @B.String("")
 
-    rep
+    /*rep
         mouseState blob<@Syscall.MouseState> <- @Syscall.getMouseState()
         msg blob<@B.String>
         rep i u32 <- 0, i < 7, i <- i + 1
@@ -30,9 +30,9 @@ CMD_F_INFO blob<@B.String>
         msg.print()
         msg <- @B.StringForS32(mouseState.deltaY)
         msg.println()
-    ;
+    ;*/
 
-    /*rep
+    rep
         rep character != '\n'
             character <- @Syscall.readPressedAscii().u8
             if character = '\b': input.removeLast()
@@ -114,5 +114,5 @@ CMD_F_INFO blob<@B.String>
 
         character <- '\0'
         input.clear()
-    ;*/
+    ;
 ;
