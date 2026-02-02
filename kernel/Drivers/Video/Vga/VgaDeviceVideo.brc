@@ -52,18 +52,21 @@ VgaDeviceVideo fun -> blob<DeviceVideo>
     ret deviceVideo
 ;
 
-flush raw<"r,~{eax}">: loc u32
-    mov al, [0x0a0000 + $0]
-;
-
 vgaInitMode fun: it ptr<blob<DeviceVideo>>, mode u32
     if mode = MODE_VGA_640x480x4
         width <- 640
         height <- 480
         vgaMode <- MODE_VGA_640x480x4
-        //pSecondPageBuffer <- pFirstPageBuffer
         pBackPageBuffer <- pFirstPageBuffer
         @BiosService.setVideoMode(0x12)
+
+        // switch to mode 0
+        out8(GC_INDEX_PORT, MODE_REG)
+        out8(GC_DATA_PORT, 0x00)
+
+        // enable set/reset on all planes
+        out8(GC_INDEX_PORT, SET_RESET_REG)
+        out8(GC_DATA_PORT, 0x0f)
     else if mode = MODE_VGA_320x240x8
         width <- 320
         height <- 240
@@ -121,20 +124,18 @@ vgaInitMode fun: it ptr<blob<DeviceVideo>>, mode u32
 vgaDrawPixel fun: it ptr<blob<DeviceVideo>>, x u32, y u32, color u32
     if vgaMode = MODE_VGA_640x480x4
         offset u32 <- (y * width + x) / 8
-        out8(GC_INDEX_PORT, MODE_REG)
-        out8(GC_DATA_PORT, 0x00)
 
-        out8(GC_INDEX_PORT, SET_RESET_REG)
-        out8(GC_DATA_PORT, 0x00)
+        // set set/reset value to the specified color
+        out8(GC_INDEX_PORT, SET_RESET_VALUE_REG)
+        out8(GC_DATA_PORT, color.u8)
 
+        // mask out all the pixels other than the desired
         out8(GC_INDEX_PORT, BIT_MASK_REG)
         out8(GC_DATA_PORT, 0x80 >> (x % 8))
 
-        out8(SC_INDEX_PORT, MAP_MASK_REG)
-        out8(SC_DATA_PORT, color.u8 & 0x0f)
-
-        flush(offset)
-        pBackPageBuffer.val[offset] <- 0xff
+        // first read the value to set latches (use updated values)
+        val u8 <- pBackPageBuffer.val[offset]
+        pBackPageBuffer.val[offset] <- val
     else if vgaMode = MODE_VGA_320x240x8
         offset u32 <- (y * width + x) / 4
 
@@ -152,10 +153,6 @@ vgaClear fun: it ptr<blob<DeviceVideo>>, color u32
         out8(GC_INDEX_PORT, MODE_REG)
         out8(GC_DATA_PORT, 0x03)
 
-        // enable set/reset on all planes
-        out8(GC_INDEX_PORT, SET_RESET_REG)
-        out8(GC_DATA_PORT, 0x0f)
-
         // set color as the set/reset value
         out8(GC_INDEX_PORT, SET_RESET_VALUE_REG)
         out8(GC_DATA_PORT, color.u8)
@@ -171,6 +168,10 @@ vgaClear fun: it ptr<blob<DeviceVideo>>, color u32
         rep i u32 <- 0, i < width * height / 8, i <- i + 1
             pBackPageBuffer.val[i] <- 0xff
         ;
+
+        // switch back to mode 0
+        out8(GC_INDEX_PORT, MODE_REG)
+        out8(GC_DATA_PORT, 0x00)
     else if vgaMode = MODE_VGA_320x240x8
         // enable all four planes
         out8(SC_INDEX_PORT, MAP_MASK_REG)
@@ -183,11 +184,18 @@ vgaClear fun: it ptr<blob<DeviceVideo>>, color u32
 ;
 
 vgaSwapBuffers fun: it ptr<blob<DeviceVideo>>
-    // wait for current vsync to finish
-    rep in8(INPUT_STATUS_1_PORT) & 0x08 != 0
-    ;
+    if vgaMode = MODE_VGA_640x480x4
+        /*
+        // wait for current vsync to finish
+        rep in8(INPUT_STATUS_1_PORT) &? 0x08:
+        
+        // wait for vsync to start
+        rep not in8(INPUT_STATUS_1_PORT) &? 0x08:
+        */
+    else if vgaMode = MODE_VGA_320x240x8
+        // wait for current vsync to finish
+        rep in8(INPUT_STATUS_1_PORT) &? 0x08:
 
-    if vgaMode = MODE_VGA_320x240x8
         bufferOffset u32 <- 0
 
         // swap back buffer
@@ -206,8 +214,7 @@ vgaSwapBuffers fun: it ptr<blob<DeviceVideo>>
         out8(CRTC_DATA_PORT, (bufferOffset & 0xff).u8)
 
         // wait for vsync to start
-        rep in8(INPUT_STATUS_1_PORT) & 0x08 = 0
-        ;
+        rep not in8(INPUT_STATUS_1_PORT) &? 0x08:
     ;
 ;
 
