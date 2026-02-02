@@ -2,15 +2,18 @@
 @import Syscall
 
 @export start fun
-    @Syscall.gfxSetMode(@Syscall.GFX_MODE_320x240x8)
+    //@Syscall.gfxSetMode(@Syscall.GFX_MODE_320x240x8)
+    @Syscall.gfxSetMode(@Syscall.GFX_MODE_640x480x4)
 
     xPos s32 <- 100
     yPos s32 <- 100
     xVel s32 <- 5
     yVel s32 <- 5
 
-    width s32 <- 320
-    height s32 <- 240
+    //width s32 <- 320
+    //height s32 <- 240
+    width s32 <- 640
+    height s32 <- 480
 
     bgColor u32 <- 0
     fgColor u32 <- 1

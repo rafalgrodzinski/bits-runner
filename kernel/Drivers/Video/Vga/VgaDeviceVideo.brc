@@ -148,16 +148,26 @@ vgaDrawPixel fun: it ptr<blob<DeviceVideo>>, x u32, y u32, color u32
 
 vgaClear fun: it ptr<blob<DeviceVideo>>, color u32
     if vgaMode = MODE_VGA_640x480x4
+        // switch to mode 3
         out8(GC_INDEX_PORT, MODE_REG)
         out8(GC_DATA_PORT, 0x03)
 
+        // enable set/reset on all planes
         out8(GC_INDEX_PORT, SET_RESET_REG)
         out8(GC_DATA_PORT, 0x0f)
 
+        // set color as the set/reset value
         out8(GC_INDEX_PORT, SET_RESET_VALUE_REG)
         out8(GC_DATA_PORT, color.u8)
 
-        flush(0)
+        // enable all planes
+        out8(SC_INDEX_PORT, 0x02)
+        out8(SC_DATA_PORT, 0x0f)
+
+        // enable all 8 pixels in each byte
+        out8(GC_INDEX_PORT, 0x08)
+        out8(GC_DATA_PORT, 0xff)
+
         rep i u32 <- 0, i < width * height / 8, i <- i + 1
             pBackPageBuffer.val[i] <- 0xff
         ;
