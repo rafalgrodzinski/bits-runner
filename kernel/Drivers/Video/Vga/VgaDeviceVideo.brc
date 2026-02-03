@@ -1,5 +1,6 @@
 @module DeviceVideo
 
+@import BSys
 @import BiosService
 
 SC_INDEX_PORT u16 <- 0x03c4
@@ -27,18 +28,6 @@ width u32
 height u32
 vgaMode u32
 
-out8 raw<"r,r,~{eax},~{edx}">: port u16, value u8
-    mov dx, $0
-    mov al, $1
-    out dx, al
-;
-
-in8 raw<"=r,r,~{eax},~{edx}">: port u16 -> u8
-    mov dx, $1
-    in al, dx
-    mov $0, al
-;
-
 VgaDeviceVideo fun -> blob<DeviceVideo>
     deviceVideo blob<DeviceVideo>
 
@@ -49,7 +38,7 @@ VgaDeviceVideo fun -> blob<DeviceVideo>
     deviceVideo.getWidth <- {vgaGetWidth.adr}
     deviceVideo.getHeight <- {vgaGetHeight.adr}
 
-    ret deviceVideo
+    ret deviceVideo 
 ;
 
 vgaInitMode fun: it ptr<blob<DeviceVideo>>, mode u32
@@ -61,12 +50,12 @@ vgaInitMode fun: it ptr<blob<DeviceVideo>>, mode u32
         @BiosService.setVideoMode(0x12)
 
         // switch to mode 0
-        out8(GC_INDEX_PORT, MODE_REG)
-        out8(GC_DATA_PORT, 0x00)
+        @BSys.out8(GC_INDEX_PORT, MODE_REG)
+        @BSys.out8(GC_DATA_PORT, 0x00)
 
         // enable set/reset on all planes
-        out8(GC_INDEX_PORT, SET_RESET_REG)
-        out8(GC_DATA_PORT, 0x0f)
+        @BSys.out8(GC_INDEX_PORT, SET_RESET_REG)
+        @BSys.out8(GC_DATA_PORT, 0x0f)
     else if mode = MODE_VGA_320x240x8
         width <- 320
         height <- 240
@@ -80,44 +69,44 @@ vgaInitMode fun: it ptr<blob<DeviceVideo>>, mode u32
         // and then modify to a planar 320x240
 
         // disable chain-4 mode
-        out8(SC_INDEX_PORT, 0x04)
-        out8(SC_DATA_PORT, 0x06)
+        @BSys.out8(SC_INDEX_PORT, 0x04)
+        @BSys.out8(SC_DATA_PORT, 0x06)
         // select 25 MHz dot clock & 60 Hz scanning rate
-        out8(MISC_OUTPUT_PORT, 0xe3)
+        @BSys.out8(MISC_OUTPUT_PORT, 0xe3)
         // remove write protect on CRTC registers
-        out8(CRTC_INDEX_PORT, 0x11)
-        out8(CRTC_DATA_PORT, 0x0e)
+        @BSys.out8(CRTC_INDEX_PORT, 0x11)
+        @BSys.out8(CRTC_DATA_PORT, 0x0e)
         // vertical total
-        out8(CRTC_INDEX_PORT, 0x06)
-        out8(CRTC_DATA_PORT, 0x0d)
+        @BSys.out8(CRTC_INDEX_PORT, 0x06)
+        @BSys.out8(CRTC_DATA_PORT, 0x0d)
         // overflow (bit 8 of vertical counts)
-        out8(CRTC_INDEX_PORT, 0x07)
-        out8(CRTC_DATA_PORT, 0x3e)
+        @BSys.out8(CRTC_INDEX_PORT, 0x07)
+        @BSys.out8(CRTC_DATA_PORT, 0x3e)
         // cell height (2 to double-scan)
-        out8(CRTC_INDEX_PORT, 0x09)
-        out8(CRTC_DATA_PORT, 0x41)
+        @BSys.out8(CRTC_INDEX_PORT, 0x09)
+        @BSys.out8(CRTC_DATA_PORT, 0x41)
         // v sync start
-        out8(CRTC_INDEX_PORT, 0x10)
-        out8(CRTC_DATA_PORT, 0xea)
+        @BSys.out8(CRTC_INDEX_PORT, 0x10)
+        @BSys.out8(CRTC_DATA_PORT, 0xea)
         // v sync end and protect cr0-cr7
-        out8(CRTC_INDEX_PORT, 0x11)
-        //out8(CRTC_DATA_PORT, 0xac)
-        out8(CRTC_DATA_PORT, 0x0c)
+        @BSys.out8(CRTC_INDEX_PORT, 0x11)
+        //@BSys.out8(CRTC_DATA_PORT, 0xac)
+        @BSys.out8(CRTC_DATA_PORT, 0x0c)
         // vertical displayed
-        out8(CRTC_INDEX_PORT, 0x12)
-        out8(CRTC_DATA_PORT, 0xdf)
+        @BSys.out8(CRTC_INDEX_PORT, 0x12)
+        @BSys.out8(CRTC_DATA_PORT, 0xdf)
         // turn off dword mode
-        out8(CRTC_INDEX_PORT, 0x14)
-        out8(CRTC_DATA_PORT, 0x00)
+        @BSys.out8(CRTC_INDEX_PORT, 0x14)
+        @BSys.out8(CRTC_DATA_PORT, 0x00)
         // v blank start
-        out8(CRTC_INDEX_PORT, 0x15)
-        out8(CRTC_DATA_PORT, 0xe7)
+        @BSys.out8(CRTC_INDEX_PORT, 0x15)
+        @BSys.out8(CRTC_DATA_PORT, 0xe7)
         // v blank end
-        out8(CRTC_INDEX_PORT, 0x16)
-        out8(CRTC_DATA_PORT, 0x06)
+        @BSys.out8(CRTC_INDEX_PORT, 0x16)
+        @BSys.out8(CRTC_DATA_PORT, 0x06)
         // turn on byte mode
-        out8(CRTC_INDEX_PORT, 0x17)
-        out8(CRTC_DATA_PORT, 0xe3)
+        @BSys.out8(CRTC_INDEX_PORT, 0x17)
+        @BSys.out8(CRTC_DATA_PORT, 0xe3)
     ;
 ;
 
@@ -126,12 +115,12 @@ vgaDrawPixel fun: it ptr<blob<DeviceVideo>>, x u32, y u32, color u32
         offset u32 <- (y * width + x) / 8
 
         // set set/reset value to the specified color
-        out8(GC_INDEX_PORT, SET_RESET_VALUE_REG)
-        out8(GC_DATA_PORT, color.u8)
+        @BSys.out8(GC_INDEX_PORT, SET_RESET_VALUE_REG)
+        @BSys.out8(GC_DATA_PORT, color.u8)
 
         // mask out all the pixels other than the desired
-        out8(GC_INDEX_PORT, BIT_MASK_REG)
-        out8(GC_DATA_PORT, 0x80 >> (x % 8))
+        @BSys.out8(GC_INDEX_PORT, BIT_MASK_REG)
+        @BSys.out8(GC_DATA_PORT, 0x80 >> (x % 8))
 
         // first read the value to set latches (use updated values)
         val u8 <- pBackPageBuffer.val[offset]
@@ -140,8 +129,8 @@ vgaDrawPixel fun: it ptr<blob<DeviceVideo>>, x u32, y u32, color u32
         offset u32 <- (y * width + x) / 4
 
         // enable plane 0-3 for the pixel
-        out8(SC_INDEX_PORT, MAP_MASK_REG)
-        out8(SC_DATA_PORT, 1 << (x % 4))
+        @BSys.out8(SC_INDEX_PORT, MAP_MASK_REG)
+        @BSys.out8(SC_DATA_PORT, 1 << (x % 4))
 
         pBackPageBuffer.val[offset] <- color.u8
     ;
@@ -150,32 +139,32 @@ vgaDrawPixel fun: it ptr<blob<DeviceVideo>>, x u32, y u32, color u32
 vgaClear fun: it ptr<blob<DeviceVideo>>, color u32
     if vgaMode = MODE_VGA_640x480x4
         // switch to mode 3
-        out8(GC_INDEX_PORT, MODE_REG)
-        out8(GC_DATA_PORT, 0x03)
+        @BSys.out8(GC_INDEX_PORT, MODE_REG)
+        @BSys.out8(GC_DATA_PORT, 0x03)
 
         // set color as the set/reset value
-        out8(GC_INDEX_PORT, SET_RESET_VALUE_REG)
-        out8(GC_DATA_PORT, color.u8)
+        @BSys.out8(GC_INDEX_PORT, SET_RESET_VALUE_REG)
+        @BSys.out8(GC_DATA_PORT, color.u8)
 
         // enable all planes
-        out8(SC_INDEX_PORT, 0x02)
-        out8(SC_DATA_PORT, 0x0f)
+        @BSys.out8(SC_INDEX_PORT, 0x02)
+        @BSys.out8(SC_DATA_PORT, 0x0f)
 
         // enable all 8 pixels in each byte
-        out8(GC_INDEX_PORT, 0x08)
-        out8(GC_DATA_PORT, 0xff)
+        @BSys.out8(GC_INDEX_PORT, 0x08)
+        @BSys.out8(GC_DATA_PORT, 0xff)
 
         rep i u32 <- 0, i < width * height / 8, i <- i + 1
             pBackPageBuffer.val[i] <- 0xff
         ;
 
         // switch back to mode 0
-        out8(GC_INDEX_PORT, MODE_REG)
-        out8(GC_DATA_PORT, 0x00)
+        @BSys.out8(GC_INDEX_PORT, MODE_REG)
+        @BSys.out8(GC_DATA_PORT, 0x00)
     else if vgaMode = MODE_VGA_320x240x8
         // enable all four planes
-        out8(SC_INDEX_PORT, MAP_MASK_REG)
-        out8(SC_DATA_PORT, 0x0f)
+        @BSys.out8(SC_INDEX_PORT, MAP_MASK_REG)
+        @BSys.out8(SC_DATA_PORT, 0x0f)
 
         rep i u32 <- 0, i < width * height / 4, i <- i + 1
             pBackPageBuffer.val[i] <- color.u8
@@ -194,7 +183,7 @@ vgaSwapBuffers fun: it ptr<blob<DeviceVideo>>
         */
     else if vgaMode = MODE_VGA_320x240x8
         // wait for current vsync to finish
-        rep in8(INPUT_STATUS_1_PORT) &? 0x08:
+        rep @BSys.in8(INPUT_STATUS_1_PORT) &? 0x08:
 
         bufferOffset u32 <- 0
 
@@ -207,14 +196,14 @@ vgaSwapBuffers fun: it ptr<blob<DeviceVideo>>
             pBackPageBuffer <- pFirstPageBuffer
         ;
 
-        out8(CRTC_INDEX_PORT, 0x0c)
-        out8(CRTC_DATA_PORT, ((bufferOffset >> 8) & 0xff).u8)
+        @BSys.out8(CRTC_INDEX_PORT, 0x0c)
+        @BSys.out8(CRTC_DATA_PORT, ((bufferOffset >> 8) & 0xff).u8)
 
-        out8(CRTC_INDEX_PORT, 0x0d)
-        out8(CRTC_DATA_PORT, (bufferOffset & 0xff).u8)
+        @BSys.out8(CRTC_INDEX_PORT, 0x0d)
+        @BSys.out8(CRTC_DATA_PORT, (bufferOffset & 0xff).u8)
 
         // wait for vsync to start
-        rep not in8(INPUT_STATUS_1_PORT) &? 0x08:
+        rep not @BSys.in8(INPUT_STATUS_1_PORT) &? 0x08:
     ;
 ;
 
