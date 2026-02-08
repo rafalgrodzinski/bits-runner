@@ -1,7 +1,5 @@
 @module DeviceKeyboard
 
-@import BSys
-
 CMD_PORT u16 <- 0x64
 DATA_PORT u16 <- 0x60
 
@@ -141,15 +139,27 @@ SHIFTED_ASCII_MAP data<u8> <- {
 keyboardStatus data<bool, 128>
 pressedAscii u8
 
+in raw<"=r,r,~{eax},~{edx}">: portNum u16 -> u8
+    mov dx, $1
+    in al, dx
+    mov $0, al
+;
+
+out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
+    mov dx, $0
+    mov al, $1
+    out dx, al
+;
+
 @export DeviceKeyboard blob
     init fun
     ;
 
     handleInterrupt fun
         // check if we have data
-        rep not @BSys.in8(CMD_PORT) &? 0x01:
+        rep not in(CMD_PORT) &? 0x01:
 
-        scanCode u32 <- @BSys.in8(DATA_PORT)
+        scanCode u32 <- in(DATA_PORT)
 
         isPressed bool <- scanCode & 0x80 = 0
         scanCode <- scanCode & 0x7f // get rid of the flag
@@ -173,13 +183,13 @@ pressedAscii u8
         /*if pressedAscii = 'a'.u8
             out(DATA_PORT, CMD_SET_LED)
             out(DATA_PORT, LED_CAPS_LOCK)
-            if @BSys.in8(DATA_PORT) != ACK
+            if in(DATA_PORT) != ACK
                 out(DATA_PORT, LED_CAPS_LOCK)
             ;
         else
             out(DATA_PORT, CMD_SET_LED)
             out(DATA_PORT, 0.u8)
-            if @BSys.in8(DATA_PORT) != ACK
+            if in(DATA_PORT) != ACK
                 out(DATA_PORT, 0.u8)
             ;
         ;*/
