@@ -4,7 +4,7 @@
 width u32
 height u32
 
-DEMOS_COUNT u32 <- 4
+DEMOS_COUNT u32 <- 5
 demoMode u32 <- 0
 
 ascii u32
@@ -41,6 +41,7 @@ readMouse fun
         else if demoMode = 1: demo_1()
         else if demoMode = 2: demo_2()
         else if demoMode = 3: demo_3()
+        else if demoMode = 4: demo_4()
     ;
 ;
 
@@ -222,6 +223,60 @@ demo_3 fun
 
         @Syscall.gfxClearScreen(0)
         @Syscall.gfxDrawLine(x1.u32, y1.u32, x2.u32, y2.u32, fgColor)
+        @Syscall.gfxSwapBuffers()
+    ;
+;
+
+demo_4 fun
+    setMode(1)
+
+    POINTS_COUNT u32 <- 5
+
+    px data<s32, 5>
+    py data<s32, 5>
+    sx data<s32, 5> <- { 1, 2, 3, 1, 2}
+    sy data<s32, 5> <- { 4, 2, 1, 4, 2}
+
+    fgColor u32 <- 0
+
+    rep demoMode = 4
+        readKeyboard()
+        readMouse()
+
+        if mouseState.buttonsState &? 0x01
+            fgColor <- fgColor + 1
+            if fgColor > 16: fgColor <- 1
+        ;
+
+        rep i u32 <- 0, i < POINTS_COUNT, i <- i + 1
+            px[i] <- px[i] + sx[i]
+            py[i] <- py[i] + sy[i]
+
+            if px[i] >= width.s32
+                px[i] <- width.s32 - 1
+                sx[i] <- -sx[i]
+            else if px[i] < 0
+                px[i] <- 0
+                sx[i] <- -sx[i]
+            ;
+
+            if py[i] >= height
+                py[i] <- height - 1
+                sy[i] <- -sy[i]
+            else if py[i] < 0
+                py[i] <- 0
+                sy[i] <- -sy[i]
+            ;
+        ;
+
+        @Syscall.gfxClearScreen(0)
+
+        rep i u32 <- 0, i < POINTS_COUNT, i <- i + 1
+            i2 u32 <- if i < POINTS_COUNT - 1: i + 1 else: 0
+
+            @Syscall.gfxDrawLine(px[i].u32, py[i].u32, px[i2].u32, py[i2].u32, (fgColor + i) % 16 + 1)
+        ;
+
         @Syscall.gfxSwapBuffers()
     ;
 ;
