@@ -1,6 +1,7 @@
 @module Term
 
 @import BiosService
+@import BSys
 
 @export MODE_80x25 u32 <- 1
 @export MODE_80x50 u32 <- 2
@@ -33,12 +34,6 @@ termWidth u32 <- 0
 termHeight u32 <- 0
 
 pBuffer ptr<data<u8>> <- { 0x0b8000 }
-
-out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
-    mov dx, $0
-    mov al, $1
-    out dx, al
-;
 
 @export init fun: mode u32
     if mode = MODE_80x50
@@ -80,11 +75,11 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
 
     cursorAdr u32 <- cursorY * termWidth + cursorX
     // high byte
-    out(0x03d4, 0x0e.u8)
-    out(0x03d5, ((cursorAdr >> 8) & 0xff).u8)
+    @BSys.out8(0x03d4, 0x0e)
+    @BSys.out8(0x03d5, ((cursorAdr >> 8) & 0xff).u8)
     // low byte
-    out(0x03d4, 0x0f.u8)
-    out(0x03d5, (cursorAdr & 0xff).u8)
+    @BSys.out8(0x03d4, 0x0f)
+    @BSys.out8(0x03d5, (cursorAdr & 0xff).u8)
 
     ret isOverscrolled
 ;
