@@ -1,10 +1,10 @@
 @import B
 @import Syscall
 
-width s32
-height s32
+width u32
+height u32
 
-DEMOS_COUNT u32 <- 2
+DEMOS_COUNT u32 <- 4
 demoMode u32 <- 0
 
 ascii u32
@@ -37,19 +37,18 @@ readMouse fun
 
 @export start fun
     rep
-        if demoMode = 0
-            demo_0()
-        else if demoMode = 1
-            demo_1()
-        ;
+             if demoMode = 0: demo_0()
+        else if demoMode = 1: demo_1()
+        else if demoMode = 2: demo_2()
+        else if demoMode = 3: demo_3()
     ;
 ;
 
 demo_0 fun
     setMode(1)
 
-    xPos s32 <- width / 2
-    yPos s32 <- width / 2
+    xPos s32 <- width.s32 / 2
+    yPos s32 <- width.s32 / 2
     xVel s32 <- 5
     yVel s32 <- 5
 
@@ -75,8 +74,8 @@ demo_0 fun
         xPos <- xPos + mouseState.deltaX
         yPos <- yPos - mouseState.deltaY
 
-        if xPos > width - 10
-            xPos <- width - 10
+        if xPos > width.s32 - 10
+            xPos <- width.s32 - 10
         else if xPos < 10
             xPos <- 10
         ;
@@ -100,8 +99,8 @@ demo_0 fun
 demo_1 fun
     setMode(0)
 
-    xPos s32 <- width / 2
-    yPos s32 <- width / 2
+    xPos s32 <- width.s32 / 2
+    yPos s32 <- width.s32 / 2
     xVel s32 <- 5
     yVel s32 <- 5
 
@@ -127,8 +126,8 @@ demo_1 fun
         xPos <- xPos + mouseState.deltaX
         yPos <- yPos - mouseState.deltaY
 
-        if xPos > width - 10
-            xPos <- width - 10
+        if xPos > width.s32 - 10
+            xPos <- width.s32 - 10
         else if xPos < 10
             xPos <- 10
         ;
@@ -146,5 +145,32 @@ demo_1 fun
         ;
 
         @Syscall.gfxSwapBuffers()
+    ;
+;
+
+demo_2 fun
+    setMode(0)
+
+    rep iy u32 <- 0, iy < height, iy <- iy + 1
+        rep ix u32 <- 0, ix < width, ix <- ix + 1
+            color u32 <- (ix / (width / 8)) + (iy / (height / 2) * 8)
+            @Syscall.gfxDrawPixel(ix, iy, color)
+        ;
+    ;
+
+    rep demoMode = 2
+        readKeyboard()
+        readMouse()
+    ;
+;
+
+demo_3 fun
+    setMode(1)
+
+    rep demoMode = 3
+        readKeyboard()
+        readMouse()
+
+        @Syscall.gfxClearScreen(0)
     ;
 ;
