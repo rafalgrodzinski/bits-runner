@@ -4,6 +4,12 @@
 width s32
 height s32
 
+DEMOS_COUNT u32 <- 2
+demoMode u32 <- 0
+
+ascii u32
+mouseState blob<@Syscall.MouseState>
+
 setMode fun: mode u32
     if mode = 0
         width <- 640
@@ -16,21 +22,97 @@ setMode fun: mode u32
     ;
 ;
 
+readKeyboard fun
+    ascii <- @Syscall.getAscii()
+    if ascii = 'z'
+        demoMode <- if demoMode = 0: DEMOS_COUNT - 1 else: demoMode - 1
+    else if ascii = 'x'
+        demoMode <- if demoMode < DEMOS_COUNT - 1: demoMode + 1 else: 0
+    ;
+;
+
+readMouse fun
+    mouseState <- @Syscall.getMouseState()
+;
+
 @export start fun
-    xPos s32 <- 100
-    yPos s32 <- 100
+    rep
+        if demoMode = 0
+            demo_0()
+        else if demoMode = 1
+            demo_1()
+        ;
+    ;
+;
+
+demo_0 fun
+    setMode(1)
+
+    xPos s32 <- width / 2
+    yPos s32 <- width / 2
     xVel s32 <- 5
     yVel s32 <- 5
 
     bgColor u32 <- 0
     fgColor u32 <- 1
 
-    setMode(1)
+    rep demoMode = 0
+        readKeyboard()
+        readMouse()
 
-    rep
         @Syscall.gfxClearScreen(bgColor)
-        
-        mouseState blob<@Syscall.MouseState> <- @Syscall.getMouseState()
+
+        if mouseState.buttonsState &? 0x01
+            fgColor <- fgColor + 1
+            if fgColor > 15: fgColor <- 0
+        ;
+
+        if mouseState.buttonsState &? 0x02
+            bgColor <- bgColor + 1
+            if bgColor > 15: bgColor <- 0
+        ;
+
+        xPos <- xPos + mouseState.deltaX
+        yPos <- yPos - mouseState.deltaY
+
+        if xPos > width - 10
+            xPos <- width - 10
+        else if xPos < 10
+            xPos <- 10
+        ;
+
+        if yPos > height - 10
+            yPos <- height - 10
+        else if yPos < 10
+            yPos <- 10
+        ;
+
+        rep iy u32 <- 0, iy < 20, iy <- iy + 1
+            rep ix u32 <- 0, ix < 20, ix <- ix + 1
+                @Syscall.gfxDrawPixel((ix + xPos - 10).u32, (iy + yPos - 10).u32, fgColor)
+            ;
+        ;
+
+        @Syscall.gfxSwapBuffers()
+    ;
+;
+
+demo_1 fun
+    setMode(0)
+
+    xPos s32 <- width / 2
+    yPos s32 <- width / 2
+    xVel s32 <- 5
+    yVel s32 <- 5
+
+    bgColor u32 <- 0
+    fgColor u32 <- 1
+
+    rep demoMode = 1
+        readKeyboard()
+        readMouse()
+
+        @Syscall.gfxClearScreen(bgColor)
 
         if mouseState.buttonsState &? 0x01
             fgColor <- fgColor + 1
