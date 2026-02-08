@@ -6,6 +6,7 @@
 @export DeviceVideo blob
     initMode ptr<fun: ptr<blob<DeviceVideo>>, u32>
     drawPixel ptr<fun: ptr<blob<DeviceVideo>>, u32, u32, u32>
+    drawLine ptr<fun: ptr<blob<DeviceVideo>>, u32, u32, u32, u32, u32>
     clear ptr<fun: ptr<blob<DeviceVideo>>, u32>
     swapBuffers ptr<fun: ptr<blob<DeviceVideo>>>
     getWidth ptr<fun: ptr<blob<DeviceVideo>> -> u32>

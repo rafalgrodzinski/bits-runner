@@ -101,8 +101,6 @@ demo_1 fun
 
     xPos s32 <- width.s32 / 2
     yPos s32 <- width.s32 / 2
-    xVel s32 <- 5
-    yVel s32 <- 5
 
     bgColor u32 <- 0
     fgColor u32 <- 1
@@ -167,10 +165,63 @@ demo_2 fun
 demo_3 fun
     setMode(1)
 
+    x1 s32 <- width.s32 / 2
+    y1 s32 <- width.s32 / 2
+
+    x2 s32 <- width.s32 / 2
+    y2 s32 <- width.s32 / 2
+
+    fgColor u32 <- 1
+
+    isFront bool <- true
+
     rep demoMode = 3
         readKeyboard()
         readMouse()
 
+        if mouseState.buttonsState &? 0x01
+            fgColor <- fgColor + 1
+            if fgColor > 15: fgColor <- 1
+        ;
+
+        if mouseState.buttonsState &? 0x02
+            isFront <- not isFront
+        ;
+
+        if isFront
+            x1 <- x1 + mouseState.deltaX
+            y1 <- y1 - mouseState.deltaY
+
+            if x1 >= width.s32
+                x1 <- width.s32 - 1
+            else if x1 < 0
+                x1 <- 0
+            ;
+
+            if y1 >= height
+                y1 <- height - 1
+            else if y1 < 0
+                y1 <- 0
+            ;
+        else
+            x2 <- x2 + mouseState.deltaX
+            y2 <- y2 - mouseState.deltaY
+
+            if x2 >= width.s32
+                x2 <- width.s32 - 1
+            else if x2 < 0
+                x2 <- 0
+            ;
+
+            if y2 >= height
+                y2 <- height - 1
+            else if y2 < 0
+                y2 <- 0
+            ;
+        ;
+
         @Syscall.gfxClearScreen(0)
+        @Syscall.gfxDrawLine(x1.u32, y1.u32, x2.u32, y2.u32, fgColor)
+        @Syscall.gfxSwapBuffers()
     ;
 ;

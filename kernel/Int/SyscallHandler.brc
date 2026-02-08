@@ -28,6 +28,7 @@ CALL_GFX_SET_MODE u32 <- 0x300
 CALL_GFX_SWAP_BUFFERS u32 <- 0x310
 CALL_GFX_CLEAR_SCREEN u32 <- 0x320
 CALL_GFX_DRAW_PIXEL u32 <- 0x321
+CALL_GFX_DRAW_LINE u32 <- 0x322
 
 storageFs blob<@Storage.StorageFs>
 
@@ -77,6 +78,12 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         deviceVideo.clear.val({deviceVideo.adr}, ebx)
     else if eax = CALL_GFX_DRAW_PIXEL
         deviceVideo.drawPixel.val({deviceVideo.adr}, ebx, ecx, edx)
+    else if eax = CALL_GFX_DRAW_LINE
+        x1 u32 <- ebx >> 16
+        y1 u32 <- ebx & 0xffff
+        x2 u32 <- ecx >> 16
+        y2 u32 <- ecx & 0xffff
+        deviceVideo.drawLine.val({deviceVideo.adr}, x1, y1, x2, y2, edx)
     ;
 
     ret 0
