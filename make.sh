@@ -34,12 +34,14 @@ check "Failed to build kernel"
 echo
 
 ## Shell
-#echo "🛠️ Building shell..."
+echo "🛠️ Building shell..."
 ./apps/shell/build.sh
 check "Failed to build shell"
 
+echo
+
 ## VDemo
-#echo "🛠️ Building vdemo..."
+echo "🛠️ Building vdemo..."
 ./apps/vdemo/build.sh
 check "Failed to build vdemo"
 
