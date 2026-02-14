@@ -1,0 +1,282 @@
+@import B
+@import Syscall
+
+width u32
+height u32
+
+DEMOS_COUNT u32 <- 5
+demoMode u32 <- 0
+
+ascii u32
+mouseState blob<@Syscall.MouseState>
+
+setMode fun: mode u32
+    if mode = 0
+        width <- 640
+        height <- 480
+        @Syscall.gfxSetMode(@Syscall.GFX_MODE_640x480x4)
+    else if mode = 1
+        width <- 320
+        height <- 240
+        @Syscall.gfxSetMode(@Syscall.GFX_MODE_320x240x8)
+    ;
+;
+
+readKeyboard fun
+    ascii <- @Syscall.getAscii()
+    if ascii = 'z'
+        demoMode <- if demoMode = 0: DEMOS_COUNT - 1 else: demoMode - 1
+    else if ascii = 'x'
+        demoMode <- if demoMode < DEMOS_COUNT - 1: demoMode + 1 else: 0
+    ;
+;
+
+readMouse fun
+    mouseState <- @Syscall.getMouseState()
+;
+
+@export start fun
+    rep
+             if demoMode = 0: demo_0()
+        else if demoMode = 1: demo_1()
+        else if demoMode = 2: demo_2()
+        else if demoMode = 3: demo_3()
+        else if demoMode = 4: demo_4()
+    ;
+;
+
+demo_0 fun
+    setMode(1)
+
+    xPos s32 <- width.s32 / 2
+    yPos s32 <- width.s32 / 2
+    xVel s32 <- 5
+    yVel s32 <- 5
+
+    bgColor u32 <- 0
+    fgColor u32 <- 1
+
+    rep demoMode = 0
+        readKeyboard()
+        readMouse()
+
+        @Syscall.gfxClearScreen(bgColor)
+
+        if mouseState.buttonsState &? 0x01
+            fgColor <- fgColor + 1
+            if fgColor > 15: fgColor <- 0
+        ;
+
+        if mouseState.buttonsState &? 0x02
+            bgColor <- bgColor + 1
+            if bgColor > 15: bgColor <- 0
+        ;
+
+        xPos <- xPos + mouseState.deltaX
+        yPos <- yPos - mouseState.deltaY
+
+        if xPos > width.s32 - 10
+            xPos <- width.s32 - 10
+        else if xPos < 10
+            xPos <- 10
+        ;
+
+        if yPos > height - 10
+            yPos <- height - 10
+        else if yPos < 10
+            yPos <- 10
+        ;
+
+        rep iy u32 <- 0, iy < 20, iy <- iy + 1
+            rep ix u32 <- 0, ix < 20, ix <- ix + 1
+                @Syscall.gfxDrawPixel((ix + xPos - 10).u32, (iy + yPos - 10).u32, fgColor)
+            ;
+        ;
+
+        @Syscall.gfxSwapBuffers()
+    ;
+;
+
+demo_1 fun
+    setMode(0)
+
+    xPos s32 <- width.s32 / 2
+    yPos s32 <- width.s32 / 2
+
+    bgColor u32 <- 0
+    fgColor u32 <- 1
+
+    rep demoMode = 1
+        readKeyboard()
+        readMouse()
+
+        @Syscall.gfxClearScreen(bgColor)
+
+        if mouseState.buttonsState &? 0x01
+            fgColor <- fgColor + 1
+            if fgColor > 15: fgColor <- 0
+        ;
+
+        if mouseState.buttonsState &? 0x02
+            bgColor <- bgColor + 1
+            if bgColor > 15: bgColor <- 0
+        ;
+
+        xPos <- xPos + mouseState.deltaX
+        yPos <- yPos - mouseState.deltaY
+
+        if xPos > width.s32 - 10
+            xPos <- width.s32 - 10
+        else if xPos < 10
+            xPos <- 10
+        ;
+
+        if yPos > height - 10
+            yPos <- height - 10
+        else if yPos < 10
+            yPos <- 10
+        ;
+
+        rep iy u32 <- 0, iy < 20, iy <- iy + 1
+            rep ix u32 <- 0, ix < 20, ix <- ix + 1
+                @Syscall.gfxDrawPixel((ix + xPos - 10).u32, (iy + yPos - 10).u32, fgColor)
+            ;
+        ;
+
+        @Syscall.gfxSwapBuffers()
+    ;
+;
+
+demo_2 fun
+    setMode(0)
+
+    rep iy u32 <- 0, iy < height, iy <- iy + 1
+        rep ix u32 <- 0, ix < width, ix <- ix + 1
+            color u32 <- (ix / (width / 8)) + (iy / (height / 2) * 8)
+            @Syscall.gfxDrawPixel(ix, iy, color)
+        ;
+    ;
+
+    rep demoMode = 2
+        readKeyboard()
+        readMouse()
+    ;
+;
+
+demo_3 fun
+    setMode(1)
+
+    x1 s32 <- width.s32 / 2
+    y1 s32 <- width.s32 / 2
+
+    x2 s32 <- width.s32 / 2
+    y2 s32 <- width.s32 / 2
+
+    fgColor u32 <- 1
+
+    isFront bool <- true
+
+    rep demoMode = 3
+        readKeyboard()
+        readMouse()
+
+        if mouseState.buttonsState &? 0x01
+            fgColor <- fgColor + 1
+            if fgColor > 15: fgColor <- 1
+        ;
+
+        if mouseState.buttonsState &? 0x02
+            isFront <- not isFront
+        ;
+
+        if isFront
+            x1 <- x1 + mouseState.deltaX
+            y1 <- y1 - mouseState.deltaY
+
+            if x1 >= width.s32
+                x1 <- width.s32 - 1
+            else if x1 < 0
+                x1 <- 0
+            ;
+
+            if y1 >= height
+                y1 <- height - 1
+            else if y1 < 0
+                y1 <- 0
+            ;
+        else
+            x2 <- x2 + mouseState.deltaX
+            y2 <- y2 - mouseState.deltaY
+
+            if x2 >= width.s32
+                x2 <- width.s32 - 1
+            else if x2 < 0
+                x2 <- 0
+            ;
+
+            if y2 >= height
+                y2 <- height - 1
+            else if y2 < 0
+                y2 <- 0
+            ;
+        ;
+
+        @Syscall.gfxClearScreen(0)
+        @Syscall.gfxDrawLine(x1.u32, y1.u32, x2.u32, y2.u32, fgColor)
+        @Syscall.gfxSwapBuffers()
+    ;
+;
+
+demo_4 fun
+    setMode(1)
+
+    POINTS_COUNT u32 <- 5
+
+    px data<s32, 5>
+    py data<s32, 5>
+    sx data<s32, 5> <- { 1, 2, 3, 1, 2}
+    sy data<s32, 5> <- { 4, 2, 1, 4, 2}
+
+    fgColor u32 <- 0
+
+    rep demoMode = 4
+        readKeyboard()
+        readMouse()
+
+        if mouseState.buttonsState &? 0x01
+            fgColor <- fgColor + 1
+            if fgColor > 16: fgColor <- 1
+        ;
+
+        rep i u32 <- 0, i < POINTS_COUNT, i <- i + 1
+            px[i] <- px[i] + sx[i]
+            py[i] <- py[i] + sy[i]
+
+            if px[i] >= width.s32
+                px[i] <- width.s32 - 1
+                sx[i] <- -sx[i]
+            else if px[i] < 0
+                px[i] <- 0
+                sx[i] <- -sx[i]
+            ;
+
+            if py[i] >= height
+                py[i] <- height - 1
+                sy[i] <- -sy[i]
+            else if py[i] < 0
+                py[i] <- 0
+                sy[i] <- -sy[i]
+            ;
+        ;
+
+        @Syscall.gfxClearScreen(0)
+
+        rep i u32 <- 0, i < POINTS_COUNT, i <- i + 1
+            i2 u32 <- if i < POINTS_COUNT - 1: i + 1 else: 0
+
+            @Syscall.gfxDrawLine(px[i].u32, py[i].u32, px[i2].u32, py[i2].u32, (fgColor + i) % 16 + 1)
+        ;
+
+        @Syscall.gfxSwapBuffers()
+    ;
+;

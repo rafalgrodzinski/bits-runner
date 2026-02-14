@@ -6,8 +6,22 @@ CALL_REBOOT u32 <- 0x00
 CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_GET_INFO_MEM u32 <- 0x20
 
+// Input
+CALL_INPUT_KEYBOARD_GET_ASCII u32 <- 0x101
+CALL_INPUT_MOUSE_GET_STATE u32 <- 0x110
+
 // Storage
 CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
+
+// GFX
+CALL_GFX_SET_MODE u32 <- 0x300
+CALL_GFX_SWAP_BUFFERS u32 <- 0x310
+CALL_GFX_CLEAR_SCREEN u32 <- 0x320
+CALL_GFX_DRAW_PIXEL u32 <- 0x321
+CALL_GFX_DRAW_LINE u32 <- 0x322
+
+@export GFX_MODE_640x480x4 u32 <- 0x00
+@export GFX_MODE_320x240x8 u32 <- 0x01
 
 @export InfoMem blob
     totalSize u32
@@ -23,34 +37,71 @@ CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
     entrySize u32
 ;
 
-syscallRaw raw<"=r,m,m,m,~{eax},~{ebx},~{ecx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/, arg2 u32/*s3*/ -> u32/*$0*/
+@export MouseState blob
+    buttonsState u32
+    deltaX s32
+    deltaY s32
+;
+
+syscallRaw raw<"=r,m,m,m,m,~{eax},~{ebx},~{ecx},~{edx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/, arg2 u32/*$3*/, arg3 u32/*s4*/ -> u32/*$0*/
     mov eax, $1
     mov ebx, $2
     mov ecx, $3
+    mov edx, $4
     int 0x30
     mov $0, eax
 ;
 
 @export reboot fun
-    syscallRaw(CALL_REBOOT, 0, 0)
+    syscallRaw(CALL_REBOOT, 0, 0, 0)
 ;
 
 @export getTimestamp fun -> u32
-    ret syscallRaw(CALL_GET_TIMESTAMP, 0, 0)
-;
-
-@export readPressedAscii fun -> u32
-    ret syscallRaw(0x07, 0, 0)
+    ret syscallRaw(CALL_GET_TIMESTAMP, 0, 0, 0)
 ;
 
 @export getInfoMem fun -> blob<InfoMem>
     info blob<InfoMem>
-    syscallRaw(CALL_GET_INFO_MEM, info.adr.u32, 0)
+    syscallRaw(CALL_GET_INFO_MEM, info.adr.u32, 0, 0)
     ret info
 ;
 
 @export getInfoFsEntry fun: entryPath blob<@B.String> -> blob<InfoFsEntry>
     info blob<InfoFsEntry>
-    syscallRaw(CALL_STORAGE_GET_INFO_FS_ENTRY, info.adr.u32, entryPath.adr.u32)
+    syscallRaw(CALL_STORAGE_GET_INFO_FS_ENTRY, info.adr.u32, entryPath.adr.u32, 0)
     ret info
+;
+
+// Input
+@export getAscii fun -> u32
+    ret syscallRaw(CALL_INPUT_KEYBOARD_GET_ASCII, 0, 0, 0)
+;
+
+@export getMouseState fun -> blob<MouseState>
+    mouseState blob<MouseState>
+    syscallRaw(CALL_INPUT_MOUSE_GET_STATE, mouseState.adr.u32, 0, 0)
+    ret mouseState
+;
+
+// GFX
+@export gfxSetMode fun: mode u32
+    syscallRaw(CALL_GFX_SET_MODE, mode, 0, 0)
+;
+
+@export gfxSwapBuffers fun
+    syscallRaw(CALL_GFX_SWAP_BUFFERS, 0, 0, 0)
+;
+
+@export gfxClearScreen fun: color u32
+    syscallRaw(CALL_GFX_CLEAR_SCREEN, color, 0, 0)
+;
+
+@export gfxDrawPixel fun: x u32, y u32, color u32
+    syscallRaw(CALL_GFX_DRAW_PIXEL, x, y, color)
+;
+
+@export gfxDrawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
+    p1 u32 <- (x1 << 16) | (y1 & 0xffff)
+    p2 u32 <- (x2 << 16) | (y2 & 0xffff)
+    syscallRaw(CALL_GFX_DRAW_LINE, p1, p2, color)
 ;

@@ -411,37 +411,37 @@ interrupt_handler_29:
     push 0x29
     jmp interrupt_handler
 
-; IRQ a
+; IRQ 10
 interrupt_handler_2a:
     push  0
     push 0x2a
     jmp interrupt_handler
 
-; IRQ b
+; IRQ 11
 interrupt_handler_2b:
     push  0
     push 0x2b
     jmp interrupt_handler
 
-; IRQ c
+; IRQ 12
 interrupt_handler_2c:
     push  0
     push 0x2c
     jmp interrupt_handler
 
-; IRQ d
+; IRQ 13
 interrupt_handler_2d:
     push  0
     push 0x2d
     jmp interrupt_handler
 
-; IRQ e
+; IRQ 14
 interrupt_handler_2e:
     push  0
     push 0x2e
     jmp interrupt_handler
 
-; IRQ f
+; IRQ 15
 interrupt_handler_2f:
     push  0
     push 0x2f
@@ -482,6 +482,7 @@ interrupt_handler:
     ; Acknowledge interrupt
     mov al, 0x20
     out PIC1_CMD_PORT, al
+    out PIC2_CMD_PORT, al
 
     mov esp, ebp
     popad

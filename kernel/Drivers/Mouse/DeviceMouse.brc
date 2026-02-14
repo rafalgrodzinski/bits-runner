@@ -1,0 +1,182 @@
+@module DeviceMouse
+
+@import BSys
+
+CMD_PORT u16 <- 0x64
+DATA_PORT u16 <- 0x60
+
+STANDARD_MODE u8 <- 0x00
+SCROLL_WHEEL_MODE u8 <- 0x03
+5_BUTTON_MODE u8 <- 0x04
+
+disableInterrupts raw<"">
+    cli
+;
+
+enableInterrupts raw<"">
+    sti
+;
+
+waitForWriteReady fun
+    rep @BSys.in8(CMD_PORT) &? 0x02:
+;
+
+waitForReadReady fun
+    rep not @BSys.in8(CMD_PORT) &? 0x01:
+;
+
+writeMouse fun: value u8
+    waitForWriteReady()
+    @BSys.out8(CMD_PORT, 0xd4)
+
+    waitForWriteReady()
+    @BSys.out8(DATA_PORT, value)
+
+    waitForReadReady()
+    @BSys.in8(DATA_PORT) // get ACK 0xfa
+;
+
+@export DeviceMouse blob
+    mode u8
+
+    status data<u8, 4>
+    currentStatusIndex u32
+
+    isPressedStates data<bool, 5>
+    offsets data<s32, 3>
+
+    init fun
+        disableInterrupts()
+
+        // Enable second PS/2 port
+        waitForWriteReady()
+        @BSys.out8(CMD_PORT, 0xa8)
+
+        // first try enabling scroll wheel mode
+        writeMouse(0xf3)
+        writeMouse(200)
+
+        writeMouse(0xf3)
+        writeMouse(100)
+
+        writeMouse(0xf3)
+        writeMouse(80)
+
+        writeMouse(0xf2)
+        waitForReadReady()
+        it.val.mode <- @BSys.in8(DATA_PORT)
+
+        // if succeeded, try enableing 5-button mode
+        if it.val.mode = SCROLL_WHEEL_MODE
+            writeMouse(0xf3)
+            writeMouse(200)
+
+            writeMouse(0xf3)
+            writeMouse(200)
+
+            writeMouse(0xf3)
+            writeMouse(80)
+
+            writeMouse(0xf2)
+            waitForReadReady()
+            it.val.mode <- @BSys.in8(DATA_PORT)    
+        ;
+
+        // Enable interrupts
+        waitForWriteReady()
+        @BSys.out8(CMD_PORT, 0x20)
+
+        waitForReadReady()
+        status u8 <- @BSys.in8(DATA_PORT)
+
+        // Enable mouse
+        status <- status | 0b0000_0010 // enable IRQ 12
+        status <- status & 0b1101_1111 // enable mouse clock
+
+        waitForWriteReady()
+        @BSys.out8(CMD_PORT, 0x60)
+
+        waitForWriteReady()
+        @BSys.out8(DATA_PORT, status)
+
+        // Enable data reporting
+        writeMouse(0xf4)
+
+        enableInterrupts()
+        it.val.currentStatusIndex <- 0
+    ;
+
+    handleInterrupt fun
+        // store received data in current slot
+        it.val.status[it.val.currentStatusIndex] <- @BSys.in8(DATA_PORT)
+
+        it.val.currentStatusIndex <- it.val.currentStatusIndex + 1
+        if it.val.mode = STANDARD_MODE and it.val.currentStatusIndex < 3: ret
+        if (it.val.mode = SCROLL_WHEEL_MODE or it.val.mode = 5_BUTTON_MODE) and it.val.currentStatusIndex < 4: ret
+
+        // received all the required data bytes, reset the counter
+        it.val.currentStatusIndex <- 0
+
+        // get standard pressed buttons
+        it.val.isPressedStates[0] <- it.val.status[0] &? 0b0000_0001
+        it.val.isPressedStates[1] <- it.val.status[0] &? 0b0000_0010
+        it.val.isPressedStates[2] <- it.val.status[0] &? 0b0000_0100
+
+        // get extended pressed buttons
+        if it.val.mode = 5_BUTTON_MODE
+            it.val.isPressedStates[3] <- it.val.status[3] &? 0b0001_0000
+            it.val.isPressedStates[4] <- it.val.status[3] &? 0b0010_0000
+        ;
+
+        // decode X delta
+        it.val.offsets[0] <- it.val.status[1]
+        if it.val.status[0] &? 0b0001_0000
+            it.val.offsets[0] <- it.val.offsets[0] | 0xffff_ff00
+        ;
+
+        // decode Y delta
+        it.val.offsets[1] <- it.val.status[2]
+        if it.val.status[0] &? 0b0010_0000
+            it.val.offsets[1] <- it.val.offsets[1] | 0xffff_ff00
+        ;
+
+        // decode scroll wheel delta
+        if it.val.mode = SCROLL_WHEEL_MODE
+            it.val.offsets[2] <- it.val.status[3] & 0b0111_1111
+            if it.val.status[3] &? 0b1000_0000
+                it.val.offsets[2] <- it.val.offsets[2] | 0xffff_ff80
+            ;
+        else if it.val.mode = 5_BUTTON_MODE
+            it.val.offsets[2] <- it.val.status[3] & 0b0000_0111
+            if it.val.status[3] &? 0b0000_1000
+                it.val.offsets[2] <- it.val.offsets[2] | 0xffff_fff8
+            ;
+        ;
+    ;
+
+    getButtonsState fun -> u32
+        state u32 <- 0
+        if it.val.isPressedStates[0]: state <- state | (1 << 0)
+        if it.val.isPressedStates[1]: state <- state | (1 << 1)
+        if it.val.isPressedStates[2]: state <- state | (1 << 2)
+        if it.val.isPressedStates[3]: state <- state | (1 << 3)
+        if it.val.isPressedStates[4]: state <- state | (1 << 4)
+
+        if it.val.offsets[2] > 0: state <- state | (1 << 5)
+        if it.val.offsets[2] < 0: state <- state | (1 << 6)
+
+        ret state
+    ;
+
+    getDeltaX fun -> s32
+        ret it.val.offsets[0]
+    ;
+
+    getDeltaY fun -> s32
+        ret it.val.offsets[1]
+    ;
+
+    resetState fun
+        rep i u32 <- 0, i < 3, i <- i + 1: it.val.offsets[i] <- 0
+    ;
+;

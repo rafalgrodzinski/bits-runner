@@ -3,7 +3,6 @@
 @import B
 @import BiosService
 @import DrvCmos
-@import DrvKeyboard
 @import Mem
 @import Storage
 @import Term
@@ -12,13 +11,24 @@
 CALL_REBOOT u32 <- 0x00
 CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_PRINT_CHARACTER u32 <- 0x01
-CALL_READ_ASCII u32 <- 0x07
+
+// Input
+CALL_INPUT_KEYBOARD_GET_STATE u32 <- 0x100
+CALL_INPUT_KEYBOARD_GET_ASCII u32 <- 0x101
+CALL_INPUT_MOUSE_GET_STATE u32 <- 0x110
 
 // Memory
 CALL_GET_INFO_MEM u32 <- 0x20
 
 // Storage
 CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
+
+// GFX
+CALL_GFX_SET_MODE u32 <- 0x300
+CALL_GFX_SWAP_BUFFERS u32 <- 0x310
+CALL_GFX_CLEAR_SCREEN u32 <- 0x320
+CALL_GFX_DRAW_PIXEL u32 <- 0x321
+CALL_GFX_DRAW_LINE u32 <- 0x322
 
 storageFs blob<@Storage.StorageFs>
 
@@ -33,8 +43,18 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         ret @DrvCmos.getTimestamp()
     else if eax = CALL_PRINT_CHARACTER
         @Term.printCharacter(ebx.u8, ecx.u8)
-    else if eax = CALL_READ_ASCII
-        ret @DrvKeyboard.readPressedAscii()
+    else if eax = CALL_INPUT_KEYBOARD_GET_STATE
+        // TODO
+    else if eax = CALL_INPUT_KEYBOARD_GET_ASCII
+        ascii u32 <- deviceKeyboard.getAscii()
+        deviceKeyboard.resetState()
+        ret ascii
+    else if eax = CALL_INPUT_MOUSE_GET_STATE
+        pMouseState ptr<data<s32>> <- ebx.a.ptr<data<s32>>
+        pMouseState.val[0] <- deviceMouse.getButtonsState()
+        pMouseState.val[1] <- deviceMouse.getDeltaX()
+        pMouseState.val[2] <- deviceMouse.getDeltaY()
+        deviceMouse.resetState()
     else if eax = CALL_GET_INFO_MEM
         pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
         pInfoMem.val[0] <- @Mem.getInfoTotalSize()
@@ -50,6 +70,20 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         entry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, pEntryPath.val)
         pInfo.val[0] <- entry.kind
         pInfo.val[1] <- entry.entrySize
+    else if eax = CALL_GFX_SET_MODE
+        deviceVideo.initMode.val({deviceVideo.adr}, ebx)
+    else if eax = CALL_GFX_SWAP_BUFFERS
+        deviceVideo.swapBuffers.val({deviceVideo.adr})
+    else if eax = CALL_GFX_CLEAR_SCREEN
+        deviceVideo.clear.val({deviceVideo.adr}, ebx)
+    else if eax = CALL_GFX_DRAW_PIXEL
+        deviceVideo.drawPixel.val({deviceVideo.adr}, ebx, ecx, edx)
+    else if eax = CALL_GFX_DRAW_LINE
+        x1 u32 <- ebx >> 16
+        y1 u32 <- ebx & 0xffff
+        x2 u32 <- ecx >> 16
+        y2 u32 <- ecx & 0xffff
+        deviceVideo.drawLine.val({deviceVideo.adr}, x1, y1, x2, y2, edx)
     ;
 
     ret 0

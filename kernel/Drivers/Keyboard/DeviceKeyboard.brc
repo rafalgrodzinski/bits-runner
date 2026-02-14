@@ -1,7 +1,9 @@
-@module DrvKeyboard
+@module DeviceKeyboard
 
-CMD_PORT u32 <- 0x64
-DATA_PORT u32 <- 0x60
+@import BSys
+
+CMD_PORT u16 <- 0x64
+DATA_PORT u16 <- 0x60
 
 CMD_SET_LED u8 <- 0xed
 CMD_ECHO u8 <- 0xee
@@ -139,59 +141,55 @@ SHIFTED_ASCII_MAP data<u8> <- {
 keyboardStatus data<bool, 128>
 pressedAscii u8
 
-in raw<"=r,m,~{eax},~{edx}">: portNum u32 -> u8
-    mov dx, $1
-    in al, dx
-    mov $0, al
-;
-
-out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
-    mov dx, $0
-    mov al, $1
-    out dx, al
-;
-
-@export handleInterrupt fun
-    // check if we have data
-    //if in(CMD_PORT) & 0x02.u8 != 1.u8: ret
-
-    scanCode u32 <- in(DATA_PORT)
-    isPressed bool <- scanCode & 0x80 = 0
-    scanCode <- scanCode & 0x7f // get rid of the flag
-
-    // ignore if there is not status update (eg, repeated key)
-    if keyboardStatus[scanCode] = isPressed: ret
-
-    keyboardStatus[scanCode] <- isPressed
-
-    // check range
-    if scanCode > ASCII_MAP.count or not isPressed
-        pressedAscii <- 0
-        ret
+@export DeviceKeyboard blob
+    init fun
     ;
 
-    if scanCode != 0
-        isShiftPressed bool <- keyboardStatus[KEY_L_SHIFT] or keyboardStatus[KEY_R_SHIFT]
-        pressedAscii <- if isShiftPressed: SHIFTED_ASCII_MAP[scanCode] else: ASCII_MAP[scanCode]
-    ;
+    handleInterrupt fun
+        // check if we have data
+        rep not @BSys.in8(CMD_PORT) &? 0x01:
 
-    if pressedAscii = 'a'.u8
-        out(DATA_PORT, CMD_SET_LED)
-        out(DATA_PORT, LED_CAPS_LOCK)
-        if in(DATA_PORT) != ACK
+        scanCode u32 <- @BSys.in8(DATA_PORT)
+
+        isPressed bool <- scanCode & 0x80 = 0
+        scanCode <- scanCode & 0x7f // get rid of the flag
+
+        // ignore if there is not status update (eg, repeated key)
+        if keyboardStatus[scanCode] = isPressed: ret
+
+        keyboardStatus[scanCode] <- isPressed
+
+        // check range
+        if scanCode > ASCII_MAP.count or not isPressed
+            pressedAscii <- 0
+            ret
+        ;
+
+        if scanCode != 0
+            isShiftPressed bool <- keyboardStatus[KEY_L_SHIFT] or keyboardStatus[KEY_R_SHIFT]
+            pressedAscii <- if isShiftPressed: SHIFTED_ASCII_MAP[scanCode] else: ASCII_MAP[scanCode]
+        ;
+
+        /*if pressedAscii = 'a'.u8
+            out(DATA_PORT, CMD_SET_LED)
             out(DATA_PORT, LED_CAPS_LOCK)
-        ;
-    else
-        out(DATA_PORT, CMD_SET_LED)
-        out(DATA_PORT, 0.u8)
-        if in(DATA_PORT) != ACK
+            if @BSys.in8(DATA_PORT) != ACK
+                out(DATA_PORT, LED_CAPS_LOCK)
+            ;
+        else
+            out(DATA_PORT, CMD_SET_LED)
             out(DATA_PORT, 0.u8)
-        ;
+            if @BSys.in8(DATA_PORT) != ACK
+                out(DATA_PORT, 0.u8)
+            ;
+        ;*/
     ;
-;
 
-@export readPressedAscii fun -> u32
-    value u32 <- pressedAscii.u32
-    pressedAscii <- 0
-    ret value
+    getAscii fun -> u32
+        ret pressedAscii
+    ;
+
+    resetState fun
+        pressedAscii <- 0
+    ;
 ;

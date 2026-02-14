@@ -16,87 +16,88 @@ CMD_F_INFO blob<@B.String>
     input blob<@B.String> <- @B.String("")
     cmd blob<@B.String> <- @B.String("")
     arg blob<@B.String> <- @B.String("")
+
     rep
         rep character != '\n'
-            character <- @Syscall.readPressedAscii().u8
-            if character = '\b': input.removeLast.val({input.adr})
-            else if character != '\n' and character != '\0': input.append.val({input.adr}, character)
+            character <- @Syscall.getAscii().u8
+            if character = '\b': input.removeLast()
+            else if character != '\n' and character != '\0': input.append(character)
 
             if character != '\0'
                 charString blob<@B.String> <- @B.StringForChar(character)
-                charString.print.val({charString.adr})
+                charString.print()
             ;
         ;
 
         // split into cmd and arg
-        loc u32 <- input.find.val({input.adr}, @B.String(" "))
+        loc u32 <- input.find(@B.String(" "))
         if loc > 0
-            cmd <- input.subStringTo.val({input.adr}, loc)
-            arg <- input.subStringFrom.val({input.adr}, loc + 1)
+            cmd <- input.subStringTo(loc)
+            arg <- input.subStringFrom(loc + 1)
         else
             cmd <- input
         ;
 
-        if cmd.isEqual.val({cmd.adr}, CMD_REBOOT)
+        if cmd.isEqual(CMD_REBOOT)
             message blob<@B.String> <- @B.String("Rebooting...")
-            message.println.val({message.adr})
+            message.println()
             @Syscall.reboot()
-        else if cmd.isEqual.val({cmd.adr}, CMD_TIME)
+        else if cmd.isEqual(CMD_TIME)
             timestamp u32 <- @Syscall.getTimestamp()
             message blob<@B.String> <- @B.StringForU32(timestamp)
-            message.println.val({message.adr})
-        else if cmd.isEqual.val({cmd.adr}, CMD_M_INFO)
+            message.println()
+        else if cmd.isEqual(CMD_M_INFO)
             info blob<@Syscall.InfoMem> <- @Syscall.getInfoMem()
             text blob<@B.String>
 
             text <- @B.String("Total size: ")
-            text.print.val({text.adr})
+            text.print()
             text <- @B.StringForU32(info.totalSize)
-            text.println.val({text.adr})
+            text.println()
 
             text <- @B.String("Total pages: ")
-            text.print.val({text.adr})
+            text.print()
             text <- @B.StringForU32(info.totalPages)
-            text.println.val({text.adr})
+            text.println()
 
             text <- @B.String("Free pages: ")
-            text.print.val({text.adr})
+            text.print()
             text <- @B.StringForU32(info.freePages)
-            text.println.val({text.adr})
+            text.println()
 
             text <- @B.String("Heap start: ")
-            text.print.val({text.adr})
+            text.print()
             text <- @B.StringForU32(info.heapStart)
-            text.println.val({text.adr})
+            text.println()
 
             text <- @B.String("Heap size: ")
-            text.print.val({text.adr})
+            text.print()
             text <- @B.StringForU32(info.heapSize)
-            text.println.val({text.adr})
+            text.println()
 
             text <- @B.String("Allocated bytes: ")
-            text.print.val({text.adr})
+            text.print()
             text <- @B.StringForU32(info.allocateBytes)
-            text.println.val({text.adr})
-        else if cmd.isEqual.val({cmd.adr}, CMD_F_INFO)
+            text.println()
+        else if cmd.isEqual(CMD_F_INFO)
             info blob<@Syscall.InfoFsEntry> <- @Syscall.getInfoFsEntry(arg)
             text blob<@B.String>
 
             text <- @B.String("Kind: ")
-            text.print.val({text.adr})
+            text.print()
             text <- @B.StringForU32(info.kind)
-            text.println.val({text.adr})
+            text.println()
 
             text <- @B.String("Size: ")
-            text.print.val({text.adr})
+            text.print()
             text <- @B.StringForU32(info.entrySize)
-            text.println.val({text.adr})
+            text.println()
         else
             message blob<@B.String> <- @B.String("Unknown command")
-            message.println.val({message.adr})
+            message.println()
         ;
 
         character <- '\0'
-        input.clear.val({input.adr})
+        input.clear()
     ;
 ;

@@ -1,0 +1,11 @@
+@export memset fun: aDest a, value u32, bytesCount u32
+    rep i u32 <- 0, i < bytesCount, i <- i + 1
+        aDest.ptr<data<u8>>.val[i] <- value.u8
+    ;
+;
+
+@export memcpy fun: aDest a, aSrc a, bytesCount u32
+    rep i u32 <- 0, i < bytesCount, i <- i + 1
+        aDest.ptr<data<u8>>.val[i] <- aSrc.ptr<data<u8>>.val[i]
+    ;
+;

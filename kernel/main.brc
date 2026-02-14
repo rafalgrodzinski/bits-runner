@@ -33,16 +33,17 @@ getEdx raw<"=r"> -> u32
     @BiosService.init(biosServiceAdr)
     @Sched.init(gdtTssAdr)
     @Mem.init()
-    @Int.init()
     @Term.init(@Term.MODE_80x25)
+    @Int.init()
 
     @Term.printString("Initializing Bits Runner...\n", @Term.FOREGROUND_GRAY)
     storageFs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
     @Int.initSyscallHandler(storageFs)
     @Term.printString("All ready, welcome to Bits Runner!\n", @Term.FOREGROUND_GREEN)
 
-    // Load shell
-    appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/SHELL.BIN"))
+    // Load app
+    //appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/SHELL.BIN"))
+    appEntry blob<@Storage.StorageFsEntry> <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/VDEMO.BIN"))
     pApp ptr<data<u8>> <- @Mem.allocateBytes(appEntry.entrySize).vadr.ptr<data<u8>>
 
     storageFs.readEntry.val({storageFs.adr}, appEntry, pApp)

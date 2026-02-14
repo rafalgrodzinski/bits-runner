@@ -34,9 +34,16 @@ check "Failed to build kernel"
 echo
 
 ## Shell
-#echo "🛠️ Building shell..."
-./shell/build.sh
+echo "🛠️ Building shell..."
+./apps/shell/build.sh
 check "Failed to build shell"
+
+echo
+
+## VDemo
+echo "🛠️ Building vdemo..."
+./apps/vdemo/build.sh
+check "Failed to build vdemo"
 
 echo
 
@@ -56,12 +63,19 @@ diskutil eject "${DISK_FDD}" &&
 
 # Mount and copy files
 FDD_MOUNT_POINT=$(hdiutil attach fdd.img | grep -o '\/Volumes\/.*') &&
+# copy system files
 cp bios_svc.bin "${FDD_MOUNT_POINT}/" &&
 cp kernel.bin "${FDD_MOUNT_POINT}/" &&
-cp shell.bin "${FDD_MOUNT_POINT}/" &&
+# copy apps
+mkdir "${FDD_MOUNT_POINT}/apps" &&
+cp shell.bin "${FDD_MOUNT_POINT}/apps/" &&
+cp vdemo.bin "${FDD_MOUNT_POINT}/apps/" &&
+
+#cp shell.bin "${FDD_MOUNT_POINT}/" &&
 # Create a dummy folder, just for testing
-mkdir "${FDD_MOUNT_POINT}/test" &&
-cp kernel/main.brc "${FDD_MOUNT_POINT}/test/" &&
+#mkdir "${FDD_MOUNT_POINT}/test" &&
+#cp kernel/main.brc "${FDD_MOUNT_POINT}/test/" &&
+
 hdiutil eject "${FDD_MOUNT_POINT}"
 check "Failed to create FDD image"
 
@@ -90,16 +104,27 @@ diskutil eject "${DISK_HDD}" &&
 
 # Mount and copy files to the first partition
 HDD_MOUNT_POINT=$(hdiutil attach hdd.img | grep -o '\/Volumes\/.*' | head -1) &&
+# copy system files
 cp bios_svc.bin "${HDD_MOUNT_POINT}/" &&
 cp kernel.bin "${HDD_MOUNT_POINT}/" &&
-cp shell.bin "${HDD_MOUNT_POINT}/" &&
+# copy apps
+mkdir "${HDD_MOUNT_POINT}/apps" &&
+cp shell.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
+
+#cp shell.bin "${HDD_MOUNT_POINT}/" &&
 hdiutil eject "${DISK_HDD}" &&
 
 # Mount and copy files to the second partition
 HDD_MOUNT_POINT=$(hdiutil attach hdd.img | grep -o '\/Volumes\/.*' | tail -1) &&
+# copy system files
 cp bios_svc.bin "${HDD_MOUNT_POINT}/" &&
 cp kernel.bin "${HDD_MOUNT_POINT}/" &&
-cp shell.bin "${HDD_MOUNT_POINT}/" &&
+# copy apps
+mkdir "${HDD_MOUNT_POINT}/apps" &&
+cp shell.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
+#cp shell.bin "${HDD_MOUNT_POINT}/" &&
 hdiutil eject "${DISK_HDD}" &&
 check "Failed to create HDD image"
 
