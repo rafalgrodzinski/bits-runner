@@ -30,6 +30,9 @@ CALL_GFX_CLEAR_SCREEN u32 <- 0x320
 CALL_GFX_DRAW_PIXEL u32 <- 0x321
 CALL_GFX_DRAW_LINE u32 <- 0x322
 
+// Process
+CALL_PROCESS_YIELD u32 <- 0x400
+
 storageFs blob<@Storage.StorageFs>
 
 @export initSyscallHandler fun: _storageFs blob<@Storage.StorageFs>
@@ -84,6 +87,7 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         x2 u32 <- ecx >> 16
         y2 u32 <- ecx & 0xffff
         deviceVideo.drawLine.val({deviceVideo.adr}, x1, y1, x2, y2, edx)
+    else if eax = CALL_PROCESS_YIELD
     ;
 
     ret 0
