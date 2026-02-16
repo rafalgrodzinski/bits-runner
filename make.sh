@@ -47,6 +47,13 @@ check "Failed to build vdemo"
 
 echo
 
+## VDemo
+echo "🛠️ Building count..."
+./apps/count/build.sh
+check "Failed to build count"
+
+echo
+
 # Create floppy image
 echo "🛠️ Building FDD image..."
 # Generate empty image file
@@ -70,11 +77,7 @@ cp kernel.bin "${FDD_MOUNT_POINT}/" &&
 mkdir "${FDD_MOUNT_POINT}/apps" &&
 cp shell.bin "${FDD_MOUNT_POINT}/apps/" &&
 cp vdemo.bin "${FDD_MOUNT_POINT}/apps/" &&
-
-#cp shell.bin "${FDD_MOUNT_POINT}/" &&
-# Create a dummy folder, just for testing
-#mkdir "${FDD_MOUNT_POINT}/test" &&
-#cp kernel/main.brc "${FDD_MOUNT_POINT}/test/" &&
+cp count.bin "${FDD_MOUNT_POINT}/apps/" &&
 
 hdiutil eject "${FDD_MOUNT_POINT}"
 check "Failed to create FDD image"
@@ -111,9 +114,11 @@ cp kernel.bin "${HDD_MOUNT_POINT}/" &&
 mkdir "${HDD_MOUNT_POINT}/apps" &&
 cp shell.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp count.bin "${HDD_MOUNT_POINT}/" &&
+cp count.bin "${HDD_MOUNT_POINT}/" &&
 
-#cp shell.bin "${HDD_MOUNT_POINT}/" &&
 hdiutil eject "${DISK_HDD}" &&
+check "Failed to create HDD image"
 
 # Mount and copy files to the second partition
 HDD_MOUNT_POINT=$(hdiutil attach hdd.img | grep -o '\/Volumes\/.*' | tail -1) &&
@@ -124,7 +129,7 @@ cp kernel.bin "${HDD_MOUNT_POINT}/" &&
 mkdir "${HDD_MOUNT_POINT}/apps" &&
 cp shell.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
-#cp shell.bin "${HDD_MOUNT_POINT}/" &&
+
 hdiutil eject "${DISK_HDD}" &&
 check "Failed to create HDD image"
 

@@ -55,12 +55,16 @@ setTss raw<"m,~{eax}">: gdtEntry u32
 tss blob<Tss>
 pGdtTss ptr<data<u8>>
 
+processesCount u32 <- 0
+currentProcess u32 <- 8
+pProcesses data<ptr<blob<Process>>, 8>
+
 @export init fun: gdtTssAdr u32
     pGdtTss <- { gdtTssAdr }
     tss.ss0 <- GDT_DATA
 ;
 
-@export createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32 -> ptr<blob<Process>>
+@export createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32// -> ptr<blob<Process>>
     pCurrentPageDirectory ptr<data<u32>> <- {getCr3()}
 
     pProcess ptr<blob<Process>> <- @Mem.allocateAlignedBytes(blob<Process>.size, 0x1000).vadr.ptr<blob<Process>>
@@ -118,7 +122,9 @@ pGdtTss ptr<data<u8>>
     setCr3(oldCr3)
     enableInterrupts()
 
-    ret pProcess
+    //ret pProcess
+    pProcesses[processesCount] <- pProcess
+    processesCount <- processesCount + 1
 ;
 
 switchToProcessRaw raw<"m,m,m">: esp u32, cr3 u32, gdtUserData u32
@@ -139,4 +145,12 @@ switchToProcessRaw raw<"m,m,m">: esp u32, cr3 u32, gdtUserData u32
     tss.esp0 <- pProcess.val.esp0
     setTss(GDT_TSS)
     switchToProcessRaw(pProcess.val.esp, pProcess.val.cr3, GDT_USER_DATA)
+;
+
+@export switchToNextProcess fun
+    if processesCount = 0: ret
+
+    currentProcess <- currentProcess + 1
+    if currentProcess >= processesCount: currentProcess <- 0
+    switchToProcess(pProcesses[currentProcess])
 ;
