@@ -33,8 +33,8 @@ getEdx raw<"=r"> -> u32
     @BiosService.init(biosServiceAdr)
     @Sched.init(gdtTssAdr)
     @Mem.init()
-    @Term.init(@Term.MODE_80x25)
     @Int.init()
+    @Term.init(@Term.MODE_80x25)
 
     @Term.printString("Initializing Bits Runner...\n", @Term.FOREGROUND_GRAY)
     storageFs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
@@ -49,16 +49,16 @@ getEdx raw<"=r"> -> u32
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/SHELL.BIN"))
     pApp <- @Mem.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
-    @Sched.createProcess(pApp, fsEntry.entrySize)
+    pShell ptr<blob<@Sched.Process>> <- @Sched.createProcess(pApp, fsEntry.entrySize)
 
     // Load count
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/COUNT.BIN"))
     pApp <- @Mem.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
-    @Sched.createProcess(pApp, fsEntry.entrySize)
+    pCount ptr<blob<@Sched.Process>> <- @Sched.createProcess(pApp, fsEntry.entrySize)
 
-    //
     @Sched.switchToNextProcess()
+    //@Sched.switchToProcess(pShell)
 
     rep
     ;

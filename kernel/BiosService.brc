@@ -35,7 +35,7 @@ rebootRaw raw<"m,m,~{eax}">: biosServiceAdr u32/*$0*/, serviceNum u8/*$1*/
 //
 
 // video mode
-setVideoModeRaw raw<"m, m, m">: biosServiceAdr u32/*$0*/, serviceNum u8/*$1*/, modeNum u8/*$2*/
+setVideoModeRaw raw<"m,m,m,~{eax}">: biosServiceAdr u32/*$0*/, serviceNum u8/*$1*/, modeNum u8/*$2*/
     mov ah, $1
     mov al, $2
     call $0
