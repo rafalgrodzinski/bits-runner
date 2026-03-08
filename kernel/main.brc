@@ -58,7 +58,6 @@ getEdx raw<"=r"> -> u32
     pCount ptr<blob<@Sched.Process>> <- @Sched.createProcess(pApp, fsEntry.entrySize)
 
     @Sched.switchToNextProcess()
-    //@Sched.switchToProcess(pShell)
 
     rep
     ;

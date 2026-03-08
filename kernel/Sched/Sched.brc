@@ -1,10 +1,13 @@
 @module Sched
 
 @import Mem
+@import Term
 
-KERNEL_ADR u32 <- 0x8000_0000 // @ 3GiB
-KERNEL_STACK_END_ADR u32 <- 0xc000_0000
-KERNEL_STACK_SIZE u32 <- 256 * 1024 // 256KiB
+KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
+//KERNEL_STACK_END_ADR u32 <- 0xc000_0000 // @ 3GiB
+KERNEL_STACK_END_ADR u32 <- 0x1_0000_0000 - 0x40_0000 // @ 4GiB - 4MiB (for pages directory self reference) ffbf_ffff
+// (0xFF800000) 0xFFBC0000 - 0xFFC0_0000 (ffbf_ffff)
+KERNEL_STACK_SIZE u32 <- 256 * 1024 // 256KiB 4_0000
 
 USER_ADR u32 <- 0x40_0000 // @ 4 MiB
 USER_STACK_END_ADR u32 <- 0x8000_0000 // just bellow kernel @ 3GiB
@@ -14,6 +17,9 @@ GDT_DATA u32 <- 0x10
 GDT_USER_CODE u32 <- 0x28 | 0x03
 GDT_USER_DATA u32 <- 0x30 | 0x03
 GDT_TSS u32 <- 0x38
+
+PROCESS_STATE_NOT_STARTED u32 <- 0
+PROCESS_STATE_RUNNING u32 <- 1
 
 Tss blob
     unused0 u32
@@ -25,10 +31,9 @@ Tss blob
 @export Process blob
     pageDirectory data<u32, 1024>
     cr3 u32
-    eip u32
     esp u32
     esp0 u32
-    pid u32
+    state u32
 ;
 
 getCr3 raw<"=r"> -> u32
@@ -37,6 +42,10 @@ getCr3 raw<"=r"> -> u32
 
 setCr3 raw<"r">: adr u32
     mov cr3, $0
+;
+
+getEsp raw<"=r"> -> u32
+    mov $0, esp
 ;
 
 disableInterrupts raw<"">
@@ -53,43 +62,14 @@ setTss raw<"m,~{eax}">: gdtEntry u32
 ;
 
 tss blob<Tss>
-pGdtTss ptr<data<u8>>
 
 processesCount u32 <- 0
 currentProcess u32 <- 8
 pProcesses data<ptr<blob<Process>>, 8>
 
 @export init fun: gdtTssAdr u32
-    pGdtTss <- { gdtTssAdr }
     tss.ss0 <- GDT_DATA
-;
-
-@export createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32// -> ptr<blob<Process>>
-    pCurrentPageDirectory ptr<data<u32>> <- {getCr3()}
-
-    pProcess ptr<blob<Process>> <- @Mem.allocateAlignedBytes(blob<Process>.size, 0x1000).vadr.ptr<blob<Process>>
-    pProcess.val.eip <- USER_ADR
-    pProcess.val.esp <- USER_STACK_END_ADR - 5 * u32.size // 5 slots for iret frame
-    pProcess.val.esp0 <- KERNEL_STACK_END_ADR
-    pProcess.val.cr3 <- @Mem.lAdrToPAdr(pProcess.val.pageDirectory.adr.u32)
-    pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x13 // PCD & RW & P
-
-    // Setup new page directory
-
-    // copy first identity page directory
-    pProcess.val.pageDirectory[0] <- pCurrentPageDirectory.val[0]
-
-    // copy kernel page directories
-    rep i u32 <- 512, i < 1023, i <- i + 1: pProcess.val.pageDirectory[i] <- pCurrentPageDirectory.val[i]
-
-    // clear user page tables
-    rep i u32 <- 1, i < 512, i <- i + 1: pProcess.val.pageDirectory[i] <-  0
-
-    // user memory
-    @Mem.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, imageSize, USER_ADR)
-
-    // user stack memory
-    @Mem.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, USER_STACK_SIZE, USER_STACK_END_ADR - USER_STACK_SIZE)
+    pGdtTss ptr<data<u8>> <- { gdtTssAdr }
 
     pGdtTss.val[0] <- (blob<Tss>.size & 0x0000_00ff)
     pGdtTss.val[1] <- (blob<Tss>.size & 0x0000_ff00) >> 8
@@ -99,6 +79,45 @@ pProcesses data<ptr<blob<Process>>, 8>
     pGdtTss.val[5] <- 0b1000_1001 // <7: present> <6-5: Priviledge Level> <4: 0 for TSS> <3: 32bit> <2-1: 0 for TSS> <0: 1 for TSS>
     pGdtTss.val[6] <- (blob<Tss>.size & 0x000f_0000) >> 16
     pGdtTss.val[7] <- ((tss.adr & 0xff00_0000) >> 24).u8
+
+    setTss(GDT_TSS)
+;
+
+@export createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32 -> ptr<blob<Process>>
+    pCurrentPageDirectory ptr<data<u32>> <- {getCr3()}
+
+    pProcess ptr<blob<Process>> <- @Mem.allocateAlignedBytes(blob<Process>.size, 0x1000).vadr.ptr<blob<Process>>
+    pProcess.val.state <- PROCESS_STATE_NOT_STARTED
+
+    pProcess.val.cr3 <- @Mem.lAdrToPAdr(pProcess.val.pageDirectory.adr.u32)
+    pProcess.val.esp <- USER_STACK_END_ADR - 5 * u32.size // 5 slots for iret frame
+    pProcess.val.esp0 <- KERNEL_STACK_END_ADR
+
+    // Setup new page directory
+
+    // copy first identity page directory
+    pProcess.val.pageDirectory[0] <- pCurrentPageDirectory.val[0]
+
+    // copy kernel page directories
+    rep i u32 <- 512, i < 1022, i <- i + 1: pProcess.val.pageDirectory[i] <- pCurrentPageDirectory.val[i]
+
+    // clear user page tables
+    rep i u32 <- 1, i < 512, i <- i + 1: pProcess.val.pageDirectory[i] <-  0
+
+    // clear kernel stack pages table
+    pProcess.val.pageDirectory[1022] <- 0
+
+    // self-refence pages directory
+    pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x13 // PCD & RW & P
+
+    // allocate user memory pages
+    @Mem.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, imageSize, USER_ADR)
+
+    // allocate user stack memory pages
+    @Mem.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, USER_STACK_SIZE, USER_STACK_END_ADR - USER_STACK_SIZE)
+
+    // allocate kernel stack memory pages
+    @Mem.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, KERNEL_STACK_SIZE, KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE)
 
     // Copy user image to target address
     disableInterrupts()
@@ -111,9 +130,9 @@ pProcesses data<ptr<blob<Process>>, 8>
     pStack.val[3] <- USER_STACK_END_ADR
     pStack.val[2] <- 0x0202 // eflags IF & 1
     pStack.val[1] <- GDT_USER_CODE // cs
-    pStack.val[0] <- pProcess.val.eip // eip
+    pStack.val[0] <- USER_ADR
 
-    imageTargetAddrss ptr<data<u8>> <- { pProcess.val.eip }
+    imageTargetAddrss ptr<data<u8>> <- { USER_ADR }
 
     rep i u32 <- 0, i < imageSize, i <- i + 1
         imageTargetAddrss.val[i] <- imageSourceAddress.val[i]
@@ -122,14 +141,16 @@ pProcesses data<ptr<blob<Process>>, 8>
     setCr3(oldCr3)
     enableInterrupts()
 
-    //ret pProcess
     pProcesses[processesCount] <- pProcess
     processesCount <- processesCount + 1
+
+    ret pProcess
 ;
 
-switchToProcessRaw raw<"m,m,m">: esp u32, cr3 u32, gdtUserData u32
-    cli
-    mov ax, $2
+startUserProcessRaw raw<"r,r,r,~{eax}">: esp u32/*$0*/, cr3 u32/*$1*/, gdtUserData u32/*$2*/
+    //xchg bx, bx
+
+    mov eax, $2
     mov ds, ax
     mov es, ax
     mov fs, ax
@@ -137,20 +158,41 @@ switchToProcessRaw raw<"m,m,m">: esp u32, cr3 u32, gdtUserData u32
 
     mov eax, $1
     mov cr3, eax
-    mov esp, $0
+
+    mov eax, $0
+    mov esp, eax
+
     iretd
 ;
 
-@export switchToProcess fun: pProcess ptr<blob<Process>>
-    tss.esp0 <- pProcess.val.esp0
-    setTss(GDT_TSS)
-    switchToProcessRaw(pProcess.val.esp, pProcess.val.cr3, GDT_USER_DATA)
+resumeKernelProcessRaw raw<"r,r,~{eax}">: esp0 u32, cr3 u32 //, eip0 u32
+    //xchg bx, bx
+
+    mov eax, $1
+    mov cr3, eax
+
+    mov eax, $0
+    mov esp, eax
 ;
 
 @export switchToNextProcess fun
     if processesCount = 0: ret
 
+    disableInterrupts()
+    if currentProcess < processesCount
+        pProcesses[currentProcess].val.esp0 <- getEsp()
+    ;
+
     currentProcess <- currentProcess + 1
     if currentProcess >= processesCount: currentProcess <- 0
-    switchToProcess(pProcesses[currentProcess])
+
+    pCurrentProcess ptr<blob<Process>> <- pProcesses[currentProcess]
+    if pCurrentProcess.val.state = PROCESS_STATE_NOT_STARTED
+        tss.esp0 <- pCurrentProcess.val.esp0
+        pCurrentProcess.val.state <- PROCESS_STATE_RUNNING
+        startUserProcessRaw(pCurrentProcess.val.esp, pCurrentProcess.val.cr3, GDT_USER_DATA)
+    else
+        resumeKernelProcessRaw(pCurrentProcess.val.esp0, pCurrentProcess.val.cr3)
+    ;
+    enableInterrupts()
 ;
