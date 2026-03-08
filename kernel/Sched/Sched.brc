@@ -1,16 +1,13 @@
 @module Sched
 
 @import Mem
-@import Term
 
 KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
-//KERNEL_STACK_END_ADR u32 <- 0xc000_0000 // @ 3GiB
-KERNEL_STACK_END_ADR u32 <- 0x1_0000_0000 - 0x40_0000 // @ 4GiB - 4MiB (for pages directory self reference) ffbf_ffff
-// (0xFF800000) 0xFFBC0000 - 0xFFC0_0000 (ffbf_ffff)
+KERNEL_STACK_END_ADR u32 <- 0x1_0000_0000 - 0x40_0000 // @ 4GiB - 4MiB (for pages directory self reference)
 KERNEL_STACK_SIZE u32 <- 256 * 1024 // 256KiB 4_0000
 
 USER_ADR u32 <- 0x40_0000 // @ 4 MiB
-USER_STACK_END_ADR u32 <- 0x8000_0000 // just bellow kernel @ 3GiB
+USER_STACK_END_ADR u32 <- 0x8000_0000 // just bellow kernel @ 2GiB
 USER_STACK_SIZE u32 <- 256 * 1024 // 256KiB
 
 GDT_DATA u32 <- 0x10
@@ -148,8 +145,6 @@ pProcesses data<ptr<blob<Process>>, 8>
 ;
 
 startUserProcessRaw raw<"r,r,r,~{eax}">: esp u32/*$0*/, cr3 u32/*$1*/, gdtUserData u32/*$2*/
-    //xchg bx, bx
-
     mov eax, $2
     mov ds, ax
     mov es, ax
@@ -166,8 +161,6 @@ startUserProcessRaw raw<"r,r,r,~{eax}">: esp u32/*$0*/, cr3 u32/*$1*/, gdtUserDa
 ;
 
 resumeKernelProcessRaw raw<"r,r,~{eax}">: esp0 u32, cr3 u32 //, eip0 u32
-    //xchg bx, bx
-
     mov eax, $1
     mov cr3, eax
 
