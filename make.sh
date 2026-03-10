@@ -114,8 +114,7 @@ cp kernel.bin "${HDD_MOUNT_POINT}/" &&
 mkdir "${HDD_MOUNT_POINT}/apps" &&
 cp shell.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
-cp count.bin "${HDD_MOUNT_POINT}/" &&
-cp count.bin "${HDD_MOUNT_POINT}/" &&
+cp count.bin "${HDD_MOUNT_POINT}/apps/" &&
 
 hdiutil eject "${DISK_HDD}" &&
 check "Failed to create HDD image"
@@ -129,6 +128,7 @@ cp kernel.bin "${HDD_MOUNT_POINT}/" &&
 mkdir "${HDD_MOUNT_POINT}/apps" &&
 cp shell.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp count.bin "${HDD_MOUNT_POINT}/apps/" &&
 
 hdiutil eject "${DISK_HDD}" &&
 check "Failed to create HDD image"

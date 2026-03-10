@@ -81,7 +81,16 @@ pProcesses data<ptr<blob<Process>>, 8>
 ;
 
 @export createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32 -> ptr<blob<Process>>
-    pCurrentPageDirectory ptr<data<u32>> <- {getCr3()}
+    pCurrentPageDirectory ptr<data<u32>>
+    oldCr3 u32
+
+    if currentProcess < processesCount
+        oldCr3 <- pProcesses[currentProcess].val.cr3
+        pCurrentPageDirectory <- { pProcesses[currentProcess].val.pageDirectory.adr }
+    else
+        oldCr3 <- getCr3()
+        pCurrentPageDirectory <- { getCr3() }
+    ;
 
     pProcess ptr<blob<Process>> <- @Mem.allocateAlignedBytes(blob<Process>.size, 0x1000).vadr.ptr<blob<Process>>
     pProcess.val.state <- PROCESS_STATE_NOT_STARTED
@@ -118,7 +127,6 @@ pProcesses data<ptr<blob<Process>>, 8>
 
     // Copy user image to target address
     disableInterrupts()
-    oldCr3 u32 <- getCr3()
     setCr3(pProcess.val.cr3)
 
     // setup iret frame
