@@ -100,6 +100,14 @@ flushTlb raw<"~{eax}">
     if freePagesCount < requestedPagesCount: ret 0 
 
     remainingPagesCount u32 <- requestedPagesCount
+
+    disableInterrupts()
+    // use that last current directory page to self-reference the new directory tables
+    oldSelfReference u32 <- pCurrentPageDirectory.val[1023]
+    selfReference u32 <- (lAdrToPAdr(pPageDirectory.vadr.u32) & 0xffff_f000) | 0b10111 //0x13 // PCD & RW & P
+    pCurrentPageDirectory.val[1023] <- selfReference
+    flushTlb()
+
     rep i u32 <- 0, remainingPagesCount > 0, i <- i + 1
         if pMemLayout.val.memPages[i] = 0.u8
             pageIndex u32 <- requestedPagesCount - remainingPagesCount
@@ -108,6 +116,11 @@ flushTlb raw<"~{eax}">
             remainingPagesCount <- remainingPagesCount - 1
         ;
     ;
+
+    // and restore the original self-reference
+    pCurrentPageDirectory.val[1023] <- oldSelfReference
+    flushTlb()
+    enableInterrupts()
 
     ret requestedPagesCount * pMemLayout.val.pageSize
 ;
@@ -121,22 +134,13 @@ registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory pt
     if pPageDirectory.val[directoryIndex] & 0x01 = 0
         pPageTable ptr<data<u32>> <- allocateAlignedBytes(u32.size * 1024, 0x1000).vadr.ptr<data<u32>>
         rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- 0
-        pPageDirectory.val[directoryIndex] <- lAdrToPAdr(pPageTable.vadr.u32) | 0b111
+        pPageDirectory.val[directoryIndex] <- (lAdrToPAdr(pPageTable.vadr.u32) & 0xffff_f000) | 0b10111
+        flushTlb()
     ;
 
-    disableInterrupts()
-    // use that last current directory page to self-reference the new directory tables
-    oldSelfReference u32 <- pCurrentPageDirectory.val[1023]
-    selfReference u32 <- lAdrToPAdr(pPageDirectory.vadr.u32) | 0x13 // PCD & RW & P
-    pCurrentPageDirectory.val[1023] <- selfReference
-    flushTlb()
     // update new table entries relative to the last directory entry
     pPageTables ptr<data<u32>> <- { 0xffc0_0000 }
-    pPageTables.val[directoryIndex * 0x400 + tableIndex] <- (page * pMemLayout.val.pageSize) | 0b111
-    // and restore the original self-reference
-    pCurrentPageDirectory.val[1023] <- oldSelfReference
-    flushTlb()
-    enableInterrupts()
+    pPageTables.val[directoryIndex * 0x400 + tableIndex] <- ((page * pMemLayout.val.pageSize) & 0xffff_f000) | 0b10111
 ;
 
 @export lAdrToPAdr fun: lAdr u32 -> u32

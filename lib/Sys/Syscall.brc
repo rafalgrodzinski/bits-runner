@@ -20,6 +20,9 @@ CALL_GFX_CLEAR_SCREEN u32 <- 0x320
 CALL_GFX_DRAW_PIXEL u32 <- 0x321
 CALL_GFX_DRAW_LINE u32 <- 0x322
 
+// Process
+CALL_PROCESS_YIELD u32 <- 0x400
+
 @export GFX_MODE_640x480x4 u32 <- 0x00
 @export GFX_MODE_320x240x8 u32 <- 0x01
 
@@ -104,4 +107,9 @@ syscallRaw raw<"=r,m,m,m,m,~{eax},~{ebx},~{ecx},~{edx}">: syscallNum u32/*$1*/, 
     p1 u32 <- (x1 << 16) | (y1 & 0xffff)
     p2 u32 <- (x2 << 16) | (y2 & 0xffff)
     syscallRaw(CALL_GFX_DRAW_LINE, p1, p2, color)
+;
+
+// Process
+@export processYield fun
+    syscallRaw(CALL_PROCESS_YIELD, 0, 0, 0)
 ;

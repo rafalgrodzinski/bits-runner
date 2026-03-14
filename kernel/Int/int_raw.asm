@@ -11,6 +11,8 @@ extern Int.handleInterrupt
 %define GDT_CODE_PROTECTED_MODE 0x08
 %define ISR_OFFSET_HIGH 0x80000000 >> 16
 
+%define GDT_KERNEL_DATA 0x10
+
 ;
 ; IDT (Interrupt Descriptor Table)
 idt_descriptor_protected_mode:
@@ -469,6 +471,19 @@ interrupt_handler:
     pushad
     mov ebp, esp
 
+    ; Switch to kernel segments
+    push ds
+    push es
+    push fs
+    push gs
+
+    mov ax, GDT_KERNEL_DATA
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; Push arguments
     push dword .info
     push dword .interrupt
     push dword .edx
@@ -477,12 +492,23 @@ interrupt_handler:
     push dword .eax
 
     call Int.handleInterrupt
+
+    ; Store return value
     mov .eax, eax
 
     ; Acknowledge interrupt
     mov al, 0x20
     out PIC1_CMD_PORT, al
     out PIC2_CMD_PORT, al
+
+    ; Skip pushed arguments
+    add esp, 4 * 6
+
+    ; Restore segments
+    pop gs
+    pop fs
+    pop es
+    pop ds
 
     mov esp, ebp
     popad

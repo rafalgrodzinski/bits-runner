@@ -36,6 +36,8 @@ readMouse fun
 ;
 
 @export start fun
+    @B.String("vdemo.bin >").println()
+
     rep
              if demoMode = 0: demo_0()
         else if demoMode = 1: demo_1()

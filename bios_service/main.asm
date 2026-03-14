@@ -377,7 +377,8 @@ init_memory_layout_32:
     cmp eax, KERNEL_PHY_ADR
     jb .not_kernel_memory
     mov ebx, KERNEL_PHY_ADR
-    add ebx, .kernel_size
+    ;add ebx, .kernel_size
+    add ebx, 0x100000 ; Hardcode 1MiB for image size + heap
     cmp eax, ebx
     jnb .not_kernel_memory
     mov al, 1

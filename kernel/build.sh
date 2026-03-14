@@ -53,7 +53,7 @@ SOURCES_DIRS=(
 
 for SOURCES_DIR in "${SOURCES_DIRS[@]}"; do
     # find .brc files (except for BSys.brc, cause it is specific per system)
-    FILES=`find "${SOURCES_DIR}" -name *.brc ! -name "BSys.brc" -type f`
+    FILES=`find "${SOURCES_DIR}" -name *.brc ! -name "BSys.brc" ! -name "*Storage*.brc" -type f | sort`
     for FILE in ${FILES}; do
         # and add them to the list
         SOURCES+=("${FILE}")
@@ -61,6 +61,14 @@ for SOURCES_DIR in "${SOURCES_DIRS[@]}"; do
 done
 # and add the Bits Runner specific BSys.brc
 SOURCES+=("${SCRIPT_DIR}/../lib/B/BSys.brc")
+
+# Storage files need to be specifically ordered
+SOURCES+=("${SCRIPT_DIR}/Storage/Storage.brc")
+SOURCES+=("${SCRIPT_DIR}/Storage/StorageDevice/StorageDevice.brc")
+SOURCES+=("${SCRIPT_DIR}/Storage/StorageDevice/BiosBootStorageDevice.brc")
+SOURCES+=("${SCRIPT_DIR}/Storage/StorageArea/StorageArea.brc")
+SOURCES+=("${SCRIPT_DIR}/Storage/StorageFs/StorageFs.brc")
+SOURCES+=("${SCRIPT_DIR}/Storage/StorageFs/StorageFsFat.brc")
 
 # build the source
 brb ${FLAGS[@]} ${SOURCES[@]}
