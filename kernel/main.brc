@@ -45,17 +45,17 @@ getEdx raw<"=r"> -> u32
     fsEntry blob<@Storage.StorageFsEntry>
     pApp ptr<data<u8>>
 
+    // Load count
+    fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/COUNT.BIN"))
+    pApp <- @Mem.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
+    storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
+    @Sched.createProcess(pApp, fsEntry.entrySize)
+
     // Load shell
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/SHELL.BIN"))
     pApp <- @Mem.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
     @Sched.createProcess(pApp, fsEntry.entrySize)
-
-    // Load count
-    fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/COUNT.BIN"))
-    pApp <- @Mem.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
-    storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
-    //@Sched.createProcess(pApp, fsEntry.entrySize)
 
     // Load vdemo
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/VDEMO.BIN"))
