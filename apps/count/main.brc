@@ -2,6 +2,8 @@
 @import Syscall
 
 @export start fun
+    @B.String("count.bin >").println()
+
     num u32 <- 0
     text blob<@B.String>
     rep

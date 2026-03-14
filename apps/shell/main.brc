@@ -8,6 +8,8 @@ CMD_F_INFO blob<@B.String>
 CMD_YIELD blob<@B.String>
 
 @export start fun
+    @B.String("shell.bin >").println()
+
     CMD_REBOOT <- @B.String("reboot")
     CMD_TIME <- @B.String("time")
     CMD_M_INFO <- @B.String("minfo")
