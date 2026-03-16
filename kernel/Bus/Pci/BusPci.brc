@@ -10,15 +10,8 @@ PCI_DEVICE_TYPE_NORMAL u8 <- 0
 PCI_DEVICE_TYPE_PCI_BRIDGE u8 <- 1
 PCI_DEVICE_TYPE_CARDBUS_BRIDGE u8 <- 2
 
-/*
-blob BusDevicePci
-    vendorId u16
-    deviceId u16
-    class u8
-    subclass u8
-    headerType u8
-;
-*/
+@export devicesPciCount u32
+@export devicesPci data<blob<DevicePci>>
 
 @export BusPci blob
     scan fun
@@ -72,10 +65,12 @@ blob BusDevicePci
         busNum u8,
         deviceNum u8,
         funNum u8,
+
         vendorId u16,
         deviceId u16,
         class u8,
         subclass u8,
+
         bar0 u32,
         bar1 u32,
         bar2 u32,
@@ -83,37 +78,8 @@ blob BusDevicePci
         bar4 u32,
         bar5 u32
 
-        @Term.printHex(busNum, @Term.FOREGROUND_GRAY)
-        @Term.printString(" ", @Term.FOREGROUND_GRAY)
-
-        @Term.printHex(deviceNum, @Term.FOREGROUND_GRAY)
-        @Term.printString(": ", @Term.FOREGROUND_GRAY)
-
-        @Term.printHex(funNum, @Term.FOREGROUND_GRAY)
-        @Term.printString(" ", @Term.FOREGROUND_GRAY)
-
-        @Term.printHex(vendorId, @Term.FOREGROUND_RED)
-        @Term.printString(" ", @Term.FOREGROUND_GRAY)
-
-        @Term.printHex(deviceId, @Term.FOREGROUND_RED)
-        @Term.printString(" ", @Term.FOREGROUND_GRAY)
-
-        @Term.printHex(class, @Term.FOREGROUND_GREEN)
-        @Term.printString(" ", @Term.FOREGROUND_GRAY)
-
-        @Term.printHex(subclass, @Term.FOREGROUND_GREEN)
-        @Term.printString(" ", @Term.FOREGROUND_GRAY)
-
-        @Term.printHex(bar0, @Term.FOREGROUND_CYAN)
-        @Term.printString(" ", @Term.FOREGROUND_GRAY)
-
-        @Term.printHex(bar1, @Term.FOREGROUND_CYAN)
-        @Term.printString(" ", @Term.FOREGROUND_GRAY)
-
-        @Term.printHex(bar2, @Term.FOREGROUND_CYAN)
-        @Term.printString(" ", @Term.FOREGROUND_GRAY)
-
-        @Term.printNewLine()
+        devicesPci[devicesPciCount] <- {busNum, deviceNum, funNum, vendorId, deviceId, class, subclass, bar0, bar1, bar2, bar3, bar4, bar5}.blob<DevicePci>
+        devicesPciCount <- devicesPciCount + 1
     ;
 
     readRegister fun: busNum u8, deviceNum u8, funNum u8, registerNum u8 -> u32

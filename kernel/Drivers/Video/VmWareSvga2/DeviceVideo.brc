@@ -1,0 +1,16 @@
+@module DeviceVideo
+
+@import Bus
+@import Term
+
+VENDOR_ID u16 <- 0x15ad
+DEVICE_ID u16 <- 0x0405
+
+@export VmWareSvga2 blob
+    init fun: devicePci blob<@Bus.DevicePci>
+        if devicePci.vendorId != VENDOR_ID or devicePci.deviceId != DEVICE_ID: ret
+
+        @Term.printString("Initializing SVGA II", @Term.FOREGROUND_GRAY)
+        @Term.printNewLine()
+    ;
+;

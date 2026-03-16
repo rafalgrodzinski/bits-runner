@@ -1,0 +1,19 @@
+@module Bus
+
+@export DevicePci blob
+    busNum u8
+    deviceNum u8
+    funNum u8
+
+    vendorId u16
+    deviceId u16
+    class u8
+    subclass u8
+
+    bar0 u32
+    bar1 u32
+    bar2 u32
+    bar3 u32
+    bar4 u32
+    bar5 u32
+;

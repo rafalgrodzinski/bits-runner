@@ -7,8 +7,10 @@
 @import BSys
 @import Int
 @import Bus
+@import DeviceVideo
 
 busPci blob<@Bus.BusPci>
+deviceVideo blob<@DeviceVideo.VmWareSvga2>
 
 @export start fun
     // Get boot parameters from BIOS Service
@@ -30,6 +32,11 @@ busPci blob<@Bus.BusPci>
     @Int.initSyscallHandler(storageFs)
     @Term.printString("All ready, welcome to Bits Runner!\n", @Term.FOREGROUND_GREEN)
 
+    rep i u32, i < @Bus.devicesPciCount, i <- i + 1
+        deviceVideo.init(@Bus.devicesPci[i])
+    ;
+
+    /*
     // Load apps
     fsEntry blob<@Storage.StorageFsEntry>
     pApp ptr<data<u8>>
@@ -53,6 +60,7 @@ busPci blob<@Bus.BusPci>
     @Sched.createProcess(pApp, fsEntry.entrySize)
 
     @Sched.switchToNextProcess()
+    */
 
     rep
     ;
