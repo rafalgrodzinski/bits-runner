@@ -1,5 +1,21 @@
 @module BSys
 
+@export getEax raw<"=r"> -> u32
+    mov $0, eax
+;
+
+@export getEbx raw<"=r"> -> u32
+    mov $0, ebx
+;
+
+@export getEcx raw<"=r"> -> u32
+    mov $0, ecx
+;
+
+@export getEdx raw<"=r"> -> u32
+    mov $0, edx
+;
+
 @export out8 raw<"r,r,~{eax},~{edx}">: port u16, value u8
     mov dx, $0
     mov al, $1
@@ -12,6 +28,12 @@
     out dx, ax
 ;
 
+@export out32 raw<"r,r,~{eax},~{edx}">: port u16, value u32
+    mov dx, $0
+    mov eax, $1
+    out dx, eax
+;
+
 @export in8 raw<"=r,r,~{eax},~{edx}">: port u16 -> u8
     mov dx, $1
     in al, dx
@@ -22,6 +44,12 @@
     mov dx, $1
     in ax, dx
     mov $0, ax
+;
+
+@export in32 raw<"=r,r,~{eax},~{edx}">: port u16 -> u32
+    mov dx, $1
+    in eax, dx
+    mov $0, eax
 ;
 
 printCharRaw raw<"m,m,~{eax},~{ebx}">: character u32/*$0*/, attribute u32/*$1*/
