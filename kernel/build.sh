@@ -12,7 +12,7 @@ function check {
 
 # gather all the required build flags
 FLAGS=(
-    --opt=o2
+    --opt=o0
     --gen=obj
     --verb=v2
     --function-sections

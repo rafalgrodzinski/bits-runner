@@ -10,7 +10,7 @@
 @import DeviceVideo
 
 busPci blob<@Bus.BusPci>
-deviceVideo blob<@DeviceVideo.VmWareSvga2>
+deviceVideo blob<@DeviceVideo.Svga2>
 
 @export start fun
     // Get boot parameters from BIOS Service

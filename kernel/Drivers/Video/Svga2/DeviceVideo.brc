@@ -1,0 +1,157 @@
+@module DeviceVideo
+
+@import Bus
+@import BSys
+@import Term
+
+SVGA2_VENDOR_ID u16 <- 0x15ad
+SVGA2_DEVICE_ID u16 <- 0x0405
+
+SVGA2_REG_ID u16 <- 0x00
+SVGA2_REG_ENABLE u16 <- 0x01
+
+SVGA2_REG_WIDTH u16 <- 0x02
+SVGA2_REG_HEIGHT u16 <- 0x03
+SVGA2_REG_MAX_WIDTH u16 <- 0x04
+SVGA2_REG_MAX_HEIGHT u16 <- 0x5
+SVGA2_REG_BITS_PER_PIXEL u16 <- 0x07
+
+SVGA2_REG_FB_START u16 <- 0x0d
+SVGA2_REG_FB_OFFSET u16 <- 0x0e
+//SVGA2_REG_FB_SIZE u16 <- 0x10
+
+SVGA2_REG_FIFO_START u16 <- 0x12
+SVGA2_REG_FIFO_SIZE u16 <- 0x13
+
+SVGA2_REG_CAPS u16 <- 0x11
+
+SVGA2_INDEX_PORT u16 <- 0x00
+SVGA2_VALUE_PORT u16 <- 0x01
+
+SVGA2_SPECS_VER u32 <- 0x9000_0002
+
+@export Svga2 blob
+    portBase u16
+    specsVer u32
+
+    readReg fun: reg u16 -> u32
+        @BSys.out32(it.val.portBase + SVGA2_INDEX_PORT, reg)
+        ret @BSys.in32(it.val.portBase + SVGA2_VALUE_PORT)
+    ;
+
+    writeReg fun: reg u16, value u32
+        @BSys.out32(it.val.portBase + SVGA2_INDEX_PORT, reg)
+        @BSys.out32(it.val.portBase + SVGA2_VALUE_PORT, value)
+    ;
+
+    init fun: devicePci blob<@Bus.DevicePci>
+        if devicePci.vendorId != SVGA2_VENDOR_ID or devicePci.deviceId != SVGA2_DEVICE_ID: ret
+
+        @Term.printString("Initializing SVGA II", @Term.FOREGROUND_GRAY)
+        @Term.printNewLine()
+
+        @Term.printHex(devicePci.busNum, @Term.FOREGROUND_GRAY)
+        @Term.printString(" ", 0)
+
+        @Term.printHex(devicePci.deviceNum, @Term.FOREGROUND_GRAY)
+        @Term.printString(" ", 0)
+
+        @Term.printHex(devicePci.funNum, @Term.FOREGROUND_GRAY)
+        @Term.printNewLine()
+
+        @Term.printHex(devicePci.vendorId, @Term.FOREGROUND_RED)
+        @Term.printString(" ", 0)
+
+        @Term.printHex(devicePci.deviceId, @Term.FOREGROUND_RED)
+        @Term.printString(" ", 0)
+
+        @Term.printHex(devicePci.class, @Term.FOREGROUND_GREEN)
+        @Term.printString(" ", 0)
+
+        @Term.printHex(devicePci.subclass, @Term.FOREGROUND_GREEN)
+        @Term.printNewLine()
+
+        @Term.printHex(devicePci.bar0, @Term.FOREGROUND_CYAN)
+        @Term.printString(" ", 0)
+
+        @Term.printHex(devicePci.bar1, @Term.FOREGROUND_CYAN)
+        @Term.printString(" ", 0)
+
+        @Term.printHex(devicePci.bar2, @Term.FOREGROUND_CYAN)
+        @Term.printNewLine()
+
+        @Term.printHex(devicePci.bar3, @Term.FOREGROUND_MAGENTA)
+        @Term.printString(" ", 0)
+
+        @Term.printHex(devicePci.bar4, @Term.FOREGROUND_MAGENTA)
+        @Term.printString(" ", 0)
+
+        @Term.printHex(devicePci.bar5, @Term.FOREGROUND_MAGENTA)
+        @Term.printNewLine()
+
+        // get base port for registers
+        it.val.portBase <- (devicePci.bar0 - 1).u16
+
+        devicePci.sendCommand(0x07)
+
+        // check version
+        isVersionFound bool <- false
+        it.val.specsVer <- SVGA2_SPECS_VER + 1
+        rep not isVersionFound
+            it.val.specsVer <- it.val.specsVer - 1
+            @BSys.out32(it.val.portBase + SVGA2_REG_ID, it.val.specsVer)
+            value u32 <- @BSys.in32(it.val.portBase + SVGA2_REG_ID)
+            isVersionFound <- value = it.val.specsVer
+        ;
+
+        // map frame buffer and the command FIFO
+        fbStart u32 <- it.val.readReg(SVGA2_REG_FB_START) //@BSys.in32(it.val.portBase + SVGA2_REG_FB_START)
+        fbOffset u32 <- it.val.readReg(SVGA2_REG_FB_OFFSET) //@BSys.in32(it.val.portBase + SVGA2_REG_FB_OFFSET)
+        fifoStart u32 <- it.val.readReg(SVGA2_REG_FIFO_START) //@BSys.in32(it.val.portBase + SVGA2_REG_FIFO_START)
+        fifoSize u32 <- it.val.readReg(SVGA2_REG_FIFO_SIZE) //@BSys.in32(it.val.portBase + SVGA2_REG_FIFO_SIZE)
+        caps u32 <- it.val.readReg(SVGA2_REG_CAPS) //@BSys.in32(it.val.portBase + SVGA2_REG_CAPS)
+
+        //@BSys.out32(it.val.portBase + SVGA2_REG_ENABLE, 1)
+        //it.val.writeReg(SVGA2_REG_ENABLE, 1)
+
+        mw u32 <- it.val.readReg(SVGA2_REG_MAX_WIDTH) //@BSys.in32(it.val.portBase + SVGA2_REG_MAX_WIDTH)
+        mh u32 <- it.val.readReg(SVGA2_REG_MAX_HEIGHT) //@BSys.in32(it.val.portBase + SVGA2_REG_MAX_HEIGHT)
+
+        w u32 <- it.val.readReg(SVGA2_REG_WIDTH) //@BSys.in32(it.val.portBase + SVGA2_REG_WIDTH)
+        h u32 <- it.val.readReg(SVGA2_REG_HEIGHT) //@BSys.in32(it.val.portBase + SVGA2_REG_HEIGHT)
+
+        @Term.printHex(fbStart, @Term.BACKGROUND_RED)
+        @Term.printString(" ", 0)
+        @Term.printHex(fbOffset, @Term.BACKGROUND_RED)
+        @Term.printNewLine()
+
+        @Term.printHex(fifoStart, @Term.BACKGROUND_GREEN)
+        @Term.printString(" ", 0)
+        @Term.printHex(fifoSize, @Term.BACKGROUND_GREEN)
+        @Term.printNewLine()
+
+        @Term.printHex(it.val.specsVer, @Term.BACKGROUND_CYAN)
+        @Term.printString(" ", 0)
+        @Term.printHex(caps, @Term.BACKGROUND_CYAN)
+        @Term.printNewLine()
+
+        @Term.printHex(w, @Term.BACKGROUND_MAGENTA)
+        @Term.printString(" ", 0)
+        @Term.printHex(h, @Term.BACKGROUND_MAGENTA)
+        @Term.printNewLine()
+
+        @Term.printHex(mw, @Term.BACKGROUND_BROWN)
+        @Term.printString(" ", 0)
+        @Term.printHex(mh, @Term.BACKGROUND_BROWN)
+        @Term.printNewLine()
+
+        it.val.setMode(1024, 768, 32)
+    ;
+
+    setMode fun: width u32, height u32, bitsPerPixel u32
+        it.val.writeReg(SVGA2_REG_WIDTH, width)
+        it.val.writeReg(SVGA2_REG_HEIGHT, height)
+        it.val.writeReg(SVGA2_REG_BITS_PER_PIXEL, bitsPerPixel)
+        it.val.writeReg(SVGA2_REG_ENABLE, 1)
+    ;
+;
