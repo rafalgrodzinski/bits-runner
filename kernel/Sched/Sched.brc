@@ -152,6 +152,18 @@ pProcesses data<ptr<blob<Process>>, 8>
     ret pProcess
 ;
 
+@export mapRawMemory fun: memStart u32, memSize u32
+    pCurrentPageDirectory ptr<data<u32>>
+
+    if currentProcess < processesCount
+        pCurrentPageDirectory <- { pProcesses[currentProcess].val.pageDirectory.adr }
+    else
+        pCurrentPageDirectory <- { getCr3() }
+    ;
+
+    @Mem.mapRawMemory(pCurrentPageDirectory, memStart, memSize)
+;
+
 startUserProcessRaw raw<"r,r,r,~{eax}">: esp u32/*$0*/, cr3 u32/*$1*/, gdtUserData u32/*$2*/
     mov eax, $2
     mov ds, ax

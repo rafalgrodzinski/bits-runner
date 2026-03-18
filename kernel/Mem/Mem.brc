@@ -155,6 +155,44 @@ registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory pt
     ret pageEntry & 0xffff_fc00 + offset
 ;
 
+@export mapRawMemory fun: pCurrentPagingDirectory ptr<data<u32>>, memStart u32, memSize u32
+    memOffset u32 <- memStart % pMemLayout.val.pageSize
+    startPage u32 <- memStart / pMemLayout.val.pageSize
+    pagesCount u32 <- (memOffset + memSize + pMemLayout.val.pageSize - 1) / pMemLayout.val.pageSize
+
+    pageOffset u32 <- startPage % 0x400
+    startTable u32 <- startPage / 0x400
+    tablesCount u32 <- (pageOffset + pagesCount + 0x400 - 1) / 0x400
+
+    remainingPages u32 <- pagesCount
+
+    disableInterrupts()
+
+    rep iTable u32 <- startTable, iTable < startTable + tablesCount, iTable <- iTable + 1
+        // add a new pages table to directory if necessary
+        if pCurrentPagingDirectory.val[iTable] & 0x01 = 0
+            aPagesTable a <- allocateAlignedBytes(u32.size * 0x400, 0x1000).vadr
+            rep i u32, i < 1024, i <- i + 1: aPagesTable.ptr<data<u32>>.val[i] <- 0
+            pCurrentPagingDirectory.val[iTable] <- (lAdrToPAdr(aPagesTable.u32) & 0xffff_f000) | 0b10111
+            flushTlb()
+        ;
+
+        // register direct memory mappings
+        rep iPage u32 <- pageOffset, remainingPages > 0 and iPage < 1024, iPage <- iPage + 1
+            // update table entry relative to the last directory entry
+            memAdr u32 <- (iTable * 0x400 + iPage) * pMemLayout.val.pageSize
+            pPageTables ptr<data<u32>> <- { 0xffc0_0000 }
+            pPageTables.val[iTable * 0x400 + iPage] <- (memAdr & 0xffff_f000) | 0b10111
+
+            remainingPages <- remainingPages - 1
+        ;
+        // only the first page may have an offset
+        pageOffset <- 0
+    ;
+
+    enableInterrupts()
+;
+
 @export getInfoTotalSize fun -> u32
     ret pMemLayout.val.memSize
 ;

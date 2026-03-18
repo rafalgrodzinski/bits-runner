@@ -3,6 +3,7 @@
 @import Bus
 @import BSys
 @import Term
+@import Sched
 
 SVGA2_VENDOR_ID u16 <- 0x15ad
 SVGA2_DEVICE_ID u16 <- 0x0405
@@ -105,20 +106,19 @@ SVGA2_SPECS_VER u32 <- 0x9000_0002
         ;
 
         // map frame buffer and the command FIFO
-        fbStart u32 <- it.val.readReg(SVGA2_REG_FB_START) //@BSys.in32(it.val.portBase + SVGA2_REG_FB_START)
-        fbOffset u32 <- it.val.readReg(SVGA2_REG_FB_OFFSET) //@BSys.in32(it.val.portBase + SVGA2_REG_FB_OFFSET)
-        fifoStart u32 <- it.val.readReg(SVGA2_REG_FIFO_START) //@BSys.in32(it.val.portBase + SVGA2_REG_FIFO_START)
-        fifoSize u32 <- it.val.readReg(SVGA2_REG_FIFO_SIZE) //@BSys.in32(it.val.portBase + SVGA2_REG_FIFO_SIZE)
-        caps u32 <- it.val.readReg(SVGA2_REG_CAPS) //@BSys.in32(it.val.portBase + SVGA2_REG_CAPS)
+        fbStart u32 <- it.val.readReg(SVGA2_REG_FB_START)
+        fbOffset u32 <- it.val.readReg(SVGA2_REG_FB_OFFSET)
+        fifoStart u32 <- it.val.readReg(SVGA2_REG_FIFO_START)
+        fifoSize u32 <- it.val.readReg(SVGA2_REG_FIFO_SIZE)
+        caps u32 <- it.val.readReg(SVGA2_REG_CAPS)
 
-        //@BSys.out32(it.val.portBase + SVGA2_REG_ENABLE, 1)
-        //it.val.writeReg(SVGA2_REG_ENABLE, 1)
+        @Sched.mapRawMemory(fbStart, 4 * 1024 * 1024)
 
-        mw u32 <- it.val.readReg(SVGA2_REG_MAX_WIDTH) //@BSys.in32(it.val.portBase + SVGA2_REG_MAX_WIDTH)
-        mh u32 <- it.val.readReg(SVGA2_REG_MAX_HEIGHT) //@BSys.in32(it.val.portBase + SVGA2_REG_MAX_HEIGHT)
+        mw u32 <- it.val.readReg(SVGA2_REG_MAX_WIDTH)
+        mh u32 <- it.val.readReg(SVGA2_REG_MAX_HEIGHT)
 
-        w u32 <- it.val.readReg(SVGA2_REG_WIDTH) //@BSys.in32(it.val.portBase + SVGA2_REG_WIDTH)
-        h u32 <- it.val.readReg(SVGA2_REG_HEIGHT) //@BSys.in32(it.val.portBase + SVGA2_REG_HEIGHT)
+        w u32 <- it.val.readReg(SVGA2_REG_WIDTH)
+        h u32 <- it.val.readReg(SVGA2_REG_HEIGHT)
 
         @Term.printHex(fbStart, @Term.BACKGROUND_RED)
         @Term.printString(" ", 0)
@@ -145,7 +145,20 @@ SVGA2_SPECS_VER u32 <- 0x9000_0002
         @Term.printHex(mh, @Term.BACKGROUND_BROWN)
         @Term.printNewLine()
 
-        it.val.setMode(1024, 768, 32)
+        it.val.setMode(640, 480, 32)
+
+        pFb ptr<data<u32>> <- {fbStart}
+        pFb.val[0] <- 0x00ff_0000
+        rep y u32, y < 480, y <- y + 1
+            rep x u32, x < 640, x <- x + 1
+                red u8 <- (255 - (x * 255) / 640).u8
+                green u8 <- ((x * 255) / 640).u8
+                blue u8 <- ((y * 255) / 480).u8
+
+                color u32 <- (red << 16) | (green << 8) | (blue)
+                pFb.val[y * 640 + x] <- color
+            ;
+        ;
     ;
 
     setMode fun: width u32, height u32, bitsPerPixel u32
