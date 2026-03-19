@@ -23,7 +23,7 @@ deviceVga blob<Vga>
 @export deviceSvga2 blob<Svga2>
 
 @export getPrimary fun -> proto<DeviceVideo>
-    pDevice ptr<blob<Svga2>> <- { deviceSvga2.adr }
-    //pDevice ptr<blob<Vga>> <- { deviceVga.adr }
+    //pDevice ptr<blob<Svga2>> <- { deviceSvga2.adr }
+    pDevice ptr<blob<Vga>> <- { deviceVga.adr }
     ret { pDevice }.proto<DeviceVideo>
 ;

@@ -35,18 +35,11 @@ busPci blob<@Bus.BusPci>
         @DeviceVideo.deviceSvga2.init(@Bus.devicesPci[i])
     ;
 
-    deviceVideo proto<@DeviceVideo.DeviceVideo> <- @DeviceVideo.getPrimary()
-    deviceVideo.setMode(@DeviceVideo.MODE_RES_800x600, @DeviceVideo.MODE_BPP_32)
-    //deviceVideo.setMode(@DeviceVideo.MODE_RES_320x240, @DeviceVideo.MODE_BPP_8)
-    deviceVideo.clear(0)
-    deviceVideo.drawLine(50, 50, 250, 180, 100)
-    deviceVideo.commitDrawing()
-
-    /*
     // Load apps
     fsEntry blob<@Storage.StorageFsEntry>
     pApp ptr<data<u8>>
 
+    /*
     // Load count
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/COUNT.BIN"))
     pApp <- @Mem.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
@@ -58,6 +51,7 @@ busPci blob<@Bus.BusPci>
     pApp <- @Mem.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
     @Sched.createProcess(pApp, fsEntry.entrySize)
+    */
 
     // Load vdemo
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/VDEMO.BIN"))
@@ -66,7 +60,6 @@ busPci blob<@Bus.BusPci>
     @Sched.createProcess(pApp, fsEntry.entrySize)
 
     @Sched.switchToNextProcess()
-    */
 
     rep
     ;

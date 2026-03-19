@@ -1,5 +1,6 @@
 @module Int
 
+@import Bus
 @import B
 @import BiosService
 @import DrvCmos
@@ -26,7 +27,7 @@ CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
 
 // GFX
 CALL_GFX_SET_MODE u32 <- 0x300
-CALL_GFX_SWAP_BUFFERS u32 <- 0x310
+CALL_GFX_COMMIT_DRAWING u32 <- 0x310
 CALL_GFX_CLEAR_SCREEN u32 <- 0x320
 CALL_GFX_DRAW_PIXEL u32 <- 0x321
 CALL_GFX_DRAW_LINE u32 <- 0x322
@@ -75,19 +76,19 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         pInfo.val[0] <- entry.kind
         pInfo.val[1] <- entry.entrySize
     else if eax = CALL_GFX_SET_MODE
-        //deviceVideo.initMode.val({deviceVideo.adr}, ebx)
-    else if eax = CALL_GFX_SWAP_BUFFERS
-        //deviceVideo.swapBuffers.val({deviceVideo.adr})
+        deviceVideo.setMode(ebx, ecx)
+    else if eax = CALL_GFX_COMMIT_DRAWING
+        deviceVideo.commitDrawing()
     else if eax = CALL_GFX_CLEAR_SCREEN
-        //deviceVideo.clear.val({deviceVideo.adr}, ebx)
+        deviceVideo.clear(ebx)
     else if eax = CALL_GFX_DRAW_PIXEL
-        //deviceVideo.drawPixel.val({deviceVideo.adr}, ebx, ecx, edx)
+        deviceVideo.drawPixel(ebx, ecx, edx)
     else if eax = CALL_GFX_DRAW_LINE
         x1 u32 <- ebx >> 16
         y1 u32 <- ebx & 0xffff
         x2 u32 <- ecx >> 16
         y2 u32 <- ecx & 0xffff
-        //deviceVideo.drawLine.val({deviceVideo.adr}, x1, y1, x2, y2, edx)
+        deviceVideo.drawLine(x1, y1, x2, y2, edx)
     else if eax = CALL_PROCESS_YIELD
         @Sched.switchToNextProcess()
     ;

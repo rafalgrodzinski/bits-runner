@@ -15,7 +15,7 @@ CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
 
 // GFX
 CALL_GFX_SET_MODE u32 <- 0x300
-CALL_GFX_SWAP_BUFFERS u32 <- 0x310
+CALL_GFX_COMMIT_DRAWING u32 <- 0x310
 CALL_GFX_CLEAR_SCREEN u32 <- 0x320
 CALL_GFX_DRAW_PIXEL u32 <- 0x321
 CALL_GFX_DRAW_LINE u32 <- 0x322
@@ -23,8 +23,14 @@ CALL_GFX_DRAW_LINE u32 <- 0x322
 // Process
 CALL_PROCESS_YIELD u32 <- 0x400
 
-@export GFX_MODE_640x480x4 u32 <- 0x00
-@export GFX_MODE_320x240x8 u32 <- 0x01
+@export GFX_MODE_RES_320x240 u32 <- 0x0140_0f0
+@export GFX_MODE_RES_640x480 u32 <- 0x0280_01e0
+@export GFX_MODE_RES_800x600 u32 <- 0x0320_0258
+
+@export GFX_MODE_BPP_4 u32 <- 0x04
+@export GFX_MODE_BPP_8 u32 <- 0x08
+@export GFX_MODE_BPP_16 u32 <- 0x10
+@export GFX_MODE_BPP_32 u32 <- 0x20
 
 @export InfoMem blob
     totalSize u32
@@ -87,12 +93,12 @@ syscallRaw raw<"=r,m,m,m,m,~{eax},~{ebx},~{ecx},~{edx}">: syscallNum u32/*$1*/, 
 ;
 
 // GFX
-@export gfxSetMode fun: mode u32
-    syscallRaw(CALL_GFX_SET_MODE, mode, 0, 0)
+@export gfxSetMode fun: resolution u32, bitsPerPixel u32
+    syscallRaw(CALL_GFX_SET_MODE, resolution, bitsPerPixel, 0)
 ;
 
-@export gfxSwapBuffers fun
-    syscallRaw(CALL_GFX_SWAP_BUFFERS, 0, 0, 0)
+@export gfxCommitDrawing fun
+    syscallRaw(CALL_GFX_COMMIT_DRAWING, 0, 0, 0)
 ;
 
 @export gfxClearScreen fun: color u32
