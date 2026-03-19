@@ -22,9 +22,9 @@
     sendCommand fun: command u16
         // encode address
         pciAdr u32 <- 0x8000_0000 // <31: enable>
-        pciAdr <- pciAdr | (it.val.busNum << 16) // <23-16: bus number>
-        pciAdr <- pciAdr | (it.val.deviceNum << 11) // <15-11: device number>
-        pciAdr <- pciAdr | (it.val.funNum << 8) // <10-8: function number>
+        pciAdr <- pciAdr | (it.busNum << 16) // <23-16: bus number>
+        pciAdr <- pciAdr | (it.deviceNum << 11) // <15-11: device number>
+        pciAdr <- pciAdr | (it.funNum << 8) // <10-8: function number>
         pciAdr <- pciAdr | 0x04 // <7-0: register offset>
 
         // read reg1

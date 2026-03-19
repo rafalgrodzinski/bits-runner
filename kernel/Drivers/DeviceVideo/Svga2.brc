@@ -39,13 +39,13 @@ SVGA2_REG_CAPS u16 <- 0x11
     pFrameBuffer ptr<data<u32>>
 
     readReg fun: reg u16 -> u32
-        @BSys.out32(it.val.portBase + SVGA2_INDEX_PORT, reg)
-        ret @BSys.in32(it.val.portBase + SVGA2_VALUE_PORT)
+        @BSys.out32(it.portBase + SVGA2_INDEX_PORT, reg)
+        ret @BSys.in32(it.portBase + SVGA2_VALUE_PORT)
     ;
 
     writeReg fun: reg u16, value u32
-        @BSys.out32(it.val.portBase + SVGA2_INDEX_PORT, reg)
-        @BSys.out32(it.val.portBase + SVGA2_VALUE_PORT, value)
+        @BSys.out32(it.portBase + SVGA2_INDEX_PORT, reg)
+        @BSys.out32(it.portBase + SVGA2_VALUE_PORT, value)
     ;
 
     init fun: devicePci blob<@Bus.DevicePci>
@@ -56,27 +56,27 @@ SVGA2_REG_CAPS u16 <- 0x11
         devicePci.sendCommand(0b0111)
 
         // get base port for registers
-        it.val.portBase <- (devicePci.bar0 - 1).u16
+        it.portBase <- (devicePci.bar0 - 1).u16
 
         // check version
-        it.val.writeReg(SVGA2_REG_ID, SVGA2_SPECS_VER)
-        if it.val.readReg(SVGA2_REG_ID) != SVGA2_SPECS_VER: ret
+        it.writeReg(SVGA2_REG_ID, SVGA2_SPECS_VER)
+        if it.readReg(SVGA2_REG_ID) != SVGA2_SPECS_VER: ret
 
-        fifoStart u32 <- it.val.readReg(SVGA2_REG_FIFO_START)
-        fifoSize u32 <- it.val.readReg(SVGA2_REG_FIFO_SIZE)
-        caps u32 <- it.val.readReg(SVGA2_REG_CAPS)
+        fifoStart u32 <- it.readReg(SVGA2_REG_FIFO_START)
+        fifoSize u32 <- it.readReg(SVGA2_REG_FIFO_SIZE)
+        caps u32 <- it.readReg(SVGA2_REG_CAPS)
 
         /*
-        it.val.setMode(1024, 768, 32)
+        it.setMode(1024, 768, 32)
 
-        rep y u32, y < it.val.height, y <- y + 1
-            rep x u32, x < it.val.width, x <- x + 1
-                red u8 <- (255 - (x * 255) / it.val.width).u8
-                green u8 <- ((x * 255) / it.val.width).u8
-                blue u8 <- ((y * 255) / it.val.height).u8
+        rep y u32, y < it.height, y <- y + 1
+            rep x u32, x < it.width, x <- x + 1
+                red u8 <- (255 - (x * 255) / it.width).u8
+                green u8 <- ((x * 255) / it.width).u8
+                blue u8 <- ((y * 255) / it.height).u8
 
                 color u32 <- (red << 16) | (green << 8) | (blue)
-                it.val.pFrameBuffer.val[y * it.val.width + x] <- color
+                it.pFrameBuffer.val[y * it.width + x] <- color
             ;
         ;
         */
@@ -85,30 +85,30 @@ SVGA2_REG_CAPS u16 <- 0x11
     // MARK: proto<DeviceVideo>
 
     getWidth fun -> u32
-        ret it.val.width
+        ret it.width
     ;
 
     getHeight fun -> u32
-        ret it.val.height
+        ret it.height
     ;
 
     setMode fun: resolution u32, bpp u32
         width u32 <- resolution >> 16
         height u32 <- resolution & 0xffff
 
-        it.val.width <- width
-        it.val.height <- height
+        it.width <- width
+        it.height <- height
 
-        it.val.writeReg(SVGA2_REG_WIDTH, width)
-        it.val.writeReg(SVGA2_REG_HEIGHT, height)
-        it.val.writeReg(SVGA2_REG_BPP, bpp)
-        it.val.writeReg(SVGA2_REG_ENABLE, 1)
+        it.writeReg(SVGA2_REG_WIDTH, width)
+        it.writeReg(SVGA2_REG_HEIGHT, height)
+        it.writeReg(SVGA2_REG_BPP, bpp)
+        it.writeReg(SVGA2_REG_ENABLE, 1)
 
         // map memory
-        fbStart u32 <- it.val.readReg(SVGA2_REG_FB_START)
-        fbOffset u32 <- it.val.readReg(SVGA2_REG_FB_OFFSET)
-        fbSize u32 <- it.val.readReg(SVGA2_REG_FB_SIZE)
-        it.val.pFrameBuffer <- {fbStart + fbOffset}
+        fbStart u32 <- it.readReg(SVGA2_REG_FB_START)
+        fbOffset u32 <- it.readReg(SVGA2_REG_FB_OFFSET)
+        fbSize u32 <- it.readReg(SVGA2_REG_FB_SIZE)
+        it.pFrameBuffer <- {fbStart + fbOffset}
         @Sched.mapRawMemory(fbStart, fbSize)
     ;
 
@@ -116,13 +116,13 @@ SVGA2_REG_CAPS u16 <- 0x11
     ;
 
     clear fun: color u32
-        rep i u32, i < it.val.width * it.val.height, i <- i + 1
-            it.val.pFrameBuffer.val[i] <- color
+        rep i u32, i < it.width * it.height, i <- i + 1
+            it.pFrameBuffer.val[i] <- color
         ;
     ;
 
     drawPixel fun: x u32, y u32, color u32
-        it.val.pFrameBuffer.val[y * it.val.width + x] <- color
+        it.pFrameBuffer.val[y * it.width + x] <- color
     ;
 
     drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
@@ -144,7 +144,7 @@ SVGA2_REG_CAPS u16 <- 0x11
             p s32 <- dy * 2 - dx
             y u32 <- y1
             rep x u32 <- x1, x <= x2, x <- x + 1
-                it.val.drawPixel(x, y, color)
+                it.drawPixel(x, y, color)
                 if p < 0
                     p <- p + 2 * dy
                 else
@@ -167,7 +167,7 @@ SVGA2_REG_CAPS u16 <- 0x11
             p s32 <- dx * 2 - dy
             x u32 <- x1
             rep y u32 <- y1, y <= y2, y <- y + 1
-                it.val.drawPixel(x, y, color)
+                it.drawPixel(x, y, color)
                 if p < 0
                     p <- p + 2 * dx
                 else
