@@ -2,7 +2,6 @@
 
 @import Bus
 @import BSys
-@import Term
 @import Sched
 
 // PCI
@@ -22,7 +21,7 @@ SVGA2_REG_ENABLE u16 <- 0x01
 
 SVGA2_REG_WIDTH u16 <- 0x02
 SVGA2_REG_HEIGHT u16 <- 0x03
-SVGA2_REG_BITS_PER_PIXEL u16 <- 0x07
+SVGA2_REG_BPP u16 <- 0x07
 
 SVGA2_REG_FB_START u16 <- 0x0d
 SVGA2_REG_FB_OFFSET u16 <- 0x0e
@@ -33,7 +32,7 @@ SVGA2_REG_FIFO_SIZE u16 <- 0x13
 
 SVGA2_REG_CAPS u16 <- 0x11
 
-@export Svga2 blob
+@export Svga2 blob: DeviceVideo
     portBase u16
     width u32
     height u32
@@ -67,6 +66,7 @@ SVGA2_REG_CAPS u16 <- 0x11
         fifoSize u32 <- it.val.readReg(SVGA2_REG_FIFO_SIZE)
         caps u32 <- it.val.readReg(SVGA2_REG_CAPS)
 
+        /*
         it.val.setMode(1024, 768, 32)
 
         rep y u32, y < it.val.height, y <- y + 1
@@ -79,15 +79,28 @@ SVGA2_REG_CAPS u16 <- 0x11
                 it.val.pFrameBuffer.val[y * it.val.width + x] <- color
             ;
         ;
+        */
     ;
 
-    setMode fun: width u32, height u32, bitsPerPixel u32
+    // proto<DeviceVideo>
+    getWidth fun -> u32
+        ret it.val.width
+    ;
+
+    getHeight fun -> u32
+        ret it.val.height
+    ;
+
+    setMode fun: resolution u32, bpp u32
+        width u32 <- resolution >> 16
+        height u32 <- resolution & 0xffff
+
         it.val.width <- width
         it.val.height <- height
 
         it.val.writeReg(SVGA2_REG_WIDTH, width)
         it.val.writeReg(SVGA2_REG_HEIGHT, height)
-        it.val.writeReg(SVGA2_REG_BITS_PER_PIXEL, bitsPerPixel)
+        it.val.writeReg(SVGA2_REG_BPP, bpp)
         it.val.writeReg(SVGA2_REG_ENABLE, 1)
 
         // map memory
@@ -96,5 +109,71 @@ SVGA2_REG_CAPS u16 <- 0x11
         fbSize u32 <- it.val.readReg(SVGA2_REG_FB_SIZE)
         it.val.pFrameBuffer <- {fbStart + fbOffset}
         @Sched.mapRawMemory(fbStart, fbSize)
+    ;
+
+    commitDrawing fun
+    ;
+
+    clear fun: color u32
+        rep i u32, i < it.val.width * it.val.height, i <- i + 1
+            it.val.pFrameBuffer.val[i] <- color
+        ;
+    ;
+
+    drawPixel fun: x u32, y u32, color u32
+        it.val.pFrameBuffer.val[y * it.val.width + x] <- color
+    ;
+
+    drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
+        dx s32 <- if x2 >= x1: x2 - x1 else: x1 - x2
+        dy s32 <- if y2 >= y1: y2 - y1 else: y1 - y2
+
+        // more horizonal line
+        if dx >= dy
+            if x2 < x1
+                tmpX u32 <- x1
+                x1 <- x2
+                x2 <- tmpX
+
+                tmpY u32 <- y1
+                y1 <- y2
+                y2 <- tmpY
+            ;
+
+            p s32 <- dy * 2 - dx
+            y u32 <- y1
+            rep x u32 <- x1, x <= x2, x <- x + 1
+                it.val.drawPixel(x, y, color)
+                if p < 0
+                    p <- p + 2 * dy
+                else
+                    y <- if y1 <= y2: y + 1 else: y - 1
+                    p <- p + 2 * (dy - dx)
+                ;
+            ;
+        // more vertical line
+        else
+            if y2 < y1
+                tmpX u32 <- x1
+                x1 <- x2
+                x2 <- tmpX
+
+                tmpY u32 <- y1
+                y1 <- y2
+                y2 <- tmpY
+            ;
+
+            p s32 <- dx * 2 - dy
+            x u32 <- x1
+            rep y u32 <- y1, y <= y2, y <- y + 1
+                it.val.drawPixel(x, y, color)
+                if p < 0
+                    p <- p + 2 * dx
+                else
+                    x <- if x1 <= x2: x + 1 else: x - 1
+                    p <- p + 2 * (dx - dy)
+                ;
+            ;
+        ;
     ;
 ;

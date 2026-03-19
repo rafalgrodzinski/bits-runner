@@ -1,0 +1,41 @@
+@module DeviceVideo
+
+@export MODE_VGA_640x480x4 u32 <- 0x00
+@export MODE_VGA_320x240x8 u32 <- 0x01
+
+@export MODE_RES_640x480 u32 <- 0x0280_01e0
+@export MODE_RES_800x600 u32 <- 0x0320_0258
+
+@export MODE_BPP_16 u32 <- 0x10
+@export MODE_BPP_32 u32 <- 0x20
+
+@export DeviceVideo blob
+    initMode ptr<fun: ptr<blob<DeviceVideo>>, u32>
+    drawPixel ptr<fun: ptr<blob<DeviceVideo>>, u32, u32, u32>
+    drawLine ptr<fun: ptr<blob<DeviceVideo>>, u32, u32, u32, u32, u32>
+    clear ptr<fun: ptr<blob<DeviceVideo>>, u32>
+    swapBuffers ptr<fun: ptr<blob<DeviceVideo>>>
+    getWidth ptr<fun: ptr<blob<DeviceVideo>> -> u32>
+    getHeight ptr<fun: ptr<blob<DeviceVideo>> -> u32>
+;
+
+@export vgaDeviceVideo fun -> blob<DeviceVideo>
+    ret VgaDeviceVideo()
+;
+
+@export DeviceVideo proto
+    getWidth fun -> u32
+    getHeight fun -> u32
+    setMode fun: resolution u32, bpp u32
+    commitDrawing fun
+    clear fun: color u32
+    drawPixel fun: x u32, y u32, color u32
+    drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
+;
+
+@export deviceSvga2 blob<Svga2>
+
+@export getPrimary fun -> proto<DeviceVideo>
+    pDevice ptr<blob<Svga2>> <- { deviceSvga2.adr }
+    ret { pDevice }.proto<DeviceVideo>
+;
