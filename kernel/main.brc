@@ -36,8 +36,11 @@ busPci blob<@Bus.BusPci>
     ;
 
     deviceVideo proto<@DeviceVideo.DeviceVideo> <- @DeviceVideo.getPrimary()
-    deviceVideo.setMode(@DeviceVideo.MODE_RES_640x480, @DeviceVideo.MODE_BPP_32)
-    deviceVideo.drawLine(100, 100, 250, 400, 0x0080ff00)
+    deviceVideo.setMode(@DeviceVideo.MODE_RES_800x600, @DeviceVideo.MODE_BPP_32)
+    //deviceVideo.setMode(@DeviceVideo.MODE_RES_320x240, @DeviceVideo.MODE_BPP_8)
+    deviceVideo.clear(0)
+    deviceVideo.drawLine(50, 50, 250, 180, 100)
+    deviceVideo.commitDrawing()
 
     /*
     // Load apps

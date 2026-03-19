@@ -82,7 +82,8 @@ SVGA2_REG_CAPS u16 <- 0x11
         */
     ;
 
-    // proto<DeviceVideo>
+    // MARK: proto<DeviceVideo>
+
     getWidth fun -> u32
         ret it.val.width
     ;
