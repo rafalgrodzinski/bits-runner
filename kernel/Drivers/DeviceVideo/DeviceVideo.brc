@@ -1,6 +1,6 @@
 @module DeviceVideo
 
-@export MODE_RES_320x240 u32 <- 0x0140_0f0
+@export MODE_RES_320x240 u32 <- 0x0140_00f0
 @export MODE_RES_640x480 u32 <- 0x0280_01e0
 @export MODE_RES_800x600 u32 <- 0x0320_0258
 
