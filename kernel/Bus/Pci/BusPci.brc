@@ -11,7 +11,7 @@ PCI_DEVICE_TYPE_PCI_BRIDGE u8 <- 1
 PCI_DEVICE_TYPE_CARDBUS_BRIDGE u8 <- 2
 
 @export devicesPciCount u32
-@export devicesPci data<blob<DevicePci>>
+@export devicesPci data<blob<DevicePci>, 16>
 
 @export BusPci blob
     scan fun
