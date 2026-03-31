@@ -22,7 +22,7 @@ getCr3 raw<"=r"> -> u32
     mov $0, cr3
 ;
 
-setCr3 raw<"r">: address u32
+setCr3 raw<"r,~{memory}">: address u32
     mov cr3, $0
 ;
 
@@ -34,7 +34,7 @@ enableInterrupts raw<"">
     sti
 ;
 
-flushTlb raw<"~{eax}">
+flushTlb raw<"~{eax},~{memory}">
     mov eax, cr3
     mov cr3, eax
 ;
