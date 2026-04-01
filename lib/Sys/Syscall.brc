@@ -2,9 +2,11 @@
 
 @import B
 
+// System
 CALL_REBOOT u32 <- 0x00
 CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_GET_INFO_MEM u32 <- 0x20
+CALL_SYS_INFO_PCI u32 <- 0x021
 
 // Input
 CALL_INPUT_KEYBOARD_GET_ASCII u32 <- 0x101
@@ -41,6 +43,22 @@ CALL_PROCESS_YIELD u32 <- 0x400
     allocateBytes u32
 ;
 
+@export InfoPciDevice blob
+        busNum u32
+        deviceNum u32
+        funNum u32
+
+        vendorId u32
+        deviceId u32
+        class u32
+        subclass u32
+;
+
+@export InfoPci blob
+    devicesCount u32
+    devices data<blob<InfoPciDevice>, 16>
+;
+
 @export InfoFsEntry blob
     kind u32
     entrySize u32
@@ -72,6 +90,12 @@ syscallRaw raw<"=r,m,m,m,m,~{eax},~{ebx},~{ecx},~{edx}">: syscallNum u32/*$1*/, 
 @export getInfoMem fun -> blob<InfoMem>
     info blob<InfoMem>
     syscallRaw(CALL_GET_INFO_MEM, info.adr.u32, 0, 0)
+    ret info
+;
+
+@export getInfoPci fun -> blob<InfoPci>
+    info blob<InfoPci>
+    syscallRaw(CALL_SYS_INFO_PCI, info.adr.u32, 0, 0)
     ret info
 ;
 
