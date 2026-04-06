@@ -11,12 +11,6 @@ jobs:
     runs-on: macos-15
 
     steps:
-      - name: Cache Homebrew
-        uses: actions/cache@v5
-        with:
-          path: "${HOME}/Library/Caches/Homebrew"
-          key: ${{ runner.os }}-homebrew
-
       - name: Install BRB
         run: brew install rafalgrodzinski/tap/brb
 
