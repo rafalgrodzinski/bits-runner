@@ -1,0 +1,18 @@
+name: Build Project & Create Release
+
+on:
+  push:
+    branches:
+      - "main"
+      - "37-automated-release"
+
+jobs:
+  generate-release:
+    runs-on: macos-15-intel
+
+    steps:
+      - name: Install BRB
+        run: brew install rafalgrodzinski/tap/brb
+
+      - name: Build  Project
+        run: ./make.sh
