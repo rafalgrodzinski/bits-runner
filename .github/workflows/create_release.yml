@@ -5,6 +5,18 @@ on:
     branches:
       - "main"
       - "37-automated-release"
+  workflow_dispatch:
+    inputs:
+      build_kind:
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - release
+
+permissions:
+  contents: write
 
 jobs:
   generate-release:
@@ -23,5 +35,27 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@v6
 
+      - name: Read Version Information
+        shell: bash
+        run: |
+          BUILD_KIND="${{inputs.build_kind || 'dev'}}"
+          VERSION_NUMBER="$(cat ${GITHUB_WORKSPACE}/version.txt)"
+          case "${BUILD_KIND}" in
+            "release")
+              VERSION_SUFFIX=""
+            ;;
+            *)
+              VERSION_SUFFIX="-${BUILD_KIND}-${{github.run_number}}"
+            ;;
+          esac
+          echo "VERSION=${VERSION_NUMBER}${VERSION_SUFFIX}" >> $GITHUB_ENV
+          echo "TAG=${BUILD_KIND}/${VERSION_NUMBER}${VERSION_SUFFIX}" >> GITHUB_ENV
+
       - name: Build  Project
         run: "${GITHUB_WORKSPACE}/make.sh"
+      
+      - name: Create Release
+        run: |
+          gh release create "${TAG}" "${GITHUB_WORKSPACE}/*.img" \
+          --title "${VERSION}" \
+          --notes-file "${GITHUB_WORKSPACE}/docs/Notes.md"
