@@ -11,11 +11,20 @@ jobs:
     runs-on: macos-15-intel
 
     steps:
+      - name: Cache Homebrew
+        uses: actions/cache@v5
+        with:
+          path: "${HOME}/Library/Caches/Homebrew"
+          key: ${{ runner.os }}-homebrew
+
       - name: Install BRB
         run: brew install rafalgrodzinski/tap/brb
 
       - name: Install NASM
         run: brew install nasm
+
+      - name: Checkout Project
+        uses: actions/checkout@v6
 
       - name: Build  Project
         run: "${GITHUB_WORKSPACE}/make.sh"
