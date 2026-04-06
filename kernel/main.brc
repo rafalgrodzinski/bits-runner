@@ -4,30 +4,19 @@
 @import Sched
 @import Storage
 @import B
+@import BSys
 @import Int
+@import Bus
+@import DeviceVideo
 
-getEax raw<"=r"> -> u32
-    mov $0, eax
-;
-
-getEbx raw<"=r"> -> u32
-    mov $0, ebx
-;
-
-getEcx raw<"=r"> -> u32
-    mov $0, ecx
-;
-
-getEdx raw<"=r"> -> u32
-    mov $0, edx
-;
+busPci blob<@Bus.BusPci>
 
 @export start fun
     // Get boot parameters from BIOS Service
-    biosServiceAdr u32 <- getEax()
-    gdtTssAdr u32 <- getEbx()
-    bootPartitionFirstSector u32 <- getEcx()
-    biosBootDriveNumber u32 <- getEdx()
+    biosServiceAdr u32 <- @BSys.getEax()
+    gdtTssAdr u32 <- @BSys.getEbx()
+    bootPartitionFirstSector u32 <- @BSys.getEcx()
+    biosBootDriveNumber u32 <- @BSys.getEdx()
 
     // Initialize subsystems
     @BiosService.init(biosServiceAdr)
@@ -37,9 +26,14 @@ getEdx raw<"=r"> -> u32
     @Term.init(@Term.MODE_80x25)
 
     @Term.printString("Initializing Bits Runner...\n", @Term.FOREGROUND_GRAY)
+    busPci.scan()
     storageFs blob<@Storage.StorageFs> <- @Storage.bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
     @Int.initSyscallHandler(storageFs)
     @Term.printString("All ready, welcome to Bits Runner!\n", @Term.FOREGROUND_GREEN)
+
+    rep i u32, i < @Bus.devicesPciCount, i <- i + 1
+        @DeviceVideo.deviceSvga2.init(@Bus.devicesPci[i])
+    ;
 
     // Load apps
     fsEntry blob<@Storage.StorageFsEntry>

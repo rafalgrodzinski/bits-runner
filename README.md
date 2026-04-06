@@ -8,6 +8,7 @@ https://github.com/user-attachments/assets/e14b9e52-6a4e-43ad-8768-2606df7f3601
 - [Paging](docs/paging.md)
 - [PS/2 Input](docs/ps2_input.md)
 - [VGA](docs/vga.md)
+- [VMWare SVGA II](docs/vmware_svga_ii.md)
 
 ## Overview
 Bits Runner is a simple, 32bit operating system for x86. It is built using assembly and [BRC (Bits Runner Code)](https://github.com/rafalgrodzinski/bits-runner-code) language.

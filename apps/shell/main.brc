@@ -4,6 +4,7 @@
 CMD_REBOOT blob<@B.String>
 CMD_TIME blob<@B.String>
 CMD_M_INFO blob<@B.String>
+CMD_P_INFO blob<@B.String>
 CMD_F_INFO blob<@B.String>
 CMD_YIELD blob<@B.String>
 
@@ -13,6 +14,7 @@ CMD_YIELD blob<@B.String>
     CMD_REBOOT <- @B.String("reboot")
     CMD_TIME <- @B.String("time")
     CMD_M_INFO <- @B.String("minfo")
+    CMD_P_INFO <- @B.String("pinfo")
     CMD_F_INFO <- @B.String("finfo")
     CMD_YIELD <- @B.String("yield")
 
@@ -83,6 +85,23 @@ CMD_YIELD blob<@B.String>
             text.print()
             text <- @B.StringForU32(info.allocateBytes)
             text.println()
+        else if cmd.isEqual(CMD_P_INFO)
+            info blob<@Syscall.InfoPci> <- @Syscall.getInfoPci()
+            rep i u32, i < info.devicesCount, i <- i + 1
+                @B.StringHexForU32(info.devices[i].busNum).print()
+                @B.String(" ").print()
+                @B.StringHexForU32(info.devices[i].deviceNum).print()
+                @B.String(" ").print()
+                @B.StringHexForU32(info.devices[i].funNum).println()
+
+                @B.StringHexForU32(info.devices[i].vendorId).print()
+                @B.String(" ").print()
+                @B.StringHexForU32(info.devices[i].deviceId).print()
+                @B.String(" ").print()
+                @B.StringHexForU32(info.devices[i].class).print()
+                @B.String(" ").print()
+                @B.StringHexForU32(info.devices[i].subclass).println()
+            ;
         else if cmd.isEqual(CMD_F_INFO)
             info blob<@Syscall.InfoFsEntry> <- @Syscall.getInfoFsEntry(arg)
             text blob<@B.String>

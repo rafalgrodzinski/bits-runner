@@ -37,7 +37,7 @@ getCr3 raw<"=r"> -> u32
     mov $0, cr3
 ;
 
-setCr3 raw<"r">: adr u32
+setCr3 raw<"r,~{memory}">: adr u32
     mov cr3, $0
 ;
 
@@ -152,7 +152,19 @@ pProcesses data<ptr<blob<Process>>, 8>
     ret pProcess
 ;
 
-startUserProcessRaw raw<"r,r,r,~{eax}">: esp u32/*$0*/, cr3 u32/*$1*/, gdtUserData u32/*$2*/
+@export mapRawMemory fun: memStart u32, memSize u32
+    pCurrentPageDirectory ptr<data<u32>>
+
+    if currentProcess < processesCount
+        pCurrentPageDirectory <- { pProcesses[currentProcess].val.pageDirectory.adr }
+    else
+        pCurrentPageDirectory <- { getCr3() }
+    ;
+
+    @Mem.mapRawMemory(pCurrentPageDirectory, memStart, memSize)
+;
+
+startUserProcessRaw raw<"r,r,r,~{eax},~{memory}">: esp u32/*$0*/, cr3 u32/*$1*/, gdtUserData u32/*$2*/
     mov eax, $2
     mov ds, ax
     mov es, ax
@@ -168,7 +180,7 @@ startUserProcessRaw raw<"r,r,r,~{eax}">: esp u32/*$0*/, cr3 u32/*$1*/, gdtUserDa
     iretd
 ;
 
-resumeKernelProcessRaw raw<"r,r,~{eax}">: esp0 u32, cr3 u32 //, eip0 u32
+resumeKernelProcessRaw raw<"r,r,~{eax},~{memory}">: esp0 u32, cr3 u32 //, eip0 u32
     mov eax, $1
     mov cr3, eax
 

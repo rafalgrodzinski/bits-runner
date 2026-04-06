@@ -14,12 +14,21 @@ setMode fun: mode u32
     if mode = 0
         width <- 640
         height <- 480
-        @Syscall.gfxSetMode(@Syscall.GFX_MODE_640x480x4)
+        @Syscall.gfxSetMode(@Syscall.GFX_MODE_RES_640x480, @Syscall.GFX_MODE_BPP_4)
     else if mode = 1
         width <- 320
         height <- 240
-        @Syscall.gfxSetMode(@Syscall.GFX_MODE_320x240x8)
+        @Syscall.gfxSetMode(@Syscall.GFX_MODE_RES_320x240, @Syscall.GFX_MODE_BPP_8)
     ;
+    /*if mode = 0
+        width <- 800
+        height <- 600
+        @Syscall.gfxSetMode(@Syscall.GFX_MODE_RES_800x600, @Syscall.GFX_MODE_BPP_32)
+    else if mode = 1
+        width <- 640
+        height <- 480
+        @Syscall.gfxSetMode(@Syscall.GFX_MODE_RES_640x480, @Syscall.GFX_MODE_BPP_32)
+    ;*/
 ;
 
 readKeyboard fun
@@ -95,7 +104,7 @@ demo_0 fun
             ;
         ;
 
-        @Syscall.gfxSwapBuffers()
+        @Syscall.gfxCommitDrawing()
     ;
 ;
 
@@ -145,7 +154,7 @@ demo_1 fun
             ;
         ;
 
-        @Syscall.gfxSwapBuffers()
+        @Syscall.gfxCommitDrawing()
     ;
 ;
 
@@ -225,7 +234,7 @@ demo_3 fun
 
         @Syscall.gfxClearScreen(0)
         @Syscall.gfxDrawLine(x1.u32, y1.u32, x2.u32, y2.u32, fgColor)
-        @Syscall.gfxSwapBuffers()
+        @Syscall.gfxCommitDrawing()
     ;
 ;
 
@@ -279,6 +288,6 @@ demo_4 fun
             @Syscall.gfxDrawLine(px[i].u32, py[i].u32, px[i2].u32, py[i2].u32, (fgColor + i) % 16 + 1)
         ;
 
-        @Syscall.gfxSwapBuffers()
+        @Syscall.gfxCommitDrawing()
     ;
 ;

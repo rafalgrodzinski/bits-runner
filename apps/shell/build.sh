@@ -11,11 +11,12 @@ SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
 BRB_DIR="$(dirname "$(which brb)")/.."
 SYS_DIR="${SCRIPT_DIR}/../.."
 
-brb --verb=v2 --triple=i686-unknown-linux-gnu --function-sections --no-zero-initialized-in-bss --reloc=static \
+brb --verb=v2 --opt=o2 --triple=i686-unknown-linux-gnu --function-sections --no-zero-initialized-in-bss --reloc=static \
 "${SCRIPT_DIR}/main.brc" \
 "${BRB_DIR}/lib/B/String.brc" \
 "${SYS_DIR}/lib/B/BSys.brc" \
-"${SYS_DIR}/lib/Sys/Syscall.brc"
+"${SYS_DIR}/lib/Sys/Syscall.brc" \
+"${SYS_DIR}/kernel/Intrinsics.brc"
 check
 
 ld.lld -T "${SCRIPT_DIR}/app.ld" -o shell.bin \

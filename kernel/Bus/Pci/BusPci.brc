@@ -1,0 +1,99 @@
+@module Bus
+
+@import BSys
+@import Term
+
+PCI_CONFIG_ADR_PORT u16 <- 0x0cf8
+PCI_CONFIG_DATA_PORT u16 <- 0x0cfc
+
+PCI_DEVICE_TYPE_NORMAL u8 <- 0
+PCI_DEVICE_TYPE_PCI_BRIDGE u8 <- 1
+PCI_DEVICE_TYPE_CARDBUS_BRIDGE u8 <- 2
+
+@export devicesPciCount u32
+@export devicesPci data<blob<DevicePci>, 16>
+
+@export BusPci blob
+    scan fun
+        rep busNum u32 <- 0, busNum < 256, busNum <- busNum + 1
+            rep deviceNum u32 <- 0, deviceNum < 32, deviceNum <- deviceNum + 1
+                it.scanDevice(busNum.u8, deviceNum.u8, 0)
+            ;
+        ;
+    ;
+
+    scanDevice fun: busNum u8, deviceNum u8, funNum u8
+        register0 u32 <- it.readRegister(busNum, deviceNum, funNum, 0)
+        vendorId u16 <- (register0 & 0xffff).u16
+
+        // Is valid device?
+        if vendorId = 0xffff: ret
+
+        register2 u32 <- it.readRegister(busNum, deviceNum, 0, 2)
+        register3 u32 <- it.readRegister(busNum, deviceNum, 0, 3)
+
+        // get common info
+        deviceId u16 <- ((register0 >> 16) & 0xffff).u16
+        class u8 <- ((register2 >> 24) & 0xff).u8
+        subclass u8 <- ((register2 >> 16) & 0xff).u8
+        headerType u8 <- ((register3 >> 16) & 0xff).u8
+        type u8 <- headerType & 0x7f
+
+
+        if type = PCI_DEVICE_TYPE_NORMAL
+            bar0 u32 <- it.readRegister(busNum, deviceNum, funNum, 0x04)
+            bar1 u32 <- it.readRegister(busNum, deviceNum, funNum, 0x05)
+            bar2 u32 <- it.readRegister(busNum, deviceNum, funNum, 0x06)
+            bar3 u32 <- it.readRegister(busNum, deviceNum, funNum, 0x07)
+            bar4 u32 <- it.readRegister(busNum, deviceNum, funNum, 0x08)
+            bar5 u32 <- it.readRegister(busNum, deviceNum, funNum, 0x09)
+
+            it.addNormalDevice(busNum, deviceNum, funNum, vendorId, deviceId, class, subclass, bar0, bar1, bar2, bar3, bar4, bar5)
+        else if type = PCI_DEVICE_TYPE_PCI_BRIDGE
+        else if type = PCI_DEVICE_TYPE_CARDBUS_BRIDGE
+        ;
+
+        // Has multiple functions?
+        if funNum = 0 and headerType &? 0x80
+            rep funNum u32 <- 1, funNum < 8, funNum <- funNum + 1
+                it.scanDevice(busNum, deviceNum, funNum.u8)
+            ;
+        ;
+    ;
+
+    addNormalDevice fun:
+        busNum u8,
+        deviceNum u8,
+        funNum u8,
+
+        vendorId u16,
+        deviceId u16,
+        class u8,
+        subclass u8,
+
+        bar0 u32,
+        bar1 u32,
+        bar2 u32,
+        bar3 u32,
+        bar4 u32,
+        bar5 u32
+
+        devicesPci[devicesPciCount] <- {busNum, deviceNum, funNum, vendorId, deviceId, class, subclass, bar0, bar1, bar2, bar3, bar4, bar5}.blob<DevicePci>
+        devicesPciCount <- devicesPciCount + 1
+    ;
+
+    readRegister fun: busNum u8, deviceNum u8, funNum u8, registerNum u8 -> u32
+        // encode address
+        pciAdr u32 <- 0x8000_0000 // <31: enable>
+        pciAdr <- pciAdr | (busNum << 16) // <23-16: bus number>
+        pciAdr <- pciAdr | (deviceNum << 11) // <15-11: device number>
+        pciAdr <- pciAdr | (funNum << 8) // <10-8: function number>
+        pciAdr <- pciAdr | ((registerNum << 2) & 0b1111_1100) // <7-0: register offset>
+
+        // select address
+        @BSys.out32(PCI_CONFIG_ADR_PORT, pciAdr)
+
+        // read config data
+        ret @BSys.in32(PCI_CONFIG_DATA_PORT)
+    ;
+;

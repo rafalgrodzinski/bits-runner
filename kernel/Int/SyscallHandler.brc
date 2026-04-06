@@ -1,5 +1,6 @@
 @module Int
 
+@import Bus
 @import B
 @import BiosService
 @import DrvCmos
@@ -12,6 +13,7 @@
 CALL_REBOOT u32 <- 0x00
 CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_PRINT_CHARACTER u32 <- 0x01
+CALL_SYS_INFO_PCI u32 <- 0x021
 
 // Input
 CALL_INPUT_KEYBOARD_GET_STATE u32 <- 0x100
@@ -26,7 +28,7 @@ CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
 
 // GFX
 CALL_GFX_SET_MODE u32 <- 0x300
-CALL_GFX_SWAP_BUFFERS u32 <- 0x310
+CALL_GFX_COMMIT_DRAWING u32 <- 0x310
 CALL_GFX_CLEAR_SCREEN u32 <- 0x320
 CALL_GFX_DRAW_PIXEL u32 <- 0x321
 CALL_GFX_DRAW_LINE u32 <- 0x322
@@ -45,6 +47,19 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         @BiosService.reboot()
     else if eax = CALL_GET_TIMESTAMP
         ret @DrvCmos.getTimestamp()
+    else if eax = CALL_SYS_INFO_PCI
+        pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
+        pInfo.val[0] <- @Bus.devicesPciCount
+        rep i u32, i < @Bus.devicesPciCount, i <- i + 1
+            pInfo.val[i * 7 + 1] <- @Bus.devicesPci[i].busNum.u32
+            pInfo.val[i * 7 + 2] <- @Bus.devicesPci[i].deviceNum.u32
+            pInfo.val[i * 7 + 3] <- @Bus.devicesPci[i].funNum.u32
+
+            pInfo.val[i * 7 + 4] <- @Bus.devicesPci[i].vendorId.u32
+            pInfo.val[i * 7 + 5] <- @Bus.devicesPci[i].deviceId.u32
+            pInfo.val[i * 7 + 6] <- @Bus.devicesPci[i].class.u32
+            pInfo.val[i * 7 + 7] <- @Bus.devicesPci[i].subclass.u32
+        ;
     else if eax = CALL_PRINT_CHARACTER
         @Term.printCharacter(ebx.u8, ecx.u8)
     else if eax = CALL_INPUT_KEYBOARD_GET_STATE
@@ -75,19 +90,19 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         pInfo.val[0] <- entry.kind
         pInfo.val[1] <- entry.entrySize
     else if eax = CALL_GFX_SET_MODE
-        deviceVideo.initMode.val({deviceVideo.adr}, ebx)
-    else if eax = CALL_GFX_SWAP_BUFFERS
-        deviceVideo.swapBuffers.val({deviceVideo.adr})
+        deviceVideo.setMode(ebx, ecx)
+    else if eax = CALL_GFX_COMMIT_DRAWING
+        deviceVideo.commitDrawing()
     else if eax = CALL_GFX_CLEAR_SCREEN
-        deviceVideo.clear.val({deviceVideo.adr}, ebx)
+        deviceVideo.clear(ebx)
     else if eax = CALL_GFX_DRAW_PIXEL
-        deviceVideo.drawPixel.val({deviceVideo.adr}, ebx, ecx, edx)
+        deviceVideo.drawPixel(ebx, ecx, edx)
     else if eax = CALL_GFX_DRAW_LINE
         x1 u32 <- ebx >> 16
         y1 u32 <- ebx & 0xffff
         x2 u32 <- ecx >> 16
         y2 u32 <- ecx & 0xffff
-        deviceVideo.drawLine.val({deviceVideo.adr}, x1, y1, x2, y2, edx)
+        deviceVideo.drawLine(x1, y1, x2, y2, edx)
     else if eax = CALL_PROCESS_YIELD
         @Sched.switchToNextProcess()
     ;

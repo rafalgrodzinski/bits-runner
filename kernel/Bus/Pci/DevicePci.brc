@@ -1,0 +1,41 @@
+@module Bus
+
+@import BSys
+
+@export DevicePci blob
+    busNum u8
+    deviceNum u8
+    funNum u8
+
+    vendorId u16
+    deviceId u16
+    class u8
+    subclass u8
+
+    bar0 u32
+    bar1 u32
+    bar2 u32
+    bar3 u32
+    bar4 u32
+    bar5 u32
+
+    sendCommand fun: command u16
+        // encode address
+        pciAdr u32 <- 0x8000_0000 // <31: enable>
+        pciAdr <- pciAdr | (it.busNum << 16) // <23-16: bus number>
+        pciAdr <- pciAdr | (it.deviceNum << 11) // <15-11: device number>
+        pciAdr <- pciAdr | (it.funNum << 8) // <10-8: function number>
+        pciAdr <- pciAdr | 0x04 // <7-0: register offset>
+
+        // read reg1
+        @BSys.out32(PCI_CONFIG_ADR_PORT, pciAdr)
+        reg1 u32 <- @BSys.in32(PCI_CONFIG_DATA_PORT)
+
+        // modify command
+        reg1 <- reg1 | command
+
+        // update reg1
+        @BSys.out32(PCI_CONFIG_ADR_PORT, pciAdr)
+        @BSys.out32(PCI_CONFIG_DATA_PORT, reg1)
+    ;
+;
