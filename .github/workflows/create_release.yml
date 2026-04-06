@@ -14,5 +14,8 @@ jobs:
       - name: Install BRB
         run: brew install rafalgrodzinski/tap/brb
 
+      - name: Install NASM
+        run: brew install nasm
+
       - name: Build  Project
-        run: ./make.sh
+        run: "${GITHUB_WORKSPACE}/make.sh"
