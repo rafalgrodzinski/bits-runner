@@ -2,7 +2,7 @@
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE}")"
 SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
-BRB_DIR="$(dirname "$(which brb)")/.."
+BRC_LIB="`brew --prefix`/lib/brc"
 
 function check {
     if [ $? -ne 0 ]; then
@@ -48,7 +48,7 @@ SOURCES=()
 # For each of these directories
 SOURCES_DIRS=(
     "${SCRIPT_DIR}/"
-    "${BRB_DIR}/lib/B"
+    "${BRC_LIB}/B"
     "${SCRIPT_DIR}/../lib/B/"
 )
 
