@@ -49,7 +49,7 @@ jobs:
             ;;
           esac
           echo "VERSION=${VERSION_NUMBER}${VERSION_SUFFIX}" >> $GITHUB_ENV
-          echo "TAG=${BUILD_KIND}/${VERSION_NUMBER}${VERSION_SUFFIX}" >> GITHUB_ENV
+          echo "TAG=${BUILD_KIND}/${VERSION_NUMBER}${VERSION_SUFFIX}" >> $GITHUB_ENV
 
       - name: Build  Project
         run: "${GITHUB_WORKSPACE}/make.sh"
