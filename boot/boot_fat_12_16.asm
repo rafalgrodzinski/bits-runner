@@ -92,7 +92,7 @@ start:
 	mov [fat_first_data_sector], ax
 
 	; fat_bytes_per_cluster
-	movzx ax, [bpb_sectors_per_cluster]
+	movzx ax, byte [bpb_sectors_per_cluster]
 	mul word [bpb_bytes_per_sector]
 	mov [fat_bytes_per_cluster], ax
 
