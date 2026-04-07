@@ -58,6 +58,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
         run: |
-          gh release create "${TAG}" "${GITHUB_WORKSPACE}/*.img" \
-          --title "${VERSION}" \
+          gh release create "${{env.TAG}}" "${GITHUB_WORKSPACE}/*.img" \
+          --title "${{env.VERSION}}" \
           --notes-file "${GITHUB_WORKSPACE}/docs/Notes.md"
