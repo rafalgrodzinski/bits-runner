@@ -24,7 +24,10 @@ It is under early development but the the desired design includes:
 - Sound abstraction (PC speakr, sound cards)
 - Networing
 
-## How to build & run
+## How to run
+You download an fdd or hdd image from the [releases](https://github.com/rafalgrodzinski/bits-runner/releases) page. You can then use `dd` to prepare a disk. For example on macOS `sudo dd if=hdd.img of=/dev/disk7 status=progress` could copy the image to a USB drive, which could then be used to boot the system in an hdd emultation (don't just copy this command, make sure that disk7 is your intended target disk).
+
+## How to build
 Building works on macOS. Support for Linux may be added at a later point.
 
 Make sure you have [nasm](https://github.com/netwide-assembler/nasm) and [BRC](https://github.com/rafalgrodzinski/bits-runner-code) in your run path. Execute `/.make.sh`, which should produce a `fdd.img`, which is a FAT12 formatted floppy disk image. It will also produce `hdd.img` which contains a hard drive image with two partitions, one FAT12  and one FAT16. Run on your favourite virtual machine or real hardware (tested on VM Ware and Bochs).

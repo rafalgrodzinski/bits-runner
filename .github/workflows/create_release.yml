@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "main"
-      - "37-automated-release"
   workflow_dispatch:
     inputs:
       build_kind:
@@ -53,7 +52,7 @@ jobs:
 
       - name: Build  Project
         run: "${GITHUB_WORKSPACE}/make.sh"
-      
+
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
