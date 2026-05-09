@@ -1,5 +1,7 @@
 @module BSys
 
+@import Mem
+
 @export getEax raw<"=r"> -> u32
     mov $0, eax
 ;
@@ -61,4 +63,11 @@ printCharRaw raw<"m,m,~{eax},~{ebx}">: character u32/*$0*/, attribute u32/*$1*/
 
 @export printChar fun: character u8
     printCharRaw(character, 0x07)
+;
+
+@export memAlloc fun: bytesCount u32 -> a
+    ret @Mem.allocateBytes(bytesCount).vadr
+;
+
+@export memFree fun: address a
 ;
