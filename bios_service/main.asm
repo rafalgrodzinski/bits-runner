@@ -174,7 +174,7 @@ start_16:
     call term_print_new_line_16
     ; Check RAM size
     cmp dword [memory_size], RAM_MIN
-    jge .ram_size_ok
+    jae .ram_size_ok
     mov si, msg_error_memory_low
     call fatal_error_16 ; Too little RAM!
 .ram_size_ok:
@@ -306,10 +306,10 @@ scan_memory_16:
     ; check if we found bigger memory limit
     cmp dword [di + 16], 2 ; check if marks unavailable regions
     je .size_not_updated
-    mov eax, [di]
-    add eax, [di + 8]
+    mov eax, [di] ; region base address
+    add eax, [di + 8] ; + region size
     cmp eax, [memory_size]
-    jng .size_not_updated
+    jna .size_not_updated
     mov dword [memory_size], eax
 
 .size_not_updated:
