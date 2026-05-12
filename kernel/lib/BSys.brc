@@ -18,6 +18,14 @@
     mov $0, edx
 ;
 
+@export getCr3 raw<"=r"> -> u32
+    mov $0, cr3
+;
+
+@export setCr3 raw<"r,~{memory}">: address u32
+    mov cr3, $0
+;
+
 @export out8 raw<"r,r,~{eax},~{edx}">: port u16, value u8
     mov dx, $0
     mov al, $1
