@@ -79,9 +79,11 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         pInfoMem.val[0] <- @Mem.getInfoTotalSize()
         pInfoMem.val[1] <- @Mem.getInfoTotalPages()
         pInfoMem.val[2] <- @Mem.getInfoFreePages()
-        pInfoMem.val[3] <- @Mem.getInfoHeapStart().u32
-        pInfoMem.val[4] <- @Mem.getInfoHeapSize()
-        pInfoMem.val[5] <- @Mem.getInfoAllocatedBytes()
+        pInfoMem.val[3] <- @Mem.getInfoKernelPages()
+        pInfoMem.val[4] <- @Mem.getInfoUnusablePages()
+        pInfoMem.val[5] <- @Mem.getInfoHeapStart().u32
+        pInfoMem.val[6] <- @Mem.getInfoHeapSize()
+        pInfoMem.val[7] <- @Mem.getInfoAllocatedBytes()
     else if eax = CALL_STORAGE_GET_INFO_FS_ENTRY
         pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
         pEntryPath ptr<blob<@B.String>> <- ecx.a.ptr<blob<@B.String>>

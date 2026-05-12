@@ -38,6 +38,8 @@ CALL_PROCESS_YIELD u32 <- 0x400
     totalSize u32
     totalPages u32
     freePages u32
+    kernelPages u32
+    unusablePages u32
     heapStart u32
     heapSize u32
     allocateBytes u32

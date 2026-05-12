@@ -71,6 +71,16 @@ CMD_YIELD blob<@B.String>
             text <- @B.StringForU32(info.freePages)
             text.println()
 
+            text <- @B.String("Kernel pages: ")
+            text.print()
+            text <- @B.StringForU32(info.kernelPages)
+            text.println()
+
+            text <- @B.String("Unusable pages: ")
+            text.print()
+            text <- @B.StringForU32(info.unusablePages)
+            text.println()
+
             text <- @B.String("Heap start: ")
             text.print()
             text <- @B.StringForU32(info.heapStart)

@@ -10,6 +10,8 @@ Layout blob
 ;
 pMemLayout ptr<blob<Layout>>
 freePagesCount u32 <- 0
+kernelPagesCount u32
+unusablePagesCount u32
 
 HeapLayout blob
     pHeapStart ptr<u8>
@@ -42,10 +44,10 @@ flushTlb raw<"~{eax},~{memory}">
 @export init fun
     pMemLayout <- { heap.adr }
     // Calculate free pages
-    kernelPagesCount u32 <- 0
     rep i u32 <- 0, i < pMemLayout.val.pagesCount, i <- i + 1
-        if pMemLayout.val.memPages[i] = 0.u8: freePagesCount <- freePagesCount + 1
-        if pMemLayout.val.memPages[i] = 1.u8: kernelPagesCount <- kernelPagesCount + 1
+        if pMemLayout.val.memPages[i] = 0x00: freePagesCount <- freePagesCount + 1
+        else if pMemLayout.val.memPages[i] = 0x01: kernelPagesCount <- kernelPagesCount + 1
+        else if pMemLayout.val.memPages[i] = 0xff: unusablePagesCount <- unusablePagesCount + 1
     ;
     
     // Setup heap
@@ -203,6 +205,14 @@ registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory pt
 
 @export getInfoFreePages fun -> u32
     ret freePagesCount
+;
+
+@export getInfoKernelPages fun -> u32
+    ret kernelPagesCount
+;
+
+@export getInfoUnusablePages fun -> u32
+    ret unusablePagesCount
 ;
 
 @export getInfoHeapStart fun -> a

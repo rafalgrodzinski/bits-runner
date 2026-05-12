@@ -316,7 +316,7 @@ scan_memory_16:
     add di, 24
     cmp ebx, 0 ; once ebx becomes 0, scanning has finished
     jne .loop
-    
+
     ret
 
 ;
@@ -356,22 +356,18 @@ init_memory_layout_32:
     mov [edi + 8], eax ; pagesCount
     mov .pages_count, eax
 
-    mov dword .current_map_entry, 0
-    mov esi, .memory_map_entries_adr
-    mov ecx, 0
-.loop_page_entry:
-    ; Past last entry?
-    mov eax, .current_map_entry
-    cmp eax, .memory_map_entries_count
-    jnb .memory_entry_unmapped
-
+    mov ecx, 0 ; page currently being processed
+.loop_page_entry:    
     ; calculate current address
     mov eax, ecx
     mul dword .page_size
 
     ; mark real mode memory
     cmp eax, 0x500 ; 1024 real mode IVT + 256 BDA
-    jb .page_unavailable
+    jae .not_real_memory
+    mov al, 0xff
+    jmp .set_entry
+.not_real_memory
 
     ; mark kernel memory
     cmp eax, KERNEL_PHY_ADR
@@ -380,8 +376,8 @@ init_memory_layout_32:
     ;add ebx, .kernel_size
     add ebx, 0x100000 ; Hardcode 1MiB for image size + heap
     cmp eax, ebx
-    jnb .not_kernel_memory
-    mov al, 1
+    jae .not_kernel_memory
+    mov al, 0x01
     jmp .set_entry
 .not_kernel_memory:
 
@@ -389,8 +385,8 @@ init_memory_layout_32:
     cmp eax, KERNEL_STACK_PHY_END_ADR - KERNEL_STACK_SIZE
     jb .not_kernel_stack_memory
     cmp eax, KERNEL_STACK_PHY_END_ADR
-    jnb .not_kernel_stack_memory
-    mov al, 1
+    jae .not_kernel_stack_memory
+    mov al, 0x01
     jmp .set_entry
 .not_kernel_stack_memory:
 
@@ -398,44 +394,54 @@ init_memory_layout_32:
     cmp eax, 0x1000
     jb .not_bios_service_memory
     cmp eax, buffer + 0x200 ; 512 bytes for read/write buffer
-    jnb .not_bios_service_memory
-    mov al, 3
+    jae .not_bios_service_memory
+    mov al, 0x01
     jmp .set_entry
 .not_bios_service_memory:
 
-    ; within current entry?
-    mov ebx, [esi]
-    cmp eax, ebx ; < base?
-    jb .memory_entry_unmapped
-
-    add ebx, [esi + 8]
-    cmp eax, ebx ; >= base + length
-    jnb .try_next_entry
-
-    ; get type from the entry
-    mov al, [esi + 16]
-    cmp al, 1
-    jne .page_unavailable
-    mov al, 0
+    ; search for memory map entry
+    ; start search from the first entry
+    mov dword .current_map_entry, 0
+    mov esi, .memory_map_entries_adr
+.loop_find_entry:
+    ; Past last entry?
+    mov ebx, .current_map_entry
+    cmp ebx, .memory_map_entries_count
+    jb .not_past_last_entry
+    mov al, 0xff
     jmp .set_entry
-.page_unavailable:
-    mov al, 3
-.set_entry:
-    mov [edi + 12 + ecx], al
-    jmp .post_condition
+.not_past_last_entry:
+
+    ; within current entry?
+    ; is below entry?
+    cmp eax, [esi] ; < base?
+    jb .try_next_entry
+
+    ; is above entry?
+    cmp eax, [esi + 8] ; >= base + length
+    jae .try_next_entry
+
+    ; is usable RAM?
+    mov al, [esi + 16]
+    cmp al, 1 ; 1: usable ram
+    jne .not_usuable_ram
+    mov al, 0x00
+    jmp .set_entry
+.not_usuable_ram:
+
+    mov al, 0xff ; mark as unusable
+    jmp .set_entry
 
 .try_next_entry:
     add esi, 24 ; go to the next entry
     inc dword .current_map_entry
-    jmp .loop_page_entry
+    jmp .loop_find_entry
 
-.memory_entry_unmapped:
-    mov byte [edi + 12 + ecx], 3
-
-.post_condition:
-   inc ecx
-   cmp ecx, .pages_count
-   jb .loop_page_entry
+.set_entry:
+    mov [edi + 12 + ecx], al
+    inc ecx
+    cmp ecx, .pages_count
+    jb .loop_page_entry
 
     mov esp, ebp
     pop ebp
