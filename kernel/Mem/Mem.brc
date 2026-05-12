@@ -1,5 +1,7 @@
 @module Mem
 
+@import BSys
+
 @export heap u32 // marks start of the kernel heap
 
 Layout blob
@@ -19,22 +21,6 @@ HeapLayout blob
     allocatedBytes u32
 ;
 heapLayout blob<HeapLayout>
-
-getCr3 raw<"=r"> -> u32
-    mov $0, cr3
-;
-
-setCr3 raw<"r,~{memory}">: address u32
-    mov cr3, $0
-;
-
-disableInterrupts raw<"">
-    cli
-;
-
-enableInterrupts raw<"">
-    sti
-;
 
 flushTlb raw<"~{eax},~{memory}">
     mov eax, cr3
@@ -103,7 +89,7 @@ flushTlb raw<"~{eax},~{memory}">
 
     remainingPagesCount u32 <- requestedPagesCount
 
-    disableInterrupts()
+    @BSys.disableInterrupts()
     // use that last current directory page to self-reference the new directory tables
     oldSelfReference u32 <- pCurrentPageDirectory.val[1023]
     selfReference u32 <- (lAdrToPAdr(pPageDirectory.vadr.u32) & 0xffff_f000) | 0b10111 //0x13 // PCD & RW & P
@@ -122,7 +108,7 @@ flushTlb raw<"~{eax},~{memory}">
     // and restore the original self-reference
     pCurrentPageDirectory.val[1023] <- oldSelfReference
     flushTlb()
-    enableInterrupts()
+    @BSys.enableInterrupts()
 
     ret requestedPagesCount * pMemLayout.val.pageSize
 ;
@@ -168,7 +154,7 @@ registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory pt
 
     remainingPages u32 <- pagesCount
 
-    disableInterrupts()
+    @BSys.disableInterrupts()
 
     rep iTable u32 <- startTable, iTable < startTable + tablesCount, iTable <- iTable + 1
         // add a new pages table to directory if necessary
@@ -192,7 +178,7 @@ registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory pt
         pageOffset <- 0
     ;
 
-    enableInterrupts()
+    @BSys.enableInterrupts()
 ;
 
 @export getInfoTotalSize fun -> u32
