@@ -335,7 +335,7 @@ scan_memory_16:
 %define .memory_map_entries_count [ebp + 20]
 %define .memory_map_entries_adr [ebp + 24]
 %define .kernel_size [ebp + 28]
-bits 32
+[bits 32]
 init_memory_layout_32:
     push ebp
     mov ebp, esp
