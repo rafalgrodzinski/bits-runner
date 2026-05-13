@@ -7,7 +7,7 @@
 %define KERNEL_ADR 0x80000000 ; @ 2 GiB
 %define KERNEL_PHY_ADR 0x100000 ; @ 1MiB
 
-%define KERNEL_STACK_END_ADR 0xc0000000 ; @ 3 GiB
+%define KERNEL_STACK_END_ADR 0x100000000 - 0x400000 ; @ 4GiB - 4MiB (for pages directory self reference)
 %define KERNEL_STACK_PHY_END_ADR 0x500000 ; @ 4MiB
 %define KERNEL_STACK_SIZE 0x40000 ; 256 KiB
 
@@ -16,7 +16,7 @@
 %define PIC2_CMD_PORT 0xa0
 %define PIC2_DATA_PORT 0xa1
 
-; Jump over data into strt point
+; Jump over data into start point
 [bits 16]
 jmp 0:start_16 ; Sets CS to 0
 
@@ -373,8 +373,9 @@ init_memory_layout_32:
     cmp eax, KERNEL_PHY_ADR
     jb .not_kernel_memory
     mov ebx, KERNEL_PHY_ADR
-    add ebx, .kernel_size
-    add ebx, .pages_count ; kernel_size + pages_count (1 byte per page)
+    ;add ebx, .kernel_size
+    ;add ebx, .pages_count ; kernel_size + pages_count (1 byte per page)
+    add ebx, 0x100000 ; Hardcode 1MiB for image size + heap
     cmp eax, ebx
     jae .not_kernel_memory
     mov al, 0x01

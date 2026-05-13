@@ -5,8 +5,8 @@ page_directory: times 1024 dd 0
 ; <31-12: mem adr> <11-9: ?> <8: G> <7: PAT> <6: D> <5: A> <4: PCD> <3: PWT> <2: US> <1: RW> <0: P>
 ; G: global (don't invalidate upon mov to cr3), PAT: caching type, D: dirty, A: accessed, PCD: cache disabled, PWT: write through, US: user/supervisor, RW: read/write, P: present
 page_table_0: times 1024 dd 0 ; 0x0000 0000 - 0x0040 0000 (0 - 4MiB)
-page_table_512: times 1024 dd 0 ; 0x8000 0000 - 0x8040 0000 (2048 - 2052 MiB)
-page_table_767: times 1024 dd 0 ; 0xbfc0 0000 - 0xc000 0000 (3068 - 3072 MiB)
+page_table_512: times 1024 dd 0 ; 0x8000 0000 - 0x8040 0000 (2048 - 2052 MiB) kernel image
+page_table_1022: times 1024 dd 0 ; 0xff80 0000 - 0xffc0 0000 (4088 - 4092 MiB) kernel stack
 
 ;
 ; Initialize memory manager
@@ -23,10 +23,10 @@ memory_setup_paging_32:
     or eax, 3
     mov [page_directory + 512 * 4], eax
 
-    mov eax, page_table_767
+    mov eax, page_table_1022
     and eax, 0xfffff000
     or eax, 3
-    mov [page_directory + 767 * 4], eax
+    mov [page_directory + 1022 * 4], eax
 
     ; Identity map the first MiB
     mov ecx, 0
@@ -51,14 +51,14 @@ memory_setup_paging_32:
     loop .table_512
 
     ; Map kernel stack
-    mov ecx, 0x40
-.loop_767:
+    mov ecx, 0x40 ; 64 pages * 4096 = 256KiB
+.loop_1022:
     mov eax, 0x1000
     mul ecx
     add eax, KERNEL_STACK_PHY_END_ADR - KERNEL_STACK_SIZE - 0x1000 ; map from the end
     or eax, 0x03 ; RW & P
-    mov [page_table_767 + (ecx + 1024 - 64 - 1)  * 4], eax ; map the last 256KiB
-    loop .loop_767
+    mov [page_table_1022 + (ecx + 1024 - 64 - 1)  * 4], eax ; map the last 256KiB
+    loop .loop_1022
 
     ; Point last entry to page directory
     mov eax, page_directory

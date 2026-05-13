@@ -1,6 +1,7 @@
 @module Sched
 
 @import Mem
+@import BSys
 
 KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
 KERNEL_STACK_END_ADR u32 <- 0x1_0000_0000 - 0x40_0000 // @ 4GiB - 4MiB (for pages directory self reference)
@@ -33,24 +34,8 @@ Tss blob
     state u32
 ;
 
-getCr3 raw<"=r"> -> u32
-    mov $0, cr3
-;
-
-setCr3 raw<"r,~{memory}">: adr u32
-    mov cr3, $0
-;
-
 getEsp raw<"=r"> -> u32
     mov $0, esp
-;
-
-disableInterrupts raw<"">
-    cli
-;
-
-enableInterrupts raw<"">
-    sti
 ;
 
 setTss raw<"m,~{eax}">: gdtEntry u32
@@ -60,8 +45,8 @@ setTss raw<"m,~{eax}">: gdtEntry u32
 
 tss blob<Tss>
 
-processesCount u32 <- 0
-currentProcess u32 <- 8
+processesCount u32
+currentProcess u32 <- 0xffff
 pProcesses data<ptr<blob<Process>>, 8>
 
 @export init fun: gdtTssAdr u32
@@ -88,8 +73,8 @@ pProcesses data<ptr<blob<Process>>, 8>
         oldCr3 <- pProcesses[currentProcess].val.cr3
         pCurrentPageDirectory <- { pProcesses[currentProcess].val.pageDirectory.adr }
     else
-        oldCr3 <- getCr3()
-        pCurrentPageDirectory <- { getCr3() }
+        oldCr3 <- @BSys.getCr3()
+        pCurrentPageDirectory <- { @BSys.getCr3() }
     ;
 
     pProcess ptr<blob<Process>> <- @Mem.allocateAlignedBytes(blob<Process>.size, 0x1000).vadr.ptr<blob<Process>>
@@ -105,13 +90,10 @@ pProcesses data<ptr<blob<Process>>, 8>
     pProcess.val.pageDirectory[0] <- pCurrentPageDirectory.val[0]
 
     // copy kernel page directories
-    rep i u32 <- 512, i < 1022, i <- i + 1: pProcess.val.pageDirectory[i] <- pCurrentPageDirectory.val[i]
+    rep i u32 <- 512, i < 1023, i <- i + 1: pProcess.val.pageDirectory[i] <- pCurrentPageDirectory.val[i]
 
     // clear user page tables
     rep i u32 <- 1, i < 512, i <- i + 1: pProcess.val.pageDirectory[i] <-  0
-
-    // clear kernel stack pages table
-    pProcess.val.pageDirectory[1022] <- 0
 
     // self-refence pages directory
     pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x13 // PCD & RW & P
@@ -122,12 +104,9 @@ pProcesses data<ptr<blob<Process>>, 8>
     // allocate user stack memory pages
     @Mem.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, USER_STACK_SIZE, USER_STACK_END_ADR - USER_STACK_SIZE)
 
-    // allocate kernel stack memory pages
-    @Mem.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, KERNEL_STACK_SIZE, KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE)
-
     // Copy user image to target address
-    disableInterrupts()
-    setCr3(pProcess.val.cr3)
+    @BSys.disableInterrupts()
+    @BSys.setCr3(pProcess.val.cr3)
 
     // setup iret frame
     pStack ptr<data<u32>> <- { pProcess.val.esp }
@@ -143,11 +122,23 @@ pProcesses data<ptr<blob<Process>>, 8>
         imageTargetAddrss.val[i] <- imageSourceAddress.val[i]
     ;
 
-    setCr3(oldCr3)
-    enableInterrupts()
+    @BSys.setCr3(oldCr3)
+
+    // reuse the existing stack if it's the first process
+    if processesCount = 0
+        pProcess.val.pageDirectory[1022] <- pCurrentPageDirectory.val[1022]
+    // or allocate kernel stack memory pages
+    else
+        // allocate new kernel stack just bellow the desired 1022 slot, so we can use the existing stack for the allocation process
+        @Mem.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, KERNEL_STACK_SIZE, KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE - 0x40_0000)
+        // and them put it in the right location
+        pProcess.val.pageDirectory[1022] <- pProcess.val.pageDirectory[1021]
+        pProcess.val.pageDirectory[1021] <- 0
+    ;
 
     pProcesses[processesCount] <- pProcess
     processesCount <- processesCount + 1
+    @BSys.enableInterrupts()
 
     ret pProcess
 ;
@@ -158,7 +149,7 @@ pProcesses data<ptr<blob<Process>>, 8>
     if currentProcess < processesCount
         pCurrentPageDirectory <- { pProcesses[currentProcess].val.pageDirectory.adr }
     else
-        pCurrentPageDirectory <- { getCr3() }
+        pCurrentPageDirectory <- { @BSys.getCr3() }
     ;
 
     @Mem.mapRawMemory(pCurrentPageDirectory, memStart, memSize)
@@ -191,7 +182,8 @@ resumeKernelProcessRaw raw<"r,r,~{eax},~{memory}">: esp0 u32, cr3 u32 //, eip0 u
 @export switchToNextProcess fun
     if processesCount = 0: ret
 
-    disableInterrupts()
+    @BSys.disableInterrupts()
+    // preserve current kernel stack pointer
     if currentProcess < processesCount
         pProcesses[currentProcess].val.esp0 <- getEsp()
     ;
@@ -207,5 +199,5 @@ resumeKernelProcessRaw raw<"r,r,~{eax},~{memory}">: esp0 u32, cr3 u32 //, eip0 u
     else
         resumeKernelProcessRaw(pCurrentProcess.val.esp0, pCurrentProcess.val.cr3)
     ;
-    enableInterrupts()
+    @BSys.enableInterrupts()
 ;
