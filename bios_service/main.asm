@@ -373,9 +373,8 @@ init_memory_layout_32:
     cmp eax, KERNEL_PHY_ADR
     jb .not_kernel_memory
     mov ebx, KERNEL_PHY_ADR
-    ;add ebx, .kernel_size
-    ;add ebx, .pages_count ; kernel_size + pages_count (1 byte per page)
-    add ebx, 0x100000 ; Hardcode 1MiB for image size + heap
+    add ebx, .kernel_size
+    add ebx, .pages_count ; kernel_size + pages_count (1 byte per page)
     cmp eax, ebx
     jae .not_kernel_memory
     mov al, 0x01

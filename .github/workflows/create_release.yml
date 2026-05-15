@@ -34,8 +34,7 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@v6
 
-      - name: Read Version Information
-        shell: bash
+      - name: Read Version
         run: |
           BUILD_KIND="${{inputs.build_kind || 'dev'}}"
           VERSION_NUMBER="$(cat ${GITHUB_WORKSPACE}/version.txt)"
@@ -50,7 +49,7 @@ jobs:
           echo "VERSION=${VERSION_NUMBER}${VERSION_SUFFIX}" >> $GITHUB_ENV
           echo "TAG=${BUILD_KIND}/${VERSION_NUMBER}${VERSION_SUFFIX}" >> $GITHUB_ENV
 
-      - name: Build  Project
+      - name: Build Project
         run: "${GITHUB_WORKSPACE}/make.sh"
 
       - name: Create Release
