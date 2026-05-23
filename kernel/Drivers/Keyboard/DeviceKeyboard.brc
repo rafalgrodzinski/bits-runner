@@ -141,14 +141,54 @@ SHIFTED_ASCII_MAP data<u8> <- {
 keyboardStatus data<bool, 128>
 pressedAscii u8
 
+waitForWriteReady fun
+    rep @BSys.in8(CMD_PORT) &? 0x02:
+;
+
+waitForReadReady fun
+    rep not @BSys.in8(CMD_PORT) &? 0x01:
+;
+
 @export DeviceKeyboard blob
     init fun
+        @BSys.disableInterrupts()
+
+        // disable ports
+        waitForWriteReady()
+        @BSys.out8(CMD_PORT, 0xad)
+        waitForWriteReady()
+        @BSys.out8(CMD_PORT, 0xa7)
+
+        // drain data port
+        rep @BSys.in8(CMD_PORT) &? 0x01: @BSys.in8(DATA_PORT)
+
+        // Enable interrupts
+        waitForWriteReady()
+        @BSys.out8(CMD_PORT, 0x20)
+
+        waitForReadReady()
+        status u8 <- @BSys.in8(DATA_PORT)
+
+        // Enable first port
+        status <- status | 0b0000_0001 // enable first PS/2 port interrupt, IRQ 1
+        status <- status & 0b1111_1101 // disable the second PS/2 port interrupt, IRQ 12
+        status <- status & 0b1110_1111 // enable first PS/2 port clock
+        status <- status | 0b0100_0000 // enable first PS/2 port translation
+
+        waitForWriteReady()
+        @BSys.out8(CMD_PORT, 0x60)
+
+        waitForWriteReady()
+        @BSys.out8(DATA_PORT, status)
+
+        // enable first port
+        waitForWriteReady()
+        @BSys.out8(CMD_PORT, 0xae)
+
+        @BSys.enableInterrupts()
     ;
 
     handleInterrupt fun
-        // check if we have data
-        rep not @BSys.in8(CMD_PORT) &? 0x01:
-
         scanCode u32 <- @BSys.in8(DATA_PORT)
 
         isPressed bool <- scanCode & 0x80 = 0
@@ -169,20 +209,6 @@ pressedAscii u8
             isShiftPressed bool <- keyboardStatus[KEY_L_SHIFT] or keyboardStatus[KEY_R_SHIFT]
             pressedAscii <- if isShiftPressed: SHIFTED_ASCII_MAP[scanCode] else: ASCII_MAP[scanCode]
         ;
-
-        /*if pressedAscii = 'a'.u8
-            out(DATA_PORT, CMD_SET_LED)
-            out(DATA_PORT, LED_CAPS_LOCK)
-            if @BSys.in8(DATA_PORT) != ACK
-                out(DATA_PORT, LED_CAPS_LOCK)
-            ;
-        else
-            out(DATA_PORT, CMD_SET_LED)
-            out(DATA_PORT, 0.u8)
-            if @BSys.in8(DATA_PORT) != ACK
-                out(DATA_PORT, 0.u8)
-            ;
-        ;*/
     ;
 
     getAscii fun -> u32
