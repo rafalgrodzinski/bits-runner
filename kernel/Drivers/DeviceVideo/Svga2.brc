@@ -36,7 +36,7 @@ SVGA2_REG_CAPS u16 <- 0x11
     portBase u16
     width u32
     height u32
-    pFrameBuffer ptr<data<u32>>
+    pFrameBuffer ptr_volatile<data<u32>>
 
     readReg fun: reg u16 -> u32
         @BSys.out32(it.portBase + SVGA2_INDEX_PORT, reg)

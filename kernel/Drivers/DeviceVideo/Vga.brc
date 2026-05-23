@@ -28,9 +28,9 @@ VGA_MODE_320x240x8 u32 <- 0x01
     width u32
     height u32
     vgaMode u32
-    pFirstPageBuffer ptr<data<u8>>
-    pSecondPageBuffer ptr<data<u8>>
-    pBackPageBuffer ptr<data<u8>>
+    pFirstPageBuffer ptr_volatile<data<u8>>
+    pSecondPageBuffer ptr_volatile<data<u8>>
+    pBackPageBuffer ptr_volatile<data<u8>>
 
     // MARK: proto<DeviceVideo>
 
