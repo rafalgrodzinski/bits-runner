@@ -38,7 +38,7 @@ OBJS=(
     Int.o
     int_raw.o
     Mem.o
-    Sched.o
+    Dispatch.o
     Storage.o
     Term.o
 )

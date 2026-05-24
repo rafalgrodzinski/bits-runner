@@ -2,7 +2,7 @@
 
 @import Bus
 @import BSys
-@import Sched
+@import Dispatch
 
 // PCI
 SVGA2_VENDOR_ID u16 <- 0x15ad
@@ -109,7 +109,7 @@ SVGA2_REG_CAPS u16 <- 0x11
         fbOffset u32 <- it.readReg(SVGA2_REG_FB_OFFSET)
         fbSize u32 <- it.readReg(SVGA2_REG_FB_SIZE)
         it.pFrameBuffer <- {fbStart + fbOffset}
-        @Sched.mapRawMemory(fbStart, fbSize)
+        @Dispatch.mapRawMemory(fbStart, fbSize)
     ;
 
     commitDrawing fun

@@ -1,7 +1,7 @@
 @import Term
 @import Mem
 @import BiosService
-@import Sched
+@import Dispatch
 @import Storage
 @import B
 @import BSys
@@ -20,7 +20,7 @@ busPci blob<@Bus.BusPci>
 
     // Initialize subsystems
     @BiosService.init(biosServiceAdr)
-    @Sched.init(gdtTssAdr)
+    @Dispatch.init(gdtTssAdr)
     @Mem.init()
     @Int.init()
     @Term.init(@Term.MODE_80x25)
@@ -43,21 +43,21 @@ busPci blob<@Bus.BusPci>
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/COUNT.BIN"))
     pApp <- @Mem.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
-    @Sched.createProcess(pApp, fsEntry.entrySize)
+    @Dispatch.createProcess(pApp, fsEntry.entrySize)
 
     // Load shell
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/SHELL.BIN"))
     pApp <- @Mem.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
-    @Sched.createProcess(pApp, fsEntry.entrySize)
+    @Dispatch.createProcess(pApp, fsEntry.entrySize)
 
     // Load vdemo
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B.String("/APPS/VDEMO.BIN"))
     pApp <- @Mem.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
-    @Sched.createProcess(pApp, fsEntry.entrySize)
+    @Dispatch.createProcess(pApp, fsEntry.entrySize)
 
-    @Sched.switchToNextProcess()
+    @Dispatch.switchToNextProcess()
 
     rep:
 ;
