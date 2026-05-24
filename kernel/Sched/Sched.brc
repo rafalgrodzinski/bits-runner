@@ -1,5 +1,6 @@
 @module Sched
 
+@import B
 @import Mem
 @import BSys
 
@@ -45,9 +46,8 @@ setTss raw<"m,~{eax}">: gdtEntry u32
 
 tss blob<Tss>
 
-processesCount u32
+pProcesses blob<@B.Array, ptr<blob<Process>>>
 currentProcess u32 <- 0xffff
-pProcesses data<ptr<blob<Process>>, 8>
 
 @export init fun: gdtTssAdr u32
     tss.ss0 <- GDT_DATA
@@ -69,9 +69,9 @@ pProcesses data<ptr<blob<Process>>, 8>
     pCurrentPageDirectory ptr<data<u32>>
     oldCr3 u32
 
-    if currentProcess < processesCount
-        oldCr3 <- pProcesses[currentProcess].val.cr3
-        pCurrentPageDirectory <- { pProcesses[currentProcess].val.pageDirectory.adr }
+    if currentProcess < pProcesses.count
+        oldCr3 <- pProcesses.at(currentProcess).ptr<blob<Process>>.val.cr3
+        pCurrentPageDirectory <- { pProcesses.at(currentProcess).ptr<blob<Process>>.val.pageDirectory.adr }
     else
         oldCr3 <- @BSys.getCr3()
         pCurrentPageDirectory <- { @BSys.getCr3() }
@@ -125,7 +125,7 @@ pProcesses data<ptr<blob<Process>>, 8>
     @BSys.setCr3(oldCr3)
 
     // reuse the existing stack if it's the first process
-    if processesCount = 0
+    if pProcesses.count = 0
         pProcess.val.pageDirectory[1022] <- pCurrentPageDirectory.val[1022]
     // or allocate kernel stack memory pages
     else
@@ -136,8 +136,7 @@ pProcesses data<ptr<blob<Process>>, 8>
         pProcess.val.pageDirectory[1021] <- 0
     ;
 
-    pProcesses[processesCount] <- pProcess
-    processesCount <- processesCount + 1
+    pProcesses.push(pProcess)
     @BSys.enableInterrupts()
 
     ret pProcess
@@ -146,8 +145,8 @@ pProcesses data<ptr<blob<Process>>, 8>
 @export mapRawMemory fun: memStart u32, memSize u32
     pCurrentPageDirectory ptr<data<u32>>
 
-    if currentProcess < processesCount
-        pCurrentPageDirectory <- { pProcesses[currentProcess].val.pageDirectory.adr }
+    if currentProcess < pProcesses.count
+        pCurrentPageDirectory <- { pProcesses.at(currentProcess).ptr<blob<Process>>.val.pageDirectory.adr }
     else
         pCurrentPageDirectory <- { @BSys.getCr3() }
     ;
@@ -180,18 +179,20 @@ resumeKernelProcessRaw raw<"r,r,~{eax},~{memory}">: esp0 u32, cr3 u32 //, eip0 u
 ;
 
 @export switchToNextProcess fun
-    if processesCount = 0: ret
+    if pProcesses.count = 0: ret
 
     @BSys.disableInterrupts()
     // preserve current kernel stack pointer
-    if currentProcess < processesCount
-        pProcesses[currentProcess].val.esp0 <- getEsp()
+    if currentProcess < pProcesses.count
+        //pProcesses.at(currentProcess).ptr<blob<Process>>.val.esp0 <- getEsp()
+        pProcess ptr<blob<Process>> <- pProcesses.at(currentProcess).ptr<blob<Process>>
+        pProcess.val.esp0 <- getEsp()
     ;
 
     currentProcess <- currentProcess + 1
-    if currentProcess >= processesCount: currentProcess <- 0
+    if currentProcess >= pProcesses.count: currentProcess <- 0
 
-    pCurrentProcess ptr<blob<Process>> <- pProcesses[currentProcess]
+    pCurrentProcess ptr<blob<Process>> <- pProcesses.at(currentProcess).ptr<blob<Process>>
     if pCurrentProcess.val.state = PROCESS_STATE_NOT_STARTED
         tss.esp0 <- pCurrentProcess.val.esp0
         pCurrentProcess.val.state <- PROCESS_STATE_RUNNING
