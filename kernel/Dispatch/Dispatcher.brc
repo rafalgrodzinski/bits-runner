@@ -27,10 +27,6 @@ Tss blob
     unused1 data<u32, 23>
 ;
 
-getEsp raw<"=r"> -> u32
-    mov $0, esp
-;
-
 setTss raw<"m,~{eax}">: gdtEntry u32
     mov ax, $0
     ltr ax
@@ -88,30 +84,6 @@ currentProcess u32 <- 0xffff
     @Mem.mapRawMemory(pCurrentPageDirectory, memStart, memSize)
 ;
 
-startUserProcessRaw raw<"r,r,r,~{eax},~{memory}">: esp u32/*$0*/, cr3 u32/*$1*/, gdtUserData u32/*$2*/
-    mov eax, $2
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-
-    mov eax, $1
-    mov cr3, eax
-
-    mov eax, $0
-    mov esp, eax
-
-    iretd
-;
-
-resumeKernelProcessRaw raw<"r,r,~{eax},~{memory}">: esp0 u32, cr3 u32 //, eip0 u32
-    mov eax, $1
-    mov cr3, eax
-
-    mov eax, $0
-    mov esp, eax
-;
-
 @export switchToNextProcess fun
     if pProcesses.count = 0: ret
 
@@ -121,19 +93,13 @@ resumeKernelProcessRaw raw<"r,r,~{eax},~{memory}">: esp0 u32, cr3 u32 //, eip0 u
         // TODO:
         //pProcesses.at(currentProcess).ptr<blob<Process>>.val.esp0 <- getEsp()
         pProcess ptr<blob<Process>> <- pProcesses.at(currentProcess).ptr<blob<Process>>
-        pProcess.val.esp0 <- getEsp()
+        pProcess.val.esp0 <- @BSys.getEsp()
     ;
 
     currentProcess <- currentProcess + 1
     if currentProcess >= pProcesses.count: currentProcess <- 0
 
-    pCurrentProcess ptr<blob<Process>> <- pProcesses.at(currentProcess).ptr<blob<Process>>
-    if pCurrentProcess.val.state = PROCESS_STATE_NOT_STARTED
-        tss.esp0 <- pCurrentProcess.val.esp0
-        pCurrentProcess.val.state <- PROCESS_STATE_RUNNING
-        startUserProcessRaw(pCurrentProcess.val.esp, pCurrentProcess.val.cr3, GDT_USER_DATA)
-    else
-        resumeKernelProcessRaw(pCurrentProcess.val.esp0, pCurrentProcess.val.cr3)
-    ;
+    pProcesses.at(currentProcess).ptr<blob<Process>>.val.run()
+
     @BSys.enableInterrupts()
 ;

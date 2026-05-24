@@ -18,6 +18,10 @@
     mov $0, edx
 ;
 
+@export getEsp raw<"=r"> -> u32
+    mov $0, esp
+;
+
 @export getCr3 raw<"=r"> -> u32
     mov $0, cr3
 ;
