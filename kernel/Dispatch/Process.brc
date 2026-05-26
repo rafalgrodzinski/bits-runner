@@ -1,5 +1,7 @@
 @module Dispatch
 
+@import Mem
+
 @export Process blob
     pageDirectory data<u32, 1024>
     cr3 u32
@@ -77,7 +79,6 @@ ProcessNew fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess
     @BSys.setCr3(oldCr3)
 
     // reuse the existing stack if it's the first process
-    //if pProcesses.count = 0
     if isFirst
         pProcess.val.pageDirectory[1022] <- pCurrentPageDirectory.val[1022]
     // or allocate kernel stack memory pages
