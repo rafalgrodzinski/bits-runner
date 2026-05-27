@@ -23,47 +23,44 @@ GDT_USER_CODE u32 <- 0x28 | 0x03
 GDT_USER_DATA u32 <- 0x30 | 0x03
 GDT_TSS u32 <- 0x38
 
-PROCESS_STATE_NOT_STARTED u32 <- 0
-PROCESS_STATE_RUNNING u32 <- 1
-
 tss blob<Tss>
-processes blob<@B.Array, ptr<blob<Process>>>
 
 @export Dispatcher blob
     currentProcessIndex u32
+    processes blob<@B.Array, ptr<blob<Process>>>
 
     createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32
         @BSys.disableInterrupts()
 
-        pCurrentProcess ptr<blob<Process>> <- if it.currentProcessIndex < processes.count: processes.at(it.currentProcessIndex).ptr<blob<Process>> else: {0}
+        pCurrentProcess ptr<blob<Process>> <- if it.currentProcessIndex < it.processes.count: it.processes.at(it.currentProcessIndex).ptr<blob<Process>> else: {0}
         pProcess ptr<blob<Process>> <- ProcessNew(
             imageSourceAddress,
             imageSize,
             pCurrentProcess,
-            processes.count = 0
+            it.processes.count = 0
         )
 
-        processes.push(pProcess)
+        it.processes.push(pProcess)
 
         @BSys.enableInterrupts()
     ;
 
     runNextProcess fun
-        if processes.count = 0: ret
+        if it.processes.count = 0: ret
 
         @BSys.disableInterrupts()
         // preserve current kernel stack pointer
-        if it.currentProcessIndex < processes.count
+        if it.currentProcessIndex < it.processes.count
             // TODO:
             //it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.esp0 <- getEsp()
-            pProcess ptr<blob<Process>> <- processes.at(it.currentProcessIndex).ptr<blob<Process>>
+            pProcess ptr<blob<Process>> <- it.processes.at(it.currentProcessIndex).ptr<blob<Process>>
             pProcess.val.esp0 <- @BSys.getEsp()
         ;
 
         it.currentProcessIndex <- it.currentProcessIndex + 1
-        if it.currentProcessIndex >= processes.count: it.currentProcessIndex <- 0
+        if it.currentProcessIndex >= it.processes.count: it.currentProcessIndex <- 0
 
-        processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.run()
+        it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.run()
 
         @BSys.enableInterrupts()
     ;
@@ -71,8 +68,8 @@ processes blob<@B.Array, ptr<blob<Process>>>
     getCurrentPageDirectoryPtr fun -> ptr<data<u32>>
         pCurrentPageDirectory ptr<data<u32>>
 
-        if it.currentProcessIndex < processes.count
-            pCurrentPageDirectory <- { processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.pageDirectory.adr }
+        if it.currentProcessIndex < it.processes.count
+            pCurrentPageDirectory <- { it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.pageDirectory.adr }
         else
             pCurrentPageDirectory <- { @BSys.getCr3() }
         ;

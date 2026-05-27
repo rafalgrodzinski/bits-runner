@@ -2,6 +2,9 @@
 
 @import Mem
 
+PROCESS_STATE_NOT_STARTED u32 <- 0
+PROCESS_STATE_RUNNING u32 <- 1
+
 @export Process blob
     pageDirectory data<u32, 1024>
     cr3 u32

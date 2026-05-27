@@ -1,5 +1,6 @@
 @module DeviceVideo
 
+@import B
 @import Bus
 @import BSys
 @import Dispatch
