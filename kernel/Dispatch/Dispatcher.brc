@@ -25,9 +25,29 @@ GDT_TSS u32 <- 0x38
 
 tss blob<Tss>
 
+@export Dispatcher_instance blob<Dispatcher>
+
 @export Dispatcher blob
     currentProcessIndex u32
     processes blob<@B.Array, ptr<blob<Process>>>
+
+    init fun: aGdtTss a
+        it.currentProcessIndex <- 0xffff
+
+        tss.ss0 <- GDT_DATA
+        pGdtTss ptr<data<u8>> <- { aGdtTss }
+
+        pGdtTss.val[0] <- (blob<Tss>.size & 0x0000_00ff)
+        pGdtTss.val[1] <- (blob<Tss>.size & 0x0000_ff00) >> 8
+        pGdtTss.val[2] <- (tss.adr & 0x0000_00ff).u8
+        pGdtTss.val[3] <- ((tss.adr & 0x0000_ff00) >> 8).u8
+        pGdtTss.val[4] <- ((tss.adr & 0x00ff_0000) >> 16).u8
+        pGdtTss.val[5] <- 0b1000_1001 // <7: present> <6-5: Priviledge Level> <4: 0 for TSS> <3: 32bit> <2-1: 0 for TSS> <0: 1 for TSS>
+        pGdtTss.val[6] <- (blob<Tss>.size & 0x000f_0000) >> 16
+        pGdtTss.val[7] <- ((tss.adr & 0xff00_0000) >> 24).u8
+
+        setTssRaw(GDT_TSS)
+    ;
 
     createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32
         @BSys.disableInterrupts()
@@ -76,27 +96,6 @@ tss blob<Tss>
 
         ret pCurrentPageDirectory
     ;
-;
-
-@export Dispatcher fun: aGdtTss a -> blob<Dispatcher>
-    dispatcher blob<Dispatcher>
-    dispatcher.currentProcessIndex <- 0xffff
-
-    tss.ss0 <- GDT_DATA
-    pGdtTss ptr<data<u8>> <- { aGdtTss }
-
-    pGdtTss.val[0] <- (blob<Tss>.size & 0x0000_00ff)
-    pGdtTss.val[1] <- (blob<Tss>.size & 0x0000_ff00) >> 8
-    pGdtTss.val[2] <- (tss.adr & 0x0000_00ff).u8
-    pGdtTss.val[3] <- ((tss.adr & 0x0000_ff00) >> 8).u8
-    pGdtTss.val[4] <- ((tss.adr & 0x00ff_0000) >> 16).u8
-    pGdtTss.val[5] <- 0b1000_1001 // <7: present> <6-5: Priviledge Level> <4: 0 for TSS> <3: 32bit> <2-1: 0 for TSS> <0: 1 for TSS>
-    pGdtTss.val[6] <- (blob<Tss>.size & 0x000f_0000) >> 16
-    pGdtTss.val[7] <- ((tss.adr & 0xff00_0000) >> 24).u8
-
-    setTssRaw(GDT_TSS)
-
-    ret dispatcher
 ;
 
 setTssRaw raw<"m,~{eax}">: gdtEntry u32
