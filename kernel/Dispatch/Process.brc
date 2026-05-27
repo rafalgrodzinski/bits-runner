@@ -35,10 +35,10 @@ ProcessNew fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess
         pCurrentPageDirectory <- { @BSys.getCr3() }
     ;
 
-    pProcess ptr<blob<Process>> <- @Memory.allocateAlignedBytes(blob<Process>.size, 0x1000).vadr.ptr<blob<Process>>
+    pProcess ptr<blob<Process>> <- @Memory.MemoryManager_instance.allocateAlignedBytes(blob<Process>.size, 0x1000).vadr.ptr<blob<Process>>
     pProcess.val.state <- PROCESS_STATE_NOT_STARTED
 
-    pProcess.val.cr3 <- @Memory.lAdrToPAdr(pProcess.val.pageDirectory.adr.u32)
+    pProcess.val.cr3 <- @Memory.MemoryManager_instance.lAdrToPAdr(pProcess.val.pageDirectory.adr.u32)
     pProcess.val.esp <- USER_STACK_END_ADR - 5 * u32.size // 5 slots for iret frame
     pProcess.val.esp0 <- KERNEL_STACK_END_ADR
 
@@ -57,10 +57,10 @@ ProcessNew fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess
     pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x13 // PCD & RW & P
 
     // allocate user memory pages
-    @Memory.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, imageSize, USER_ADR)
+    @Memory.MemoryManager_instance.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, imageSize, USER_ADR)
 
     // allocate user stack memory pages
-    @Memory.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, USER_STACK_SIZE, USER_STACK_END_ADR - USER_STACK_SIZE)
+    @Memory.MemoryManager_instance.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, USER_STACK_SIZE, USER_STACK_END_ADR - USER_STACK_SIZE)
 
     // Copy user image to target address
     @BSys.setCr3(pProcess.val.cr3)
@@ -87,7 +87,7 @@ ProcessNew fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess
     // or allocate kernel stack memory pages
     else
         // allocate new kernel stack just bellow the desired 1022 slot, so we can use the existing stack for the allocation process
-        @Memory.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, KERNEL_STACK_SIZE, KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE - 0x40_0000)
+        @Memory.MemoryManager_instance.allocateProcessPageBytes(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, KERNEL_STACK_SIZE, KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE - 0x40_0000)
         // and them put it in the right location
         pProcess.val.pageDirectory[1022] <- pProcess.val.pageDirectory[1021]
         pProcess.val.pageDirectory[1021] <- 0

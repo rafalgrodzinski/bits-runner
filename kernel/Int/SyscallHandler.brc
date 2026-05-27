@@ -77,14 +77,14 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         deviceMouse.resetState()
     else if eax = CALL_GET_INFO_MEM
         pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
-        pInfoMem.val[0] <- @Memory.getInfoTotalSize()
-        pInfoMem.val[1] <- @Memory.getInfoTotalPages()
-        pInfoMem.val[2] <- @Memory.getInfoFreePages()
-        pInfoMem.val[3] <- @Memory.getInfoKernelPages()
-        pInfoMem.val[4] <- @Memory.getInfoUnusablePages()
-        pInfoMem.val[5] <- @Memory.getInfoHeapStart().u32
-        pInfoMem.val[6] <- @Memory.getInfoHeapSize()
-        pInfoMem.val[7] <- @Memory.getInfoAllocatedBytes()
+        pInfoMem.val[0] <- @Memory.MemoryManager_instance.getInfoTotalSize()
+        pInfoMem.val[1] <- @Memory.MemoryManager_instance.getInfoTotalPages()
+        pInfoMem.val[2] <- @Memory.MemoryManager_instance.getInfoFreePages()
+        pInfoMem.val[3] <- @Memory.MemoryManager_instance.getInfoKernelPages()
+        pInfoMem.val[4] <- @Memory.MemoryManager_instance.getInfoUnusablePages()
+        pInfoMem.val[5] <- @Memory.MemoryManager_instance.getInfoHeapStart().u32
+        pInfoMem.val[6] <- @Memory.MemoryManager_instance.getInfoHeapSize()
+        pInfoMem.val[7] <- @Memory.MemoryManager_instance.getInfoAllocatedBytes()
     else if eax = CALL_STORAGE_GET_INFO_FS_ENTRY
         pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
         pEntryPath ptr<blob<@B.String>> <- ecx.a.ptr<blob<@B.String>>

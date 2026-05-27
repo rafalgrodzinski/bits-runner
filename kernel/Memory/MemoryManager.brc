@@ -27,188 +27,192 @@ flushTlb raw<"~{eax},~{memory}">
     mov cr3, eax
 ;
 
-@export init fun
-    pMemLayout <- { heap.adr }
-    // Calculate free pages
-    rep i u32 <- 0, i < pMemLayout.val.pagesCount, i <- i + 1
-        if pMemLayout.val.memPages[i] = 0x00: freePagesCount <- freePagesCount + 1
-        else if pMemLayout.val.memPages[i] = 0x01: kernelPagesCount <- kernelPagesCount + 1
-        else if pMemLayout.val.memPages[i] = 0xff: unusablePagesCount <- unusablePagesCount + 1
-    ;
-    
-    // Setup heap
-    heapLayout.pHeapStart <- { heap.adr }
-    heapLayout.heapSize <- kernelPagesCount * pMemLayout.val.pageSize - heap.adr.u32 & 0x0fff_ffff
-    heapLayout.allocatedBytes <- blob<HeapLayout>.size + pMemLayout.val.pagesCount
-;
+@export MemoryManager_instance blob<MemoryManager>
 
-@export allocatePageBytes fun: bytes u32 -> u32
-    requestedPages u32 <- (bytes + pMemLayout.val.pageSize - 1) / pMemLayout.val.pageSize
-    if freePagesCount < requestedPages: ret 0
-
-    remainingPage u32 <- requestedPages
-    rep i u32 <- 0, remainingPage > 0, i <- i + 1
-        if pMemLayout.val.memPages[i] = 0.u8
-            pMemLayout.val.memPages[i] <- 1.u8
-            remainingPage <- remainingPage - 1
+@export MemoryManager blob
+    init fun
+        pMemLayout <- { heap.adr }
+        // Calculate free pages
+        rep i u32 <- 0, i < pMemLayout.val.pagesCount, i <- i + 1
+            if pMemLayout.val.memPages[i] = 0x00: freePagesCount <- freePagesCount + 1
+            else if pMemLayout.val.memPages[i] = 0x01: kernelPagesCount <- kernelPagesCount + 1
+            else if pMemLayout.val.memPages[i] = 0xff: unusablePagesCount <- unusablePagesCount + 1
         ;
+        
+        // Setup heap
+        heapLayout.pHeapStart <- { heap.adr }
+        heapLayout.heapSize <- kernelPagesCount * pMemLayout.val.pageSize - heap.adr.u32 & 0x0fff_ffff
+        heapLayout.allocatedBytes <- blob<HeapLayout>.size + pMemLayout.val.pagesCount
     ;
 
-    freePagesCount <- freePagesCount - requestedPages
-    ret requestedPages * pMemLayout.val.pageSize
-;
+    allocatePageBytes fun: bytes u32 -> u32
+        requestedPages u32 <- (bytes + pMemLayout.val.pageSize - 1) / pMemLayout.val.pageSize
+        if freePagesCount < requestedPages: ret 0
 
-@export allocateBytes fun: bytes u32 -> ptr<u8>
-    ret allocateAlignedBytes(bytes, 0)
-;
+        remainingPage u32 <- requestedPages
+        rep i u32 <- 0, remainingPage > 0, i <- i + 1
+            if pMemLayout.val.memPages[i] = 0.u8
+                pMemLayout.val.memPages[i] <- 1.u8
+                remainingPage <- remainingPage - 1
+            ;
+        ;
 
-@export allocateAlignedBytes fun: bytes u32, alignment u32 -> ptr<u8>
-    pBytes ptr<u8> <- { 0 }
+        freePagesCount <- freePagesCount - requestedPages
+        ret requestedPages * pMemLayout.val.pageSize
+    ;
 
-    fillerSize u32 <- if alignment > 1: (alignment - ((heapLayout.pHeapStart.vadr.u32 + heapLayout.allocatedBytes) % alignment)) % alignment else: 0
+    allocateBytes fun: bytes u32 -> ptr<u8>
+        ret it.allocateAlignedBytes(bytes, 0)
+    ;
 
-    if (heapLayout.heapSize - heapLayout.allocatedBytes) >= (bytes + fillerSize)
-        pBytes <- { heapLayout.pHeapStart.vadr + heapLayout.allocatedBytes + fillerSize }
-        heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes + fillerSize
-    else
-        requiredBytes u32 <- (bytes + fillerSize) - (heapLayout.heapSize - heapLayout.allocatedBytes)
-        allocatedBytes u32 <- allocatePageBytes(requiredBytes)
-        if allocatedBytes > 0
-            heapLayout.heapSize <- heapLayout.heapSize + allocatedBytes
+    allocateAlignedBytes fun: bytes u32, alignment u32 -> ptr<u8>
+        pBytes ptr<u8> <- { 0 }
+
+        fillerSize u32 <- if alignment > 1: (alignment - ((heapLayout.pHeapStart.vadr.u32 + heapLayout.allocatedBytes) % alignment)) % alignment else: 0
+
+        if (heapLayout.heapSize - heapLayout.allocatedBytes) >= (bytes + fillerSize)
             pBytes <- { heapLayout.pHeapStart.vadr + heapLayout.allocatedBytes + fillerSize }
             heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes + fillerSize
+        else
+            requiredBytes u32 <- (bytes + fillerSize) - (heapLayout.heapSize - heapLayout.allocatedBytes)
+            allocatedBytes u32 <- it.allocatePageBytes(requiredBytes)
+            if allocatedBytes > 0
+                heapLayout.heapSize <- heapLayout.heapSize + allocatedBytes
+                pBytes <- { heapLayout.pHeapStart.vadr + heapLayout.allocatedBytes + fillerSize }
+                heapLayout.allocatedBytes <- heapLayout.allocatedBytes + bytes + fillerSize
+            ;
         ;
+
+        ret pBytes
     ;
 
-    ret pBytes
-;
+    allocateProcessPageBytes fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory ptr<data<u32>>, size u32, lAdr u32 -> u32
+        requestedPagesCount u32 <- (size + pMemLayout.val.pageSize - 1) / pMemLayout.val.pageSize
+        if freePagesCount < requestedPagesCount: ret 0 
 
-@export allocateProcessPageBytes fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory ptr<data<u32>>, size u32, lAdr u32 -> u32
-    requestedPagesCount u32 <- (size + pMemLayout.val.pageSize - 1) / pMemLayout.val.pageSize
-    if freePagesCount < requestedPagesCount: ret 0 
+        remainingPagesCount u32 <- requestedPagesCount
 
-    remainingPagesCount u32 <- requestedPagesCount
-
-    @BSys.disableInterrupts()
-    // use that last current directory page to self-reference the new directory tables
-    oldSelfReference u32 <- pCurrentPageDirectory.val[1023]
-    selfReference u32 <- (lAdrToPAdr(pPageDirectory.vadr.u32) & 0xffff_f000) | 0b10111 //0x13 // PCD & RW & P
-    pCurrentPageDirectory.val[1023] <- selfReference
-    flushTlb()
-
-    rep i u32 <- 0, remainingPagesCount > 0, i <- i + 1
-        if pMemLayout.val.memPages[i] = 0.u8
-            pageIndex u32 <- requestedPagesCount - remainingPagesCount
-            registerPageForLAdr(pCurrentPageDirectory, pPageDirectory, i, lAdr + pageIndex * pMemLayout.val.pageSize)
-            pMemLayout.val.memPages[i] <- 1.u8
-            remainingPagesCount <- remainingPagesCount - 1
-        ;
-    ;
-
-    // and restore the original self-reference
-    pCurrentPageDirectory.val[1023] <- oldSelfReference
-    flushTlb()
-    @BSys.enableInterrupts()
-
-    ret requestedPagesCount * pMemLayout.val.pageSize
-;
-
-registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory ptr<data<u32>>, page u32, lAdr u32
-    // calculate directory and table index based on the desired linear address
-    directoryIndex u32 <- (lAdr & 0xffc0_0000) >> 22
-    tableIndex u32 <- (lAdr & 0x003f_f000) >> 12
-
-    // create directory page if it doesn't exist
-    if pPageDirectory.val[directoryIndex] & 0x01 = 0
-        pPageTable ptr<data<u32>> <- allocateAlignedBytes(u32.size * 1024, 0x1000).vadr.ptr<data<u32>>
-        rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- 0
-        pPageDirectory.val[directoryIndex] <- (lAdrToPAdr(pPageTable.vadr.u32) & 0xffff_f000) | 0b10111
+        @BSys.disableInterrupts()
+        // use that last current directory page to self-reference the new directory tables
+        oldSelfReference u32 <- pCurrentPageDirectory.val[1023]
+        selfReference u32 <- (it.lAdrToPAdr(pPageDirectory.vadr.u32) & 0xffff_f000) | 0b10111 //0x13 // PCD & RW & P
+        pCurrentPageDirectory.val[1023] <- selfReference
         flushTlb()
+
+        rep i u32 <- 0, remainingPagesCount > 0, i <- i + 1
+            if pMemLayout.val.memPages[i] = 0.u8
+                pageIndex u32 <- requestedPagesCount - remainingPagesCount
+                it.registerPageForLAdr(pCurrentPageDirectory, pPageDirectory, i, lAdr + pageIndex * pMemLayout.val.pageSize)
+                pMemLayout.val.memPages[i] <- 1.u8
+                remainingPagesCount <- remainingPagesCount - 1
+            ;
+        ;
+
+        // and restore the original self-reference
+        pCurrentPageDirectory.val[1023] <- oldSelfReference
+        flushTlb()
+        @BSys.enableInterrupts()
+
+        ret requestedPagesCount * pMemLayout.val.pageSize
     ;
 
-    // update new table entries relative to the last directory entry
-    pPageTables ptr<data<u32>> <- { 0xffc0_0000 }
-    pPageTables.val[directoryIndex * 0x400 + tableIndex] <- ((page * pMemLayout.val.pageSize) & 0xffff_f000) | 0b10111
-;
+    registerPageForLAdr fun: pCurrentPageDirectory ptr<data<u32>>, pPageDirectory ptr<data<u32>>, page u32, lAdr u32
+        // calculate directory and table index based on the desired linear address
+        directoryIndex u32 <- (lAdr & 0xffc0_0000) >> 22
+        tableIndex u32 <- (lAdr & 0x003f_f000) >> 12
 
-@export lAdrToPAdr fun: lAdr u32 -> u32
-    pPageDirectory ptr<data<u32>> <- { 0xffc0_0000 }
-
-    directoryIndex u32 <- (lAdr & 0xffc0_0000) >> 22
-    tableIndex u32 <- (lAdr & 0x003f_f000) >> 12
-    offset u32 <- lAdr & 0x0000_0fff
-
-    pageEntry u32 <- pPageDirectory.val[directoryIndex * 1024 + tableIndex]
-    
-    ret pageEntry & 0xffff_fc00 + offset
-;
-
-@export mapRawMemory fun: pCurrentPagingDirectory ptr<data<u32>>, memStart u32, memSize u32
-    memOffset u32 <- memStart % pMemLayout.val.pageSize
-    startPage u32 <- memStart / pMemLayout.val.pageSize
-    pagesCount u32 <- (memOffset + memSize + pMemLayout.val.pageSize - 1) / pMemLayout.val.pageSize
-
-    pageOffset u32 <- startPage % 0x400
-    startTable u32 <- startPage / 0x400
-    tablesCount u32 <- (pageOffset + pagesCount + 0x400 - 1) / 0x400
-
-    remainingPages u32 <- pagesCount
-
-    @BSys.disableInterrupts()
-
-    rep iTable u32 <- startTable, iTable < startTable + tablesCount, iTable <- iTable + 1
-        // add a new pages table to directory if necessary
-        if pCurrentPagingDirectory.val[iTable] & 0x01 = 0
-            aPagesTable a <- allocateAlignedBytes(u32.size * 0x400, 0x1000).vadr
-            rep i u32, i < 1024, i <- i + 1: aPagesTable.ptr<data<u32>>.val[i] <- 0
-            pCurrentPagingDirectory.val[iTable] <- (lAdrToPAdr(aPagesTable.u32) & 0xffff_f000) | 0b10111
+        // create directory page if it doesn't exist
+        if pPageDirectory.val[directoryIndex] & 0x01 = 0
+            pPageTable ptr<data<u32>> <- it.allocateAlignedBytes(u32.size * 1024, 0x1000).vadr.ptr<data<u32>>
+            rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- 0
+            pPageDirectory.val[directoryIndex] <- (it.lAdrToPAdr(pPageTable.vadr.u32) & 0xffff_f000) | 0b10111
             flushTlb()
         ;
 
-        // register direct memory mappings
-        rep iPage u32 <- pageOffset, remainingPages > 0 and iPage < 1024, iPage <- iPage + 1
-            // update table entry relative to the last directory entry
-            memAdr u32 <- (iTable * 0x400 + iPage) * pMemLayout.val.pageSize
-            pPageTables ptr<data<u32>> <- { 0xffc0_0000 }
-            pPageTables.val[iTable * 0x400 + iPage] <- (memAdr & 0xffff_f000) | 0b10111
-
-            remainingPages <- remainingPages - 1
-        ;
-        // only the first page may have an offset
-        pageOffset <- 0
+        // update new table entries relative to the last directory entry
+        pPageTables ptr<data<u32>> <- { 0xffc0_0000 }
+        pPageTables.val[directoryIndex * 0x400 + tableIndex] <- ((page * pMemLayout.val.pageSize) & 0xffff_f000) | 0b10111
     ;
 
-    @BSys.enableInterrupts()
-;
+    lAdrToPAdr fun: lAdr u32 -> u32
+        pPageDirectory ptr<data<u32>> <- { 0xffc0_0000 }
 
-@export getInfoTotalSize fun -> u32
-    ret pMemLayout.val.memSize
-;
+        directoryIndex u32 <- (lAdr & 0xffc0_0000) >> 22
+        tableIndex u32 <- (lAdr & 0x003f_f000) >> 12
+        offset u32 <- lAdr & 0x0000_0fff
 
-@export getInfoTotalPages fun -> u32
-    ret pMemLayout.val.pagesCount
-;
+        pageEntry u32 <- pPageDirectory.val[directoryIndex * 1024 + tableIndex]
+        
+        ret pageEntry & 0xffff_fc00 + offset
+    ;
 
-@export getInfoFreePages fun -> u32
-    ret freePagesCount
-;
+    mapRawMemory fun: pCurrentPagingDirectory ptr<data<u32>>, memStart u32, memSize u32
+        memOffset u32 <- memStart % pMemLayout.val.pageSize
+        startPage u32 <- memStart / pMemLayout.val.pageSize
+        pagesCount u32 <- (memOffset + memSize + pMemLayout.val.pageSize - 1) / pMemLayout.val.pageSize
 
-@export getInfoKernelPages fun -> u32
-    ret kernelPagesCount
-;
+        pageOffset u32 <- startPage % 0x400
+        startTable u32 <- startPage / 0x400
+        tablesCount u32 <- (pageOffset + pagesCount + 0x400 - 1) / 0x400
 
-@export getInfoUnusablePages fun -> u32
-    ret unusablePagesCount
-;
+        remainingPages u32 <- pagesCount
 
-@export getInfoHeapStart fun -> a
-    ret heapLayout.pHeapStart.vadr
-;
+        @BSys.disableInterrupts()
 
-@export getInfoHeapSize fun -> u32
-    ret heapLayout.heapSize
-;
+        rep iTable u32 <- startTable, iTable < startTable + tablesCount, iTable <- iTable + 1
+            // add a new pages table to directory if necessary
+            if pCurrentPagingDirectory.val[iTable] & 0x01 = 0
+                aPagesTable a <- it.allocateAlignedBytes(u32.size * 0x400, 0x1000).vadr
+                rep i u32, i < 1024, i <- i + 1: aPagesTable.ptr<data<u32>>.val[i] <- 0
+                pCurrentPagingDirectory.val[iTable] <- (it.lAdrToPAdr(aPagesTable.u32) & 0xffff_f000) | 0b10111
+                flushTlb()
+            ;
 
-@export getInfoAllocatedBytes fun -> u32
-    ret heapLayout.allocatedBytes
+            // register direct memory mappings
+            rep iPage u32 <- pageOffset, remainingPages > 0 and iPage < 1024, iPage <- iPage + 1
+                // update table entry relative to the last directory entry
+                memAdr u32 <- (iTable * 0x400 + iPage) * pMemLayout.val.pageSize
+                pPageTables ptr<data<u32>> <- { 0xffc0_0000 }
+                pPageTables.val[iTable * 0x400 + iPage] <- (memAdr & 0xffff_f000) | 0b10111
+
+                remainingPages <- remainingPages - 1
+            ;
+            // only the first page may have an offset
+            pageOffset <- 0
+        ;
+
+        @BSys.enableInterrupts()
+    ;
+
+    getInfoTotalSize fun -> u32
+        ret pMemLayout.val.memSize
+    ;
+
+    getInfoTotalPages fun -> u32
+        ret pMemLayout.val.pagesCount
+    ;
+
+    getInfoFreePages fun -> u32
+        ret freePagesCount
+    ;
+
+    getInfoKernelPages fun -> u32
+        ret kernelPagesCount
+    ;
+
+    getInfoUnusablePages fun -> u32
+        ret unusablePagesCount
+    ;
+
+    getInfoHeapStart fun -> a
+        ret heapLayout.pHeapStart.vadr
+    ;
+
+    getInfoHeapSize fun -> u32
+        ret heapLayout.heapSize
+    ;
+
+    getInfoAllocatedBytes fun -> u32
+        ret heapLayout.allocatedBytes
+    ;
 ;
