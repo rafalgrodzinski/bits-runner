@@ -37,7 +37,7 @@ OBJS=(
     DrvCmos.o
     Int.o
     int_raw.o
-    Mem.o
+    Memory.o
     Dispatch.o
     Storage.o
     Term.o

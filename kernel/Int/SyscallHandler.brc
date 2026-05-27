@@ -6,7 +6,7 @@
 @import B
 @import BiosService
 @import DrvCmos
-@import Mem
+@import Memory
 @import Storage
 @import Term
 
@@ -77,14 +77,14 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         deviceMouse.resetState()
     else if eax = CALL_GET_INFO_MEM
         pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
-        pInfoMem.val[0] <- @Mem.getInfoTotalSize()
-        pInfoMem.val[1] <- @Mem.getInfoTotalPages()
-        pInfoMem.val[2] <- @Mem.getInfoFreePages()
-        pInfoMem.val[3] <- @Mem.getInfoKernelPages()
-        pInfoMem.val[4] <- @Mem.getInfoUnusablePages()
-        pInfoMem.val[5] <- @Mem.getInfoHeapStart().u32
-        pInfoMem.val[6] <- @Mem.getInfoHeapSize()
-        pInfoMem.val[7] <- @Mem.getInfoAllocatedBytes()
+        pInfoMem.val[0] <- @Memory.getInfoTotalSize()
+        pInfoMem.val[1] <- @Memory.getInfoTotalPages()
+        pInfoMem.val[2] <- @Memory.getInfoFreePages()
+        pInfoMem.val[3] <- @Memory.getInfoKernelPages()
+        pInfoMem.val[4] <- @Memory.getInfoUnusablePages()
+        pInfoMem.val[5] <- @Memory.getInfoHeapStart().u32
+        pInfoMem.val[6] <- @Memory.getInfoHeapSize()
+        pInfoMem.val[7] <- @Memory.getInfoAllocatedBytes()
     else if eax = CALL_STORAGE_GET_INFO_FS_ENTRY
         pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
         pEntryPath ptr<blob<@B.String>> <- ecx.a.ptr<blob<@B.String>>

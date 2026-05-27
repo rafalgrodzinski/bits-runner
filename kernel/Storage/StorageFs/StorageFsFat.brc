@@ -1,6 +1,6 @@
 @module Storage
 
-@import Mem
+@import Memory
 
 // Predefined
 FAT_BYTES_PER_ENTRY u32 <- 0x20
@@ -44,7 +44,7 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     storageFs.readEntry <- {storageFsFatReadEntry.adr}
 
     // Init FAT
-    pFatBuffer ptr<data<u8>> <- @Mem.allocateBytes(512).vadr.ptr<data<u8>>
+    pFatBuffer ptr<data<u8>> <- @Memory.allocateBytes(512).vadr.ptr<data<u8>>
     storageArea.readSectors.val({storageArea.adr}, 0, 1, pFatBuffer)
 
     pInfo ptr<u32>
@@ -86,7 +86,7 @@ StorageFsFat fun: storageArea blob<StorageArea> -> blob<StorageFs>
     else if pInfo.val & 0xff = '6': storageFs.kind <- FS_KIND_FAT16
 
     // load fat
-    storageFs.pFat <- @Mem.allocateBytes(sectorsPerFat * bytesPerSector).vadr.ptr<data<u8>>
+    storageFs.pFat <- @Memory.allocateBytes(sectorsPerFat * bytesPerSector).vadr.ptr<data<u8>>
     storageArea.readSectors.val({storageArea.adr}, fatFirstSector, sectorsPerFat, storageFs.pFat)
 
     ret storageFs
@@ -113,11 +113,11 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<St
     parentEntryName blob<@B.String> <- @B.String(parentEntry.name)
     if parentEntryName.isEqual(@B.String("/"))
         dirEntriesCount <- it.val.fatRootDirEntriesCount
-        pFatDirEntries <- @Mem.allocateBytes(dirEntriesCount * FAT_BYTES_PER_ENTRY).vadr.ptr<data<u8>>
+        pFatDirEntries <- @Memory.allocateBytes(dirEntriesCount * FAT_BYTES_PER_ENTRY).vadr.ptr<data<u8>>
         it.val.storageArea.readSectors.val({it.val.storageArea.adr}, it.val.fatRootDirFirstSector, it.val.fatRootDirSectorsCount, pFatDirEntries)
     else
         dirEntriesCount <- 32 // TODO: Implement this properly
-        pFatDirEntries <- @Mem.allocateBytes(dirEntriesCount * FAT_BYTES_PER_ENTRY).vadr.ptr<data<u8>>
+        pFatDirEntries <- @Memory.allocateBytes(dirEntriesCount * FAT_BYTES_PER_ENTRY).vadr.ptr<data<u8>>
         it.val.readEntry.val(it, parentEntry, pFatDirEntries)
     ;
 

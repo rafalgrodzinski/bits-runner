@@ -4,7 +4,7 @@
 @import Bus
 @import BSys
 @import Dispatch
-@import Mem
+@import Memory
 @import main
 
 // PCI
@@ -112,7 +112,7 @@ SVGA2_REG_CAPS u16 <- 0x11
         fbOffset u32 <- it.readReg(SVGA2_REG_FB_OFFSET)
         fbSize u32 <- it.readReg(SVGA2_REG_FB_SIZE)
         it.pFrameBuffer <- {fbStart + fbOffset}
-        @Mem.mapRawMemory(@main.dispatcher.getCurrentPageDirectoryPtr(), fbStart, fbSize)
+        @Memory.mapRawMemory(@main.dispatcher.getCurrentPageDirectoryPtr(), fbStart, fbSize)
     ;
 
     commitDrawing fun
