@@ -142,32 +142,32 @@ keyboardStatus data<bool, 128>
 pressedAscii u8
 
 waitForWriteReady fun
-    rep @BSys.in8(CMD_PORT) &? 0x02:
+    rep @BSys::in8(CMD_PORT) &? 0x02:
 ;
 
 waitForReadReady fun
-    rep not @BSys.in8(CMD_PORT) &? 0x01:
+    rep not @BSys::in8(CMD_PORT) &? 0x01:
 ;
 
 @export DeviceKeyboard blob
     init fun
-        @BSys.disableInterrupts()
+        @BSys::disableInterrupts()
 
         // disable ports
         waitForWriteReady()
-        @BSys.out8(CMD_PORT, 0xad)
+        @BSys::out8(CMD_PORT, 0xad)
         waitForWriteReady()
-        @BSys.out8(CMD_PORT, 0xa7)
+        @BSys::out8(CMD_PORT, 0xa7)
 
         // drain data port
-        rep @BSys.in8(CMD_PORT) &? 0x01: @BSys.in8(DATA_PORT)
+        rep @BSys::in8(CMD_PORT) &? 0x01: @BSys::in8(DATA_PORT)
 
         // Enable interrupts
         waitForWriteReady()
-        @BSys.out8(CMD_PORT, 0x20)
+        @BSys::out8(CMD_PORT, 0x20)
 
         waitForReadReady()
-        status u8 <- @BSys.in8(DATA_PORT)
+        status u8 <- @BSys::in8(DATA_PORT)
 
         // Enable first port
         status <- status | 0b0000_0001 // enable first PS/2 port interrupt, IRQ 1
@@ -176,20 +176,20 @@ waitForReadReady fun
         status <- status | 0b0100_0000 // enable first PS/2 port translation
 
         waitForWriteReady()
-        @BSys.out8(CMD_PORT, 0x60)
+        @BSys::out8(CMD_PORT, 0x60)
 
         waitForWriteReady()
-        @BSys.out8(DATA_PORT, status)
+        @BSys::out8(DATA_PORT, status)
 
         // enable first port
         waitForWriteReady()
-        @BSys.out8(CMD_PORT, 0xae)
+        @BSys::out8(CMD_PORT, 0xae)
 
-        @BSys.enableInterrupts()
+        @BSys::enableInterrupts()
     ;
 
     handleInterrupt fun
-        scanCode u32 <- @BSys.in8(DATA_PORT)
+        scanCode u32 <- @BSys::in8(DATA_PORT)
 
         isPressed bool <- scanCode & 0x80 = 0
         scanCode <- scanCode & 0x7f // get rid of the flag

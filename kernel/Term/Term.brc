@@ -39,11 +39,11 @@ pBuffer ptr<data<u8>> <- { 0x0b8000 }
     if mode = MODE_80x50
         termWidth <- 80
         termHeight <- 50
-        @BiosService.setVideoMode(@BiosService.VIDEO_MODE_TEXT_80x50)
+        @BiosService::setVideoMode(@BiosService::VIDEO_MODE_TEXT_80x50)
     else
         termWidth <- 80
         termHeight <- 25
-        @BiosService.setVideoMode(@BiosService.VIDEO_MODE_TEXT_80x25)
+        @BiosService::setVideoMode(@BiosService::VIDEO_MODE_TEXT_80x25)
     ;
 
     clear(FOREGROUND_GRAY)
@@ -75,11 +75,11 @@ pBuffer ptr<data<u8>> <- { 0x0b8000 }
 
     cursorAdr u32 <- cursorY * termWidth + cursorX
     // high byte
-    @BSys.out8(0x03d4, 0x0e)
-    @BSys.out8(0x03d5, ((cursorAdr >> 8) & 0xff).u8)
+    @BSys::out8(0x03d4, 0x0e)
+    @BSys::out8(0x03d5, ((cursorAdr >> 8) & 0xff).u8)
     // low byte
-    @BSys.out8(0x03d4, 0x0f)
-    @BSys.out8(0x03d5, (cursorAdr & 0xff).u8)
+    @BSys::out8(0x03d4, 0x0f)
+    @BSys::out8(0x03d5, (cursorAdr & 0xff).u8)
 
     ret isOverscrolled
 ;

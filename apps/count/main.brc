@@ -2,20 +2,20 @@
 @import Syscall
 
 @export start fun
-    @B.String("count.bin >").println()
+    @B::String("count.bin >").println()
 
     num u32 <- 0
-    text blob<@B.String>
+    text blob<@B::String>
     rep
         rep i u32 <- 0, i < 10, i <- i + 1
-            text <- @B.StringForU32(num)
+            text <- @B::StringForU32(num)
             text.print()
-            text <- @B.String(" ")
+            text <- @B::String(" ")
             text.print()
             num <- num + 1
         ;
-        text <- @B.String("")
+        text <- @B::String("")
         text.println()
-        @Syscall.processYield()
+        @Syscall::processYield()
     ;
 ;

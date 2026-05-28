@@ -5,11 +5,11 @@
 BiosBootStorageDevice fun: biosDriveNum u32 -> blob<StorageDevice>
     storageDevice blob<StorageDevice>
     storageDevice.biosDriveNum <- biosDriveNum
-    storageDevice.sectorsCount <- @BiosService.bootStorageSectorsCount()
+    storageDevice.sectorsCount <- @BiosService::bootStorageSectorsCount()
     storageDevice.readSectors <- { biosBootStorageReadSectors.adr }
     ret storageDevice
 ;
 
 biosBootStorageReadSectors fun: it ptr<blob<StorageDevice>>, firstSector u32, sectorsCount u32, pTarget ptr<data<u8>> -> u32
-    ret @BiosService.bootStorageReadSectors(firstSector, sectorsCount, pTarget)
+    ret @BiosService::bootStorageReadSectors(firstSector, sectorsCount, pTarget)
 ;

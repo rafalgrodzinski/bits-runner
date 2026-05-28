@@ -15,9 +15,9 @@ INT_IRQ1 u32 <- 0x21 // keyboard
 INT_IRQ12 u32 <- 0x2c // mouse
 INT_SYSCALL u32 <- 0x30
 
-deviceKeyboard blob<@DeviceKeyboard.DeviceKeyboard>
-deviceMouse blob<@DeviceMouse.DeviceMouse>
-deviceVideo proto<@DeviceVideo.DeviceVideo>
+deviceKeyboard blob<@DeviceKeyboard::DeviceKeyboard>
+deviceMouse blob<@DeviceMouse::DeviceMouse>
+deviceVideo proto<@DeviceVideo::DeviceVideo>
 
 halt raw<"">
 halt${:uid}:
@@ -33,14 +33,14 @@ getCr2 raw<"=r"> -> u32
     interrupt_init_protected_mode()
     deviceKeyboard.init()
     deviceMouse.init()
-    deviceVideo <- @DeviceVideo.getPrimary()
+    deviceVideo <- @DeviceVideo::getPrimary()
 ;
 
 @export handleInterrupt fun: eax u32, ebx u32, ecx u32, edx u32, interrupt u32, errorCode u32 -> u32
     if interrupt = INT_PAGE_FAULT
-        @Term.printString("Page fault accessing memory at: ", @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
-        @Term.printHex(getCr2(), @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
-        @Term.printNewLine()
+        @Term::printString("Page fault accessing memory at: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+        @Term::printHex(getCr2(), @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+        @Term::printNewLine()
         halt()
     else if interrupt = INT_IRQ0
     else if interrupt = INT_IRQ1
@@ -50,11 +50,11 @@ getCr2 raw<"=r"> -> u32
     else if interrupt = INT_SYSCALL
         ret handleSyscall(eax, ebx, ecx, edx)
     else
-        @Term.printString("Unhandled interrupt: ", @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
-        @Term.printHex(interrupt, @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
-        @Term.printString(", error code: ", @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
-        @Term.printHex(errorCode, @Term.FOREGROUND_RED + @Term.ATTRIB_BLINKING)
-        @Term.printNewLine()
+        @Term::printString("Unhandled interrupt: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+        @Term::printHex(interrupt, @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+        @Term::printString(", error code: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+        @Term::printHex(errorCode, @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+        @Term::printNewLine()
         halt()
     ;
 

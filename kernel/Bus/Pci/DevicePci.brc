@@ -28,14 +28,14 @@
         pciAdr <- pciAdr | 0x04 // <7-0: register offset>
 
         // read reg1
-        @BSys.out32(PCI_CONFIG_ADR_PORT, pciAdr)
-        reg1 u32 <- @BSys.in32(PCI_CONFIG_DATA_PORT)
+        @BSys::out32(PCI_CONFIG_ADR_PORT, pciAdr)
+        reg1 u32 <- @BSys::in32(PCI_CONFIG_DATA_PORT)
 
         // modify command
         reg1 <- reg1 | command
 
         // update reg1
-        @BSys.out32(PCI_CONFIG_ADR_PORT, pciAdr)
-        @BSys.out32(PCI_CONFIG_DATA_PORT, reg1)
+        @BSys::out32(PCI_CONFIG_ADR_PORT, pciAdr)
+        @BSys::out32(PCI_CONFIG_DATA_PORT, reg1)
     ;
 ;

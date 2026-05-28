@@ -90,7 +90,7 @@ MemoryLayout blob
 
         remainingPagesCount u32 <- requestedPagesCount
 
-        @BSys.disableInterrupts()
+        @BSys::disableInterrupts()
         // use that last current directory page to self-reference the new directory tables
         oldSelfReference u32 <- pCurrentPageDirectory.val[1023]
         selfReference u32 <- (it.lAdrToPAdr(pPageDirectory.vadr.u32) & 0xffff_f000) | 0b10111 //0x13 // PCD & RW & P
@@ -109,7 +109,7 @@ MemoryLayout blob
         // and restore the original self-reference
         pCurrentPageDirectory.val[1023] <- oldSelfReference
         flushTlbRaw()
-        @BSys.enableInterrupts()
+        @BSys::enableInterrupts()
 
         ret requestedPagesCount * it.pMemoryLayout.val.pageSize
     ;
@@ -155,7 +155,7 @@ MemoryLayout blob
 
         remainingPages u32 <- pagesCount
 
-        @BSys.disableInterrupts()
+        @BSys::disableInterrupts()
 
         rep iTable u32 <- startTable, iTable < startTable + tablesCount, iTable <- iTable + 1
             // add a new pages table to directory if necessary
@@ -179,7 +179,7 @@ MemoryLayout blob
             pageOffset <- 0
         ;
 
-        @BSys.enableInterrupts()
+        @BSys::enableInterrupts()
     ;
 
     getInfoTotalSize fun -> u32

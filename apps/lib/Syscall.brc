@@ -101,7 +101,7 @@ syscallRaw raw<"=r,m,m,m,m,~{eax},~{ebx},~{ecx},~{edx}">: syscallNum u32/*$1*/, 
     ret info
 ;
 
-@export getInfoFsEntry fun: entryPath blob<@B.String> -> blob<InfoFsEntry>
+@export getInfoFsEntry fun: entryPath blob<@B::String> -> blob<InfoFsEntry>
     info blob<InfoFsEntry>
     syscallRaw(CALL_STORAGE_GET_INFO_FS_ENTRY, info.adr.u32, entryPath.adr.u32, 0)
     ret info

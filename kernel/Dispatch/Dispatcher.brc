@@ -29,7 +29,7 @@ tss blob<Tss>
 
 @export Dispatcher blob
     currentProcessIndex u32
-    processes blob<@B.Array, ptr<blob<Process>>>
+    processes blob<@B::Array, ptr<blob<Process>>>
 
     init fun: aGdtTss a
         it.currentProcessIndex <- 0xffff
@@ -50,7 +50,7 @@ tss blob<Tss>
     ;
 
     createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32
-        @BSys.disableInterrupts()
+        @BSys::disableInterrupts()
 
         pCurrentProcess ptr<blob<Process>> <- if it.currentProcessIndex < it.processes.count: it.processes.at(it.currentProcessIndex).ptr<blob<Process>> else: {0}
         pProcess ptr<blob<Process>> <- ProcessNew(
@@ -62,16 +62,16 @@ tss blob<Tss>
 
         it.processes.push(pProcess)
 
-        @BSys.enableInterrupts()
+        @BSys::enableInterrupts()
     ;
 
     runNextProcess fun
         if it.processes.count = 0: ret
 
-        @BSys.disableInterrupts()
+        @BSys::disableInterrupts()
         // preserve current kernel stack pointer
         if it.currentProcessIndex < it.processes.count
-            it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.esp0 <- @BSys.getEsp()
+            it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.esp0 <- @BSys::getEsp()
         ;
 
         it.currentProcessIndex <- it.currentProcessIndex + 1
@@ -79,7 +79,7 @@ tss blob<Tss>
 
         it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.run()
 
-        @BSys.enableInterrupts()
+        @BSys::enableInterrupts()
     ;
 
     getCurrentPageDirectoryPtr fun -> ptr<data<u32>>
@@ -88,7 +88,7 @@ tss blob<Tss>
         if it.currentProcessIndex < it.processes.count
             pCurrentPageDirectory <- { it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.pageDirectory.adr }
         else
-            pCurrentPageDirectory <- { @BSys.getCr3() }
+            pCurrentPageDirectory <- { @BSys::getCr3() }
         ;
 
         ret pCurrentPageDirectory

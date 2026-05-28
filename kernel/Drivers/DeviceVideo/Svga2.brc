@@ -41,16 +41,16 @@ SVGA2_REG_CAPS u16 <- 0x11
     pFrameBuffer ptr_volatile<data<u32>>
 
     readReg fun: reg u16 -> u32
-        @BSys.out32(it.portBase + SVGA2_INDEX_PORT, reg)
-        ret @BSys.in32(it.portBase + SVGA2_VALUE_PORT)
+        @BSys::out32(it.portBase + SVGA2_INDEX_PORT, reg)
+        ret @BSys::in32(it.portBase + SVGA2_VALUE_PORT)
     ;
 
     writeReg fun: reg u16, value u32
-        @BSys.out32(it.portBase + SVGA2_INDEX_PORT, reg)
-        @BSys.out32(it.portBase + SVGA2_VALUE_PORT, value)
+        @BSys::out32(it.portBase + SVGA2_INDEX_PORT, reg)
+        @BSys::out32(it.portBase + SVGA2_VALUE_PORT, value)
     ;
 
-    init fun: devicePci blob<@Bus.DevicePci>
+    init fun: devicePci blob<@Bus::DevicePci>
         // Check if device matches
         if devicePci.vendorId != SVGA2_VENDOR_ID or devicePci.deviceId != SVGA2_DEVICE_ID: ret
 
@@ -111,7 +111,7 @@ SVGA2_REG_CAPS u16 <- 0x11
         fbOffset u32 <- it.readReg(SVGA2_REG_FB_OFFSET)
         fbSize u32 <- it.readReg(SVGA2_REG_FB_SIZE)
         it.pFrameBuffer <- {fbStart + fbOffset}
-        @Memory.MemoryManager_instance.mapRawMemory(@Dispatch.Dispatcher_instance.getCurrentPageDirectoryPtr(), fbStart, fbSize)
+        @Memory::MemoryManager_instance.mapRawMemory(@Dispatch::Dispatcher_instance.getCurrentPageDirectoryPtr(), fbStart, fbSize)
     ;
 
     commitDrawing fun

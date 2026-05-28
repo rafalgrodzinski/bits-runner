@@ -19,34 +19,34 @@ REGISTER_CENTURY u8 <- 0x32
 REGISTER_FLOPPY u8 <- 0x10
 
 @export getTimestamp fun -> u32
-    nmiFlag u8 <- @BSys.in8(REGISTER_SELECT_PORT) & 0x80
+    nmiFlag u8 <- @BSys::in8(REGISTER_SELECT_PORT) & 0x80
 
-    @BSys.out8(REGISTER_SELECT_PORT, REGISTER_B | nmiFlag)
-    state u32 <- @BSys.in8(DATA_PORT)
+    @BSys::out8(REGISTER_SELECT_PORT, REGISTER_B | nmiFlag)
+    state u32 <- @BSys::in8(DATA_PORT)
     isBcdEncoded bool <- state & 0x04 = 0
     is12HourClock bool <- state & 0x02 = 0
 
-    @BSys.out8(REGISTER_SELECT_PORT, REGISTER_SECONDS | nmiFlag)
-    seconds u32 <- @BSys.in8(DATA_PORT)
+    @BSys::out8(REGISTER_SELECT_PORT, REGISTER_SECONDS | nmiFlag)
+    seconds u32 <- @BSys::in8(DATA_PORT)
 
-    @BSys.out8(REGISTER_SELECT_PORT, REGISTER_MINUTES | nmiFlag)
-    minutes u32 <- @BSys.in8(DATA_PORT)
+    @BSys::out8(REGISTER_SELECT_PORT, REGISTER_MINUTES | nmiFlag)
+    minutes u32 <- @BSys::in8(DATA_PORT)
 
-    @BSys.out8(REGISTER_SELECT_PORT, REGISTER_HOURS | nmiFlag)
-    hours u32 <- @BSys.in8(DATA_PORT)
+    @BSys::out8(REGISTER_SELECT_PORT, REGISTER_HOURS | nmiFlag)
+    hours u32 <- @BSys::in8(DATA_PORT)
     isHoursPm bool <- hours & 0x80 = 0x80
 
-    @BSys.out8(REGISTER_SELECT_PORT, REGISTER_DAY | nmiFlag)
-    day u32 <- @BSys.in8(DATA_PORT)
+    @BSys::out8(REGISTER_SELECT_PORT, REGISTER_DAY | nmiFlag)
+    day u32 <- @BSys::in8(DATA_PORT)
 
-    @BSys.out8(REGISTER_SELECT_PORT, REGISTER_MONTH | nmiFlag)
-    month u32 <- @BSys.in8(DATA_PORT)
+    @BSys::out8(REGISTER_SELECT_PORT, REGISTER_MONTH | nmiFlag)
+    month u32 <- @BSys::in8(DATA_PORT)
 
-    @BSys.out8(REGISTER_SELECT_PORT, REGISTER_YEAR | nmiFlag)
-    year u32 <- @BSys.in8(DATA_PORT)
+    @BSys::out8(REGISTER_SELECT_PORT, REGISTER_YEAR | nmiFlag)
+    year u32 <- @BSys::in8(DATA_PORT)
 
-    @BSys.out8(REGISTER_SELECT_PORT, REGISTER_CENTURY | nmiFlag)
-    century u32 <- @BSys.in8(DATA_PORT)
+    @BSys::out8(REGISTER_SELECT_PORT, REGISTER_CENTURY | nmiFlag)
+    century u32 <- @BSys::in8(DATA_PORT)
 
     // handle bcd encoding
     if isBcdEncoded
@@ -71,7 +71,7 @@ REGISTER_FLOPPY u8 <- 0x10
         year <- year + 1900
     ;
 
-    date blob<@B.Date> <- @B.DateForComponents(year, month, day, hours, minutes, seconds)
+    date blob<@B::Date> <- @B::DateForComponents(year, month, day, hours, minutes, seconds)
 
     ret date.timestamp
 ;
@@ -83,15 +83,15 @@ REGISTER_FLOPPY u8 <- 0x10
 // 4: 1.44 MB 3.5 Drive
 // 5: 2.88 MB 3.5 drive
 @export getFloppyKindA fun -> u32
-    nmiFlag u8 <- @BSys.in8(REGISTER_SELECT_PORT) & 0x80
+    nmiFlag u8 <- @BSys::in8(REGISTER_SELECT_PORT) & 0x80
 
-    @BSys.out8(REGISTER_SELECT_PORT, REGISTER_FLOPPY | nmiFlag)
-    ret (@BSys.in8(DATA_PORT) & 0xf0) >> 4
+    @BSys::out8(REGISTER_SELECT_PORT, REGISTER_FLOPPY | nmiFlag)
+    ret (@BSys::in8(DATA_PORT) & 0xf0) >> 4
 ;
 
 @export getFloppyKindB fun -> u32
-    nmiFlag u8 <- @BSys.in8(REGISTER_SELECT_PORT) & 0x80
+    nmiFlag u8 <- @BSys::in8(REGISTER_SELECT_PORT) & 0x80
 
-    @BSys.out8(REGISTER_SELECT_PORT, REGISTER_FLOPPY | nmiFlag)
-    ret @BSys.in8(DATA_PORT) & 0xf
+    @BSys::out8(REGISTER_SELECT_PORT, REGISTER_FLOPPY | nmiFlag)
+    ret @BSys::in8(DATA_PORT) & 0xf
 ;
