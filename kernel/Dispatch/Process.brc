@@ -16,9 +16,9 @@ PROCESS_STATE_RUNNING u32 <- 1
         if it.state = PROCESS_STATE_NOT_STARTED
             tss.esp0 <- it.esp0
             it.state <- PROCESS_STATE_RUNNING
-            ProcessStartRaw(it.esp, it.cr3, GDT_USER_DATA)
+            Process::startRaw(it.esp, it.cr3, GDT_USER_DATA)
         else
-            ProcessResumeRaw(it.esp0, it.cr3)
+            Process::resumeRaw(it.esp0, it.cr3)
         ;
     ;
 ;
@@ -96,7 +96,7 @@ ProcessNew fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess
     ret pProcess
 ;
 
-ProcessStartRaw raw<"r, r, r, ~{eax}, ~{memory}">: esp u32/*$0*/, cr3 u32/*$1*/, gdtUserData u32/*$2*/
+Process::startRaw raw<"r, r, r, ~{eax}, ~{memory}">: esp u32/*$0*/, cr3 u32/*$1*/, gdtUserData u32/*$2*/
     mov eax, $2
     mov ds, ax
     mov es, ax
@@ -112,7 +112,7 @@ ProcessStartRaw raw<"r, r, r, ~{eax}, ~{memory}">: esp u32/*$0*/, cr3 u32/*$1*/,
     iretd
 ;
 
-ProcessResumeRaw raw<"r, r, ~{eax}, ~{memory}">: esp0 u32, cr3 u32 //, eip0 u32
+Process::resumeRaw raw<"r, r, ~{eax}, ~{memory}">: esp0 u32, cr3 u32 //, eip0 u32
     mov eax, $1
     mov cr3, eax
 

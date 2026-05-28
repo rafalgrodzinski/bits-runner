@@ -95,7 +95,7 @@ MemoryLayout blob
         oldSelfReference u32 <- pCurrentPageDirectory.val[1023]
         selfReference u32 <- (it.lAdrToPAdr(pPageDirectory.vadr.u32) & 0xffff_f000) | 0b10111 //0x13 // PCD & RW & P
         pCurrentPageDirectory.val[1023] <- selfReference
-        flushTlbRaw()
+        MemoryManager::flushTlbRaw()
 
         rep i u32 <- 0, remainingPagesCount > 0, i <- i + 1
             if it.pMemoryLayout.val.memPages[i] = 0.u8
@@ -108,7 +108,7 @@ MemoryLayout blob
 
         // and restore the original self-reference
         pCurrentPageDirectory.val[1023] <- oldSelfReference
-        flushTlbRaw()
+        MemoryManager::flushTlbRaw()
         @BSys::enableInterrupts()
 
         ret requestedPagesCount * it.pMemoryLayout.val.pageSize
@@ -124,7 +124,7 @@ MemoryLayout blob
             pPageTable ptr<data<u32>> <- it.allocateAlignedBytes(u32.size * 1024, 0x1000).vadr.ptr<data<u32>>
             rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- 0
             pPageDirectory.val[directoryIndex] <- (it.lAdrToPAdr(pPageTable.vadr.u32) & 0xffff_f000) | 0b10111
-            flushTlbRaw()
+            MemoryManager::flushTlbRaw()
         ;
 
         // update new table entries relative to the last directory entry
@@ -163,7 +163,7 @@ MemoryLayout blob
                 aPagesTable a <- it.allocateAlignedBytes(u32.size * 0x400, 0x1000).vadr
                 rep i u32, i < 1024, i <- i + 1: aPagesTable.ptr<data<u32>>.val[i] <- 0
                 pCurrentPagingDirectory.val[iTable] <- (it.lAdrToPAdr(aPagesTable.u32) & 0xffff_f000) | 0b10111
-                flushTlbRaw()
+                MemoryManager::flushTlbRaw()
             ;
 
             // register direct memory mappings
@@ -215,7 +215,7 @@ MemoryLayout blob
     ;
 ;
 
-flushTlbRaw raw<"~{eax},~{memory}">
+MemoryManager::flushTlbRaw raw<"~{eax}, ~{memory}">
     mov eax, cr3
     mov cr3, eax
 ;
