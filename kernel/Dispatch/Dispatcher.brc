@@ -71,10 +71,7 @@ tss blob<Tss>
         @BSys.disableInterrupts()
         // preserve current kernel stack pointer
         if it.currentProcessIndex < it.processes.count
-            // TODO:
-            //it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.esp0 <- getEsp()
-            pProcess ptr<blob<Process>> <- it.processes.at(it.currentProcessIndex).ptr<blob<Process>>
-            pProcess.val.esp0 <- @BSys.getEsp()
+            it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.esp0 <- @BSys.getEsp()
         ;
 
         it.currentProcessIndex <- it.currentProcessIndex + 1
