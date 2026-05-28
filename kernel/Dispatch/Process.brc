@@ -2,8 +2,8 @@
 
 @import Memory
 
-PROCESS_STATE_NOT_STARTED u32 <- 0
-PROCESS_STATE_RUNNING u32 <- 1
+Process::STATE_NOT_STARTED u32 <- 0
+Process::STATE_RUNNING u32 <- 1
 
 @export Process blob
     pageDirectory data<u32, 1024>
@@ -13,9 +13,9 @@ PROCESS_STATE_RUNNING u32 <- 1
     state u32
 
     run fun
-        if it.state = PROCESS_STATE_NOT_STARTED
-            tss.esp0 <- it.esp0
-            it.state <- PROCESS_STATE_RUNNING
+        if it.state = Process::STATE_NOT_STARTED
+            Dispatcher::tss.esp0 <- it.esp0
+            it.state <- Process::STATE_RUNNING
             Process::startRaw(it.esp, it.cr3, GDT_USER_DATA)
         else
             Process::resumeRaw(it.esp0, it.cr3)
@@ -23,7 +23,7 @@ PROCESS_STATE_RUNNING u32 <- 1
     ;
 ;
 
-ProcessNew fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
+Process::new fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
     pCurrentPageDirectory ptr<data<u32>>
     oldCr3 u32
 
@@ -36,7 +36,7 @@ ProcessNew fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess
     ;
 
     pProcess ptr<blob<Process>> <- @Memory::MemoryManager::instance.allocateAlignedBytes(blob<Process>.size, 0x1000).vadr.ptr<blob<Process>>
-    pProcess.val.state <- PROCESS_STATE_NOT_STARTED
+    pProcess.val.state <- Process::STATE_NOT_STARTED
 
     pProcess.val.cr3 <- @Memory::MemoryManager::instance.lAdrToPAdr(pProcess.val.pageDirectory.adr.u32)
     pProcess.val.esp <- USER_STACK_END_ADR - 5 * u32.size // 5 slots for iret frame

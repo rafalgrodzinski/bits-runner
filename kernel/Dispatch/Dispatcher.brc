@@ -23,7 +23,7 @@ GDT_USER_CODE u32 <- 0x28 | 0x03
 GDT_USER_DATA u32 <- 0x30 | 0x03
 GDT_TSS u32 <- 0x38
 
-tss blob<Tss>
+Dispatcher::tss blob<Tss>
 
 @export Dispatcher::instance blob<Dispatcher>
 
@@ -34,17 +34,17 @@ tss blob<Tss>
     init fun: aGdtTss a
         it.currentProcessIndex <- 0xffff
 
-        tss.ss0 <- GDT_DATA
+        Dispatcher::tss.ss0 <- GDT_DATA
         pGdtTss ptr<data<u8>> <- { aGdtTss }
 
         pGdtTss.val[0] <- (blob<Tss>.size & 0x0000_00ff)
         pGdtTss.val[1] <- (blob<Tss>.size & 0x0000_ff00) >> 8
-        pGdtTss.val[2] <- (tss.adr & 0x0000_00ff).u8
-        pGdtTss.val[3] <- ((tss.adr & 0x0000_ff00) >> 8).u8
-        pGdtTss.val[4] <- ((tss.adr & 0x00ff_0000) >> 16).u8
+        pGdtTss.val[2] <- (Dispatcher::tss.adr & 0x0000_00ff).u8
+        pGdtTss.val[3] <- ((Dispatcher::tss.adr & 0x0000_ff00) >> 8).u8
+        pGdtTss.val[4] <- ((Dispatcher::tss.adr & 0x00ff_0000) >> 16).u8
         pGdtTss.val[5] <- 0b1000_1001 // <7: present> <6-5: Priviledge Level> <4: 0 for TSS> <3: 32bit> <2-1: 0 for TSS> <0: 1 for TSS>
         pGdtTss.val[6] <- (blob<Tss>.size & 0x000f_0000) >> 16
-        pGdtTss.val[7] <- ((tss.adr & 0xff00_0000) >> 24).u8
+        pGdtTss.val[7] <- ((Dispatcher::tss.adr & 0xff00_0000) >> 24).u8
 
         Dispatcher::setTssRaw(GDT_TSS)
     ;
@@ -53,7 +53,7 @@ tss blob<Tss>
         @BSys::disableInterrupts()
 
         pCurrentProcess ptr<blob<Process>> <- if it.currentProcessIndex < it.processes.count: it.processes.at(it.currentProcessIndex).ptr<blob<Process>> else: {0}
-        pProcess ptr<blob<Process>> <- ProcessNew(
+        pProcess ptr<blob<Process>> <- Process::new(
             imageSourceAddress,
             imageSize,
             pCurrentProcess,
@@ -95,7 +95,7 @@ tss blob<Tss>
     ;
 ;
 
-Dispatcher::setTssRaw raw<"m,~{eax}">: gdtEntry u32
+Dispatcher::setTssRaw raw<"m, ~{eax}">: gdtEntry u32
     mov ax, $0
     ltr ax
 ;
