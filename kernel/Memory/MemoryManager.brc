@@ -18,7 +18,7 @@ MemoryLayout blob
     allocatedBytes u32
 ;
 
-@export MemoryManager_instance blob<MemoryManager>
+@export MemoryManager::instance blob<MemoryManager>
 
 @export MemoryManager blob
     pMemoryLayout ptr<blob<MemoryLayout>>

@@ -25,7 +25,7 @@ GDT_TSS u32 <- 0x38
 
 tss blob<Tss>
 
-@export Dispatcher_instance blob<Dispatcher>
+@export Dispatcher::instance blob<Dispatcher>
 
 @export Dispatcher blob
     currentProcessIndex u32
