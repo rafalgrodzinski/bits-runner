@@ -1,5 +1,6 @@
 # Extra Information
 
+## OS General
 - Operating Systems: Three Easy Pieces:
 [https://pages.cs.wisc.edu/~remzi/OSTEP/](https://pages.cs.wisc.edu/~remzi/OSTEP/)
 - Osdev Notes:
@@ -25,3 +26,7 @@
 
 ## Paging
 - Paging: [https://wiki.osdev.org/Paging](https://wiki.osdev.org/Paging)
+
+## Other
+- Low-Level Date Algorithms
+[https://howardhinnant.github.io/date_algorithms.html](https://howardhinnant.github.io/date_algorithms.html)

@@ -66,6 +66,11 @@ CMD_YIELD blob<@B::String>
             text <- @B::StringForU32(info.totalPages)
             text.println()
 
+            text <- @B::String("Unavailable pages: ")
+            text.print()
+            text <- @B::StringForU32(info.unavailablePages)
+            text.println()
+
             text <- @B::String("Free pages: ")
             text.print()
             text <- @B::StringForU32(info.freePages)
@@ -76,9 +81,9 @@ CMD_YIELD blob<@B::String>
             text <- @B::StringForU32(info.kernelPages)
             text.println()
 
-            text <- @B::String("Unusable pages: ")
+            text <- @B::String("Kernel stack pages: ")
             text.print()
-            text <- @B::StringForU32(info.unusablePages)
+            text <- @B::StringForU32(info.kernelStackPages)
             text.println()
 
             text <- @B::String("Heap start: ")

@@ -30,8 +30,8 @@
 cursorX u32 <- 0
 cursorY u32 <- 0
 
-termWidth u32
-termHeight u32
+termWidth u32 <- 80
+termHeight u32 <- 25
 
 pBuffer ptr<data<u8>> <- { 0x0b8000 }
 

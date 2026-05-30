@@ -11,6 +11,11 @@
 %define KERNEL_STACK_PHY_END_ADR 0x500000 ; @ 4MiB
 %define KERNEL_STACK_SIZE 0x40000 ; 256 KiB
 
+%define PAGE_UNAVAILABLE 0xff
+%define PAGE_FREE 0x00
+%define PAGE_KERNEL 0x10
+%define PAGE_KERNEL_STACK 0x11
+
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
 %define PIC2_CMD_PORT 0xa0
@@ -221,10 +226,13 @@ start_16:
     push dword [memory_size] ; memory_size
     mov eax, KERNEL_PHY_ADR
     add eax, [kernel_size]
+    add eax, 0x1000 * 4  ; page directory + 3 * page table
     push eax ; layout_data_adr
     call init_memory_layout_32
 
-    ; Enable paging
+    mov eax, KERNEL_PHY_ADR
+    add eax, [kernel_size]
+    push eax ; page_directory_adr
     call memory_setup_paging_32
 
     ; pass boot parameters to kernel and start it
@@ -346,14 +354,17 @@ init_memory_layout_32:
 
     mov edi, .layout_data_adr
     mov eax, .memory_size
-    mov [edi], eax ; memSize
+    mov [edi], eax ; memorySize
+
+    mov ebx, .kernel_size
+    mov [edi + 4], ebx ; kernelImageSize
 
     mov ebx, .page_size
-    mov dword [edi + 4], ebx ; pageSize
+    mov dword [edi + 8], ebx ; pageSize
 
     mov edx, 0x00
     div ebx
-    mov [edi + 8], eax ; pagesCount
+    mov [edi + 12], eax ; pagesCount
     mov .pages_count, eax
 
     mov ecx, 0 ; page currently being processed
@@ -365,19 +376,21 @@ init_memory_layout_32:
     ; mark real mode memory
     cmp eax, 0x500 ; 1024 real mode IVT + 256 BDA
     jae .not_real_memory
-    mov al, 0xff
+    mov al, PAGE_UNAVAILABLE
     jmp .set_entry
-.not_real_memory
+.not_real_memory:
 
     ; mark kernel memory
     cmp eax, KERNEL_PHY_ADR
     jb .not_kernel_memory
-    mov ebx, KERNEL_PHY_ADR
-    add ebx, .kernel_size
-    add ebx, .pages_count ; kernel_size + pages_count (1 byte per page)
+    ;mov ebx, KERNEL_PHY_ADR
+    ;add ebx, .kernel_size
+    ;add ebx, 0x1000 * 4 + 4 * 4 ; kernel_size + page directory & tables + memorySize & kernelImageSize & pageSize & pagesCount
+    ;add ebx, .pages_count ; + pages_count (1 byte per page)
+    mov ebx, KERNEL_STACK_PHY_END_ADR - KERNEL_STACK_SIZE
     cmp eax, ebx
     jae .not_kernel_memory
-    mov al, 0x01
+    mov al, PAGE_KERNEL
     jmp .set_entry
 .not_kernel_memory:
 
@@ -386,7 +399,7 @@ init_memory_layout_32:
     jb .not_kernel_stack_memory
     cmp eax, KERNEL_STACK_PHY_END_ADR
     jae .not_kernel_stack_memory
-    mov al, 0x01
+    mov al, PAGE_KERNEL_STACK
     jmp .set_entry
 .not_kernel_stack_memory:
 
@@ -395,7 +408,7 @@ init_memory_layout_32:
     jb .not_bios_service_memory
     cmp eax, buffer + 0x200 ; 512 bytes for read/write buffer
     jae .not_bios_service_memory
-    mov al, 0x01
+    mov al, PAGE_UNAVAILABLE
     jmp .set_entry
 .not_bios_service_memory:
 
@@ -408,7 +421,7 @@ init_memory_layout_32:
     mov ebx, .current_map_entry
     cmp ebx, .memory_map_entries_count
     jb .not_past_last_entry
-    mov al, 0xff
+    mov al, PAGE_UNAVAILABLE
     jmp .set_entry
 .not_past_last_entry:
 
@@ -425,11 +438,11 @@ init_memory_layout_32:
     mov al, [esi + 16]
     cmp al, 1 ; 1: usable ram
     jne .not_usuable_ram
-    mov al, 0x00
+    mov al, PAGE_FREE
     jmp .set_entry
 .not_usuable_ram:
 
-    mov al, 0xff ; mark as unusable
+    mov al, PAGE_UNAVAILABLE ; mark as unavailable
     jmp .set_entry
 
 .try_next_entry:
@@ -438,7 +451,7 @@ init_memory_layout_32:
     jmp .loop_find_entry
 
 .set_entry:
-    mov [edi + 12 + ecx], al
+    mov [edi + 16 + ecx], al
     inc ecx
     cmp ecx, .pages_count
     jb .loop_page_entry

@@ -1,14 +1,16 @@
 @module Memory
 
 @import BSys
+//@import Term
 
 @export heap u32 // marks start of the kernel heap, set by linker in kernel.ld
 
 MemoryLayout blob
-    memSize u32
+    memorySize u32
+    kernelImageSize u32
     pageSize u32
     pagesCount u32
-    memPages data<u8, 0>
+    memoryPages data<u8, 0>
 ;
 
 // TODO: Remove @export (necessary because of blob instance in MemoryManager)
@@ -18,29 +20,45 @@ MemoryLayout blob
     allocatedBytes u32
 ;
 
+MemoryManager::PAGE_UNAVAILABLE u8 <- 0xff
+MemoryManager::PAGE_FREE u8 <- 0x00
+MemoryManager::PAGE_KERNEL u8 <- 0x10
+MemoryManager::PAGE_KERNEL_STACK u8 <- 0x11
+
 @export MemoryManager::instance blob<MemoryManager>
 
 @export MemoryManager blob
     pMemoryLayout ptr<blob<MemoryLayout>>
+    unavailablePagesCount u32
     freePagesCount u32
     kernelPagesCount u32
-    unusablePagesCount u32
+    kernelStackPagesCount u32
 
     heapLayout blob<HeapLayout>
 
     init fun
-        it.pMemoryLayout <- { heap.adr }
+        it.pMemoryLayout <- { heap.adr + 0x1000 * 4 } // first 4096 bytes for page directory + 3 * 4096 bytes for page tables
         // Calculate free pages
         rep i u32 <- 0, i < it.pMemoryLayout.val.pagesCount, i <- i + 1
-            if it.pMemoryLayout.val.memPages[i] = 0x00: it.freePagesCount <- it.freePagesCount + 1
-            else if it.pMemoryLayout.val.memPages[i] = 0x01: it.kernelPagesCount <- it.kernelPagesCount + 1
-            else if it.pMemoryLayout.val.memPages[i] = 0xff: it.unusablePagesCount <- it.unusablePagesCount + 1
+            if it.pMemoryLayout.val.memoryPages[i] = MemoryManager::PAGE_UNAVAILABLE: it.unavailablePagesCount <- it.unavailablePagesCount + 1
+            else if it.pMemoryLayout.val.memoryPages[i] = MemoryManager::PAGE_FREE: it.freePagesCount <- it.freePagesCount + 1
+            else if it.pMemoryLayout.val.memoryPages[i] = MemoryManager::PAGE_KERNEL: it.kernelPagesCount <- it.kernelPagesCount + 1
+            else if it.pMemoryLayout.val.memoryPages[i] = MemoryManager::PAGE_KERNEL_STACK: it.kernelStackPagesCount <- it.kernelStackPagesCount + 1
         ;
         
         // Setup heap
         it.heapLayout.pHeapStart <- { heap.adr }
-        it.heapLayout.heapSize <- it.kernelPagesCount * it.pMemoryLayout.val.pageSize - heap.adr.u32 & 0x0fff_ffff
-        it.heapLayout.allocatedBytes <- blob<HeapLayout>.size + it.pMemoryLayout.val.pagesCount
+        kernelImagePagesCount u32 <- (it.pMemoryLayout.val.kernelImageSize + it.pMemoryLayout.val.pageSize - 1) / it.pMemoryLayout.val.pageSize
+        it.heapLayout.heapSize <- (it.kernelPagesCount - kernelImagePagesCount) * it.pMemoryLayout.val.pageSize
+        it.heapLayout.allocatedBytes <- 0x1000 * 4 + blob<MemoryLayout>.size + it.pMemoryLayout.val.pagesCount
+
+        /*@Term::printHex(it.pMemoryLayout.val.memorySize, @Term::FOREGROUND_RED)
+        @Term::printHex(it.pMemoryLayout.val.pageSize, @Term::FOREGROUND_GREEN)
+        @Term::printHex(it.pMemoryLayout.val.kernelImageSize, @Term::FOREGROUND_BROWN)
+        @Term::printHex(it.pMemoryLayout.val.pagesCount, @Term::FOREGROUND_BLUE)
+        @Term::printHex(it.heapLayout.pHeapStart.vadr.u32, @Term::FOREGROUND_CYAN)
+        @Term::printHex(it.heapLayout.heapSize, @Term::FOREGROUND_MAGENTA)
+        @Term::printHex(it.heapLayout.allocatedBytes, @Term::FOREGROUND_BROWN)*/
     ;
 
     allocatePageBytes fun: bytes u32 -> u32
@@ -49,8 +67,8 @@ MemoryLayout blob
 
         remainingPage u32 <- requestedPages
         rep i u32 <- 0, remainingPage > 0, i <- i + 1
-            if it.pMemoryLayout.val.memPages[i] = 0.u8
-                it.pMemoryLayout.val.memPages[i] <- 1.u8
+            if it.pMemoryLayout.val.memoryPages[i] = 0.u8
+                it.pMemoryLayout.val.memoryPages[i] <- 1.u8
                 remainingPage <- remainingPage - 1
             ;
         ;
@@ -98,10 +116,10 @@ MemoryLayout blob
         MemoryManager::flushTlbRaw()
 
         rep i u32 <- 0, remainingPagesCount > 0, i <- i + 1
-            if it.pMemoryLayout.val.memPages[i] = 0.u8
+            if it.pMemoryLayout.val.memoryPages[i] = 0.u8
                 pageIndex u32 <- requestedPagesCount - remainingPagesCount
                 it.registerPageForLAdr(pCurrentPageDirectory, pPageDirectory, i, lAdr + pageIndex * it.pMemoryLayout.val.pageSize)
-                it.pMemoryLayout.val.memPages[i] <- 1.u8
+                it.pMemoryLayout.val.memoryPages[i] <- 1.u8
                 remainingPagesCount <- remainingPagesCount - 1
             ;
         ;
@@ -144,10 +162,10 @@ MemoryLayout blob
         ret pageEntry & 0xffff_fc00 + offset
     ;
 
-    mapRawMemory fun: pCurrentPagingDirectory ptr<data<u32>>, memStart u32, memSize u32
+    mapRawMemory fun: pCurrentPagingDirectory ptr<data<u32>>, memStart u32, memorySize u32
         memOffset u32 <- memStart % it.pMemoryLayout.val.pageSize
         startPage u32 <- memStart / it.pMemoryLayout.val.pageSize
-        pagesCount u32 <- (memOffset + memSize + it.pMemoryLayout.val.pageSize - 1) / it.pMemoryLayout.val.pageSize
+        pagesCount u32 <- (memOffset + memorySize + it.pMemoryLayout.val.pageSize - 1) / it.pMemoryLayout.val.pageSize
 
         pageOffset u32 <- startPage % 0x400
         startTable u32 <- startPage / 0x400
@@ -183,11 +201,15 @@ MemoryLayout blob
     ;
 
     getInfoTotalSize fun -> u32
-        ret it.pMemoryLayout.val.memSize
+        ret it.pMemoryLayout.val.memorySize
     ;
 
     getInfoTotalPages fun -> u32
         ret it.pMemoryLayout.val.pagesCount
+    ;
+
+    getInfoUnavailablePages fun -> u32
+        ret it.unavailablePagesCount
     ;
 
     getInfoFreePages fun -> u32
@@ -198,9 +220,10 @@ MemoryLayout blob
         ret it.kernelPagesCount
     ;
 
-    getInfoUnusablePages fun -> u32
-        ret it.unusablePagesCount
+    getInfoKernelStackPages fun -> u32
+        ret it.kernelStackPagesCount
     ;
+
 
     getInfoHeapStart fun -> a
         ret it.heapLayout.pHeapStart.vadr

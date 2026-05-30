@@ -32,7 +32,8 @@ Process::new fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProce
         pCurrentPageDirectory <- { pCurrentProcess.val.pageDirectory.adr }
     else
         oldCr3 <- @BSys::getCr3()
-        pCurrentPageDirectory <- { @BSys::getCr3() }
+        linearAdr u32 <- (oldCr3 & 0x0f_ffff) + KERNEL_ADR
+        pCurrentPageDirectory <- { linearAdr }
     ;
 
     pProcess ptr<blob<Process>> <- @Memory::MemoryManager::instance.allocateAlignedBytes(blob<Process>.size, 0x1000).vadr.ptr<blob<Process>>
