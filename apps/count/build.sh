@@ -8,15 +8,18 @@ function check {
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE}")"
 SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
-BRC_LIB="`brew --prefix`/lib/brc"
-SYS_DIR="${SCRIPT_DIR}/../.."
+#PREFIX="`brew --prefix`/lib/brc"
+PREFIX="/Users/Rafal/Workspace/Bits Runner/bits-runner-builder"
+PATH="${PREFIX}/bin:${PREFIX}/build:${PATH}"
+BLIB="${PREFIX}/lib/B"
+LIB="${SCRIPT_DIR}/../lib"
 
 brb --verb=v2 --opt=o2 --triple=i686-unknown-linux-gnu --function-sections --no-zero-initialized-in-bss --reloc=static \
 "${SCRIPT_DIR}/main.brc" \
-"${BRC_LIB}/B/String.brc" \
-"${SYS_DIR}/lib/B/BSys.brc" \
-"${SYS_DIR}/lib/Sys/Syscall.brc" \
-"${SYS_DIR}/kernel/Intrinsics.brc"
+"${BLIB}/String.brc" \
+"${LIB}/BSys.brc" \
+"${LIB}/Syscall.brc" \
+"${LIB}/Intrinsics.brc"
 check
 
 ld.lld -T "${SCRIPT_DIR}/app.ld" -o count.bin \

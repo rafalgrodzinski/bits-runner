@@ -2,7 +2,10 @@
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE}")"
 SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
-BRC_LIB="`brew --prefix`/lib/brc"
+#PREFIX="`brew --prefix`/lib/brc"
+PREFIX="/Users/Rafal/Workspace/Bits Runner/bits-runner-builder"
+PATH="${PREFIX}/bin:${PREFIX}/build:${PATH}"
+BLIB="${PREFIX}/lib/B"
 
 function check {
     if [ $? -ne 0 ]; then
@@ -34,8 +37,8 @@ OBJS=(
     DrvCmos.o
     Int.o
     int_raw.o
-    Mem.o
-    Sched.o
+    Memory.o
+    Dispatch.o
     Storage.o
     Term.o
 )
@@ -48,20 +51,17 @@ SOURCES=()
 # For each of these directories
 SOURCES_DIRS=(
     "${SCRIPT_DIR}/"
-    "${BRC_LIB}/B"
-    "${SCRIPT_DIR}/../lib/B/"
+    "${BLIB}/"
 )
 
 for SOURCES_DIR in "${SOURCES_DIRS[@]}"; do
     # find .brc files (except for BSys.brc, cause it is specific per system)
-    FILES=`find "${SOURCES_DIR}" -name *.brc ! -name "BSys.brc" ! -name "*Storage*.brc" -type f | sort`
+    FILES=`find "${SOURCES_DIR}" -name *.brc ! -name "*Storage*.brc" -type f | sort`
     for FILE in ${FILES}; do
         # and add them to the list
         SOURCES+=("${FILE}")
     done
 done
-# and add the Bits Runner specific BSys.brc
-SOURCES+=("${SCRIPT_DIR}/../lib/B/BSys.brc")
 
 # Storage files need to be specifically ordered
 SOURCES+=("${SCRIPT_DIR}/Storage/Storage.brc")

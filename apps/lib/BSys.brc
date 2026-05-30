@@ -62,3 +62,10 @@ printCharRaw raw<"m,m,~{eax},~{ebx}">: character u32/*$0*/, attribute u32/*$1*/
 @export printChar fun: character u8
     printCharRaw(character, 0x07)
 ;
+
+@export memAlloc fun: bytesCount u32 -> a
+    ret 0.a
+;
+
+@export memFree fun: address a
+;

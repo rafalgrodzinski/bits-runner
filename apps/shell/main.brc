@@ -1,42 +1,42 @@
 @import B
 @import Syscall
 
-CMD_REBOOT blob<@B.String>
-CMD_TIME blob<@B.String>
-CMD_M_INFO blob<@B.String>
-CMD_P_INFO blob<@B.String>
-CMD_F_INFO blob<@B.String>
-CMD_YIELD blob<@B.String>
+CMD_REBOOT blob<@B::String>
+CMD_TIME blob<@B::String>
+CMD_M_INFO blob<@B::String>
+CMD_P_INFO blob<@B::String>
+CMD_F_INFO blob<@B::String>
+CMD_YIELD blob<@B::String>
 
 @export start fun
-    @B.String("shell.bin >").println()
+    @B::String("shell.bin >").println()
 
-    CMD_REBOOT <- @B.String("reboot")
-    CMD_TIME <- @B.String("time")
-    CMD_M_INFO <- @B.String("minfo")
-    CMD_P_INFO <- @B.String("pinfo")
-    CMD_F_INFO <- @B.String("finfo")
-    CMD_YIELD <- @B.String("yield")
+    CMD_REBOOT <- @B::String("reboot")
+    CMD_TIME <- @B::String("time")
+    CMD_M_INFO <- @B::String("minfo")
+    CMD_P_INFO <- @B::String("pinfo")
+    CMD_F_INFO <- @B::String("finfo")
+    CMD_YIELD <- @B::String("yield")
 
     character u8 <- 0
-    input blob<@B.String> <- @B.String("")
-    cmd blob<@B.String> <- @B.String("")
-    arg blob<@B.String> <- @B.String("")
+    input blob<@B::String> <- @B::String("")
+    cmd blob<@B::String> <- @B::String("")
+    arg blob<@B::String> <- @B::String("")
 
     rep
         rep character != '\n'
-            character <- @Syscall.getAscii().u8
+            character <- @Syscall::getAscii().u8
             if character = '\b': input.removeLast()
             else if character != '\n' and character != '\0': input.append(character)
 
             if character != '\0'
-                charString blob<@B.String> <- @B.StringForChar(character)
+                charString blob<@B::String> <- @B::StringForChar(character)
                 charString.print()
             ;
         ;
 
         // split into cmd and arg
-        loc u32 <- input.find(@B.String(" "))
+        loc u32 <- input.find(@B::String(" "))
         if loc > 0
             cmd <- input.subStringTo(loc)
             arg <- input.subStringFrom(loc + 1)
@@ -45,80 +45,95 @@ CMD_YIELD blob<@B.String>
         ;
 
         if cmd.isEqual(CMD_REBOOT)
-            message blob<@B.String> <- @B.String("Rebooting...")
+            message blob<@B::String> <- @B::String("Rebooting...")
             message.println()
-            @Syscall.reboot()
+            @Syscall::reboot()
         else if cmd.isEqual(CMD_TIME)
-            timestamp u32 <- @Syscall.getTimestamp()
-            message blob<@B.String> <- @B.StringForU32(timestamp)
+            timestamp u32 <- @Syscall::getTimestamp()
+            message blob<@B::String> <- @B::StringForU32(timestamp)
             message.println()
         else if cmd.isEqual(CMD_M_INFO)
-            info blob<@Syscall.InfoMem> <- @Syscall.getInfoMem()
-            text blob<@B.String>
+            info blob<@Syscall::InfoMem> <- @Syscall::getInfoMem()
+            text blob<@B::String>
 
-            text <- @B.String("Total size: ")
+            text <- @B::String("Total size: ")
             text.print()
-            text <- @B.StringForU32(info.totalSize)
+            text <- @B::StringForU32(info.totalSize)
             text.println()
 
-            text <- @B.String("Total pages: ")
+            text <- @B::String("Total pages: ")
             text.print()
-            text <- @B.StringForU32(info.totalPages)
+            text <- @B::StringForU32(info.totalPages)
             text.println()
 
-            text <- @B.String("Free pages: ")
+            text <- @B::String("Unavailable pages: ")
             text.print()
-            text <- @B.StringForU32(info.freePages)
+            text <- @B::StringForU32(info.unavailablePages)
             text.println()
 
-            text <- @B.String("Heap start: ")
+            text <- @B::String("Free pages: ")
             text.print()
-            text <- @B.StringForU32(info.heapStart)
+            text <- @B::StringForU32(info.freePages)
             text.println()
 
-            text <- @B.String("Heap size: ")
+            text <- @B::String("Kernel pages: ")
             text.print()
-            text <- @B.StringForU32(info.heapSize)
+            text <- @B::StringForU32(info.kernelPages)
             text.println()
 
-            text <- @B.String("Allocated bytes: ")
+            text <- @B::String("Kernel stack pages: ")
             text.print()
-            text <- @B.StringForU32(info.allocateBytes)
+            text <- @B::StringForU32(info.kernelStackPages)
+            text.println()
+
+            text <- @B::String("Heap start: ")
+            text.print()
+            text <- @B::StringForU32(info.heapStart)
+            text.println()
+
+            text <- @B::String("Heap size: ")
+            text.print()
+            text <- @B::StringForU32(info.heapSize)
+            text.println()
+
+            text <- @B::String("Allocated bytes: ")
+            text.print()
+            text <- @B::StringForU32(info.allocateBytes)
             text.println()
         else if cmd.isEqual(CMD_P_INFO)
-            info blob<@Syscall.InfoPci> <- @Syscall.getInfoPci()
+            info blob<@Syscall::InfoPci> <- @Syscall::getInfoPci()
             rep i u32, i < info.devicesCount, i <- i + 1
-                @B.StringHexForU32(info.devices[i].busNum).print()
-                @B.String(" ").print()
-                @B.StringHexForU32(info.devices[i].deviceNum).print()
-                @B.String(" ").print()
-                @B.StringHexForU32(info.devices[i].funNum).println()
+                @B::StringHexForU32(info.devices[i].busNum).print()
+                @B::String(" ").print()
+                @B::StringHexForU32(info.devices[i].deviceNum).print()
+                @B::String(" ").print()
+                @B::StringHexForU32(info.devices[i].funNum).println()
 
-                @B.StringHexForU32(info.devices[i].vendorId).print()
-                @B.String(" ").print()
-                @B.StringHexForU32(info.devices[i].deviceId).print()
-                @B.String(" ").print()
-                @B.StringHexForU32(info.devices[i].class).print()
-                @B.String(" ").print()
-                @B.StringHexForU32(info.devices[i].subclass).println()
+                @B::StringHexForU32(info.devices[i].vendorId).print()
+                @B::String(" ").print()
+                @B::StringHexForU32(info.devices[i].deviceId).print()
+                @B::String(" ").print()
+                @B::StringHexForU32(info.devices[i].class).print()
+                @B::String(" ").print()
+                @B::StringHexForU32(info.devices[i].subclass).println()
             ;
         else if cmd.isEqual(CMD_F_INFO)
-            info blob<@Syscall.InfoFsEntry> <- @Syscall.getInfoFsEntry(arg)
-            text blob<@B.String>
+            info blob<@Syscall::InfoFsEntry> <- @Syscall::getInfoFsEntry(arg)
+            text blob<@B::String>
 
-            text <- @B.String("Kind: ")
+            text <- @B::String("Kind: ")
             text.print()
-            text <- @B.StringForU32(info.kind)
+            text <- @B::StringForU32(info.kind)
             text.println()
 
-            text <- @B.String("Size: ")
+            text <- @B::String("Size: ")
             text.print()
-            text <- @B.StringForU32(info.entrySize)
+            text <- @B::StringForU32(info.entrySize)
             text.println()
         else if cmd.isEqual(CMD_YIELD)
-            @Syscall.processYield()
+            @Syscall::processYield()
         else
-            message blob<@B.String> <- @B.String("Unknown command")
+            message blob<@B::String> <- @B::String("Unknown command")
             message.println()
         ;
 

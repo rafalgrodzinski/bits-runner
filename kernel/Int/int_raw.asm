@@ -483,6 +483,18 @@ interrupt_handler:
     mov fs, ax
     mov gs, ax
 
+    ; Check for spurious interrupt
+    cmp dword .interrupt, 0x27 ; is IRQ7?
+    jne .not_spurious
+
+    mov al, 0x0b ; OCW3, read ISR
+    out PIC1_CMD_PORT, al
+    in al, PIC1_CMD_PORT
+    test al, 0x80 ; check bit 7
+    jz .int_handling_finished
+
+    .not_spurious:
+
     ; Push arguments
     push dword .info
     push dword .interrupt
@@ -504,6 +516,7 @@ interrupt_handler:
     ; Skip pushed arguments
     add esp, 4 * 6
 
+    .int_handling_finished:
     ; Restore segments
     pop gs
     pop fs

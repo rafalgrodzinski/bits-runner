@@ -91,9 +91,9 @@ PCI_DEVICE_TYPE_CARDBUS_BRIDGE u8 <- 2
         pciAdr <- pciAdr | ((registerNum << 2) & 0b1111_1100) // <7-0: register offset>
 
         // select address
-        @BSys.out32(PCI_CONFIG_ADR_PORT, pciAdr)
+        @BSys::out32(PCI_CONFIG_ADR_PORT, pciAdr)
 
         // read config data
-        ret @BSys.in32(PCI_CONFIG_DATA_PORT)
+        ret @BSys::in32(PCI_CONFIG_DATA_PORT)
     ;
 ;

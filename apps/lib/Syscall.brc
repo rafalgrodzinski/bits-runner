@@ -37,7 +37,10 @@ CALL_PROCESS_YIELD u32 <- 0x400
 @export InfoMem blob
     totalSize u32
     totalPages u32
+    unavailablePages u32
     freePages u32
+    kernelPages u32
+    kernelStackPages u32
     heapStart u32
     heapSize u32
     allocateBytes u32
@@ -99,7 +102,7 @@ syscallRaw raw<"=r,m,m,m,m,~{eax},~{ebx},~{ecx},~{edx}">: syscallNum u32/*$1*/, 
     ret info
 ;
 
-@export getInfoFsEntry fun: entryPath blob<@B.String> -> blob<InfoFsEntry>
+@export getInfoFsEntry fun: entryPath blob<@B::String> -> blob<InfoFsEntry>
     info blob<InfoFsEntry>
     syscallRaw(CALL_STORAGE_GET_INFO_FS_ENTRY, info.adr.u32, entryPath.adr.u32, 0)
     ret info
