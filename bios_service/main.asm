@@ -108,7 +108,7 @@ saved_esp: dd 0
 boot_drive_number: dd 0
 boot_partition_first_sector: dd 0
 kernel_file_name: db `KERNEL  BIN`
-kernel_size: dd 0
+kernel_image_size: dd 0
 
 ;
 ; Messages
@@ -208,7 +208,7 @@ start_16:
     push dword KERNEL_PHY_ADR ; target_adr
     push kernel_file_name ; file_name_adr
     call boot_storage_load_file_32
-    mov [kernel_size], eax
+    mov [kernel_image_size], eax
 
     cmp eax, 0
     jnz .kernel_file_found
@@ -219,19 +219,19 @@ start_16:
 
 .kernel_file_found:
     ; Provide memory information to kernel
-    push dword [kernel_size]
+    push dword [kernel_image_size]
     push buffer ; memory_map_entries_adr
     push dword [memory_map_entries_count] ; memory_map_entries_count
     push dword 0x1000 ; page_size
     push dword [memory_size] ; memory_size
     mov eax, KERNEL_PHY_ADR
-    add eax, [kernel_size]
+    add eax, [kernel_image_size]
     add eax, 0x1000 * 4  ; page directory + 3 * page table
     push eax ; layout_data_adr
     call init_memory_layout_32
 
     mov eax, KERNEL_PHY_ADR
-    add eax, [kernel_size]
+    add eax, [kernel_image_size]
     push eax ; page_directory_adr
     call memory_setup_paging_32
 
@@ -335,14 +335,14 @@ scan_memory_16:
 ;  page_size
 ;  memory_map_entries_count
 ;  memory_map_entries_adr
-;  kernel_size
+;  kernel_image_size
 %define .args_count 6
 %define .layout_data_adr [ebp + 8]
 %define .memory_size [ebp + 12]
 %define .page_size [ebp + 16]
 %define .memory_map_entries_count [ebp + 20]
 %define .memory_map_entries_adr [ebp + 24]
-%define .kernel_size [ebp + 28]
+%define .kernel_image_size [ebp + 28]
 [bits 32]
 init_memory_layout_32:
     push ebp
@@ -352,19 +352,19 @@ init_memory_layout_32:
     %define .current_map_entry [ebp - 0]
     %define .pages_count [ebp - 4]
 
+    ; setup layout info
     mov edi, .layout_data_adr
-    mov eax, .memory_size
-    mov [edi], eax ; memorySize
 
-    mov ebx, .kernel_size
-    mov [edi + 4], ebx ; kernelImageSize
+    mov ebx, .kernel_image_size
+    mov [edi], ebx ; kernelImageSize
 
     mov ebx, .page_size
-    mov dword [edi + 8], ebx ; pageSize
+    mov dword [edi + 4], ebx ; pageSize
 
+    mov eax, .memory_size
     mov edx, 0x00
     div ebx
-    mov [edi + 12], eax ; pagesCount
+    mov [edi + 8], eax ; pagesCount
     mov .pages_count, eax
 
     mov ecx, 0 ; page currently being processed
@@ -384,8 +384,8 @@ init_memory_layout_32:
     cmp eax, KERNEL_PHY_ADR
     jb .not_kernel_memory
     ;mov ebx, KERNEL_PHY_ADR
-    ;add ebx, .kernel_size
-    ;add ebx, 0x1000 * 4 + 4 * 4 ; kernel_size + page directory & tables + memorySize & kernelImageSize & pageSize & pagesCount
+    ;add ebx, .kernel_image_size
+    ;add ebx, 0x1000 * 4 + 0x04 * 3 ; kernel_image_size + page directory & tables + kernelImageSize & pageSize & pagesCount
     ;add ebx, .pages_count ; + pages_count (1 byte per page)
     mov ebx, KERNEL_STACK_PHY_END_ADR - KERNEL_STACK_SIZE
     cmp eax, ebx
@@ -451,7 +451,7 @@ init_memory_layout_32:
     jmp .loop_find_entry
 
 .set_entry:
-    mov [edi + 16 + ecx], al
+    mov [edi + 12 + ecx], al
     inc ecx
     cmp ecx, .pages_count
     jb .loop_page_entry
@@ -461,7 +461,7 @@ init_memory_layout_32:
     ret 4 * .args_count
 %undef .pages_count
 %undef .current_map_entry
-%undef .kernel_size
+%undef .kernel_image_size
 %undef .memory_map_entries_adr
 %undef .memory_map_entries_count
 %undef .page_size

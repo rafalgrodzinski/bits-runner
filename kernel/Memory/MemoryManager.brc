@@ -6,7 +6,6 @@
 @export heap u32 // marks start of the kernel heap, set by linker in kernel.ld
 
 MemoryLayout blob
-    memorySize u32
     kernelImageSize u32
     pageSize u32
     pagesCount u32
@@ -201,7 +200,7 @@ MemoryManager::PAGE_KERNEL_STACK u8 <- 0x11
     ;
 
     getInfoTotalSize fun -> u32
-        ret it.pMemoryLayout.val.memorySize
+        ret it.pMemoryLayout.val.pagesCount + it.pMemoryLayout.val.pageSize
     ;
 
     getInfoTotalPages fun -> u32
