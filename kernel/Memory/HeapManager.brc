@@ -1,0 +1,50 @@
+@module Memory
+
+@export heap u32 // marks start of the kernel heap, set by linker in kernel.ld
+
+// TODO: Remove @export (necessary because of blob instance in HeapManager)
+@export HeapLayout blob
+    pHeapStart ptr<u8>
+    heapSize u32
+    allocatedBytes u32
+;
+
+@export HeapManager::instance blob<HeapManager>
+
+@export HeapManager blob
+    heapLayout blob<HeapLayout>
+
+    init fun
+        it.heapLayout.pHeapStart <- { heap.adr }
+
+        pMemoryLayout ptr<blob<MemoryLayout>> <- PagingManager::instance.pMemoryLayout
+        kernelImagePagesCount u32 <- (pMemoryLayout.val.kernelImageSize + pMemoryLayout.val.pageSize - 1) / pMemoryLayout.val.pageSize
+        it.heapLayout.heapSize <- (PagingManager::instance.kernelPagesCount - kernelImagePagesCount) * pMemoryLayout.val.pageSize
+
+        it.heapLayout.allocatedBytes <- 0x1000 * 4 + blob<MemoryLayout>.size + pMemoryLayout.val.pagesCount
+    ;
+
+    allocateAligned fun: size u32, alignment u32 -> a
+        address a
+
+        fillerSize u32 <- if alignment > 1: (alignment - ((it.heapLayout.pHeapStart.vadr.u32 + it.heapLayout.allocatedBytes) % alignment)) % alignment else: 0
+
+        if (it.heapLayout.heapSize - it.heapLayout.allocatedBytes) >= (size + fillerSize)
+            address <- it.heapLayout.pHeapStart.vadr + it.heapLayout.allocatedBytes + fillerSize
+            it.heapLayout.allocatedBytes <- it.heapLayout.allocatedBytes + size + fillerSize
+        else
+            requiredSize u32 <- (size + fillerSize) - (it.heapLayout.heapSize - it.heapLayout.allocatedBytes)
+            allocatedSize u32 <- PagingManager::instance.allocateKernelPages(requiredSize)
+            if allocatedSize > 0
+                it.heapLayout.heapSize <- it.heapLayout.heapSize + allocatedSize
+                address <- it.heapLayout.pHeapStart.vadr + it.heapLayout.allocatedBytes + fillerSize
+                it.heapLayout.allocatedBytes <- it.heapLayout.allocatedBytes + size + fillerSize
+            ;
+        ;
+
+        ret address
+    ;
+
+    free fun: address a
+    ;
+;

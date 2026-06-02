@@ -1,4 +1,5 @@
 @import B
+@import BSys
 @import Term
 @import Memory
 @import BiosService
@@ -21,7 +22,8 @@ busPci blob<@Bus::BusPci>
     // Initialize subsystems
     @BiosService::init(biosServiceAdr)
     @Dispatch::Dispatcher::instance.init(gdtTssAdr)
-    @Memory::MemoryManager::instance.init()
+    @Memory::PagingManager::instance.init()
+    @Memory::HeapManager::instance.init()
     @Int::init()
     @Term::init(@Term::MODE_80x25)
 
@@ -41,19 +43,19 @@ busPci blob<@Bus::BusPci>
 
     // Load count
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B::String("/APPS/COUNT.BIN"))
-    pApp <- @Memory::MemoryManager::instance.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
+    pApp <- @BSys::memAlloc(fsEntry.entrySize).ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
     @Dispatch::Dispatcher::instance..createProcess(pApp, fsEntry.entrySize)
 
     // Load shell
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B::String("/APPS/SHELL.BIN"))
-    pApp <- @Memory::MemoryManager::instance.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
+    pApp <- @BSys::memAlloc(fsEntry.entrySize).ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
     @Dispatch::Dispatcher::instance..createProcess(pApp, fsEntry.entrySize)
 
     // Load vdemo
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B::String("/APPS/VDEMO.BIN"))
-    pApp <- @Memory::MemoryManager::instance.allocateBytes(fsEntry.entrySize).vadr.ptr<data<u8>>
+    pApp <- @BSys::memAlloc(fsEntry.entrySize).ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
     @Dispatch::Dispatcher::instance..createProcess(pApp, fsEntry.entrySize)
 

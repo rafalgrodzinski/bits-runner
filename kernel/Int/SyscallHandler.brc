@@ -76,15 +76,15 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         deviceMouse.resetState()
     else if eax = CALL_GET_INFO_MEM
         pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
-        pInfoMem.val[0] <- @Memory::MemoryManager::instance.getInfoTotalSize()
-        pInfoMem.val[1] <- @Memory::MemoryManager::instance.getInfoTotalPages()
-        pInfoMem.val[2] <- @Memory::MemoryManager::instance.getInfoUnavailablePages()
-        pInfoMem.val[3] <- @Memory::MemoryManager::instance.getInfoFreePages()
-        pInfoMem.val[4] <- @Memory::MemoryManager::instance.getInfoKernelPages()
-        pInfoMem.val[5] <- @Memory::MemoryManager::instance.getInfoKernelStackPages()
-        pInfoMem.val[6] <- @Memory::MemoryManager::instance.getInfoHeapStart().u32
-        pInfoMem.val[7] <- @Memory::MemoryManager::instance.getInfoHeapSize()
-        pInfoMem.val[8] <- @Memory::MemoryManager::instance.getInfoAllocatedBytes()
+        pInfoMem.val[0] <- @Memory::PagingManager::instance.getInfoTotalSize()
+        pInfoMem.val[1] <- @Memory::PagingManager::instance.getInfoTotalPages()
+        pInfoMem.val[2] <- @Memory::PagingManager::instance.getInfoUnavailablePages()
+        pInfoMem.val[3] <- @Memory::PagingManager::instance.getInfoFreePages()
+        pInfoMem.val[4] <- @Memory::PagingManager::instance.getInfoKernelPages()
+        pInfoMem.val[5] <- @Memory::PagingManager::instance.getInfoKernelStackPages()
+        pInfoMem.val[6] <- @Memory::PagingManager::instance.getInfoHeapStart().u32
+        pInfoMem.val[7] <- @Memory::PagingManager::instance.getInfoHeapSize()
+        pInfoMem.val[8] <- @Memory::PagingManager::instance.getInfoAllocatedBytes()
     else if eax = CALL_STORAGE_GET_INFO_FS_ENTRY
         pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
         pEntryPath ptr<blob<@B::String>> <- ecx.a.ptr<blob<@B::String>>
