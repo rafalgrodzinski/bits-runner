@@ -219,6 +219,8 @@ start_16:
 
 .kernel_file_found:
     ; Provide memory information to kernel
+
+    ; call init_memory_layout_32
     push dword [kernel_image_size]
     push buffer ; memory_map_entries_adr
     push dword [memory_map_entries_count] ; memory_map_entries_count
@@ -230,6 +232,24 @@ start_16:
     push eax ; layout_data_adr
     call init_memory_layout_32
 
+    ; call memory_setup_paging_32
+    ; kernel_pages_count
+    mov edx, 0
+    mov ebx, 0x1000
+
+    mov eax, [memory_size]
+    div ebx ; eax <- memory_size / page_size
+    add eax, [kernel_image_size] ; + kernel_image_size
+    add eax, 0x1000 * 4 + 0x04 * 3 ; + page directory & tables + kernelImageSize & pageSize & pagesCount
+
+    div ebx
+    cmp edx, 0
+    jz .no_remainder
+    inc eax ; is partially on the next page?
+.no_remainder:
+    push eax ; kernel_pages_count
+
+    ; page_directory_adr
     mov eax, KERNEL_PHY_ADR
     add eax, [kernel_image_size]
     push eax ; page_directory_adr
@@ -383,11 +403,10 @@ init_memory_layout_32:
     ; mark kernel memory
     cmp eax, KERNEL_PHY_ADR
     jb .not_kernel_memory
-    ;mov ebx, KERNEL_PHY_ADR
-    ;add ebx, .kernel_image_size
-    ;add ebx, 0x1000 * 4 + 0x04 * 3 ; kernel_image_size + page directory & tables + kernelImageSize & pageSize & pagesCount
-    ;add ebx, .pages_count ; + pages_count (1 byte per page)
-    mov ebx, KERNEL_STACK_PHY_END_ADR - KERNEL_STACK_SIZE
+    mov ebx, KERNEL_PHY_ADR
+    add ebx, .kernel_image_size
+    add ebx, 0x1000 * 4 + 0x04 * 3 ; kernel_memory = kernel_image_size + page directory & tables + kernelImageSize & pageSize & pagesCount +
+    add ebx, .pages_count ; + pages_count (1 byte per page)
     cmp eax, ebx
     jae .not_kernel_memory
     mov al, PAGE_KERNEL

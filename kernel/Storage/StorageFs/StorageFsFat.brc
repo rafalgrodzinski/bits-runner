@@ -116,7 +116,7 @@ storageFsFatSubEntriesForEntry fun: it ptr<blob<StorageFs>>, parentEntry blob<St
         pFatDirEntries <- @BSys::memAlloc(dirEntriesCount * FAT_BYTES_PER_ENTRY).ptr<data<u8>>
         it.val.storageArea.readSectors.val({it.val.storageArea.adr}, it.val.fatRootDirFirstSector, it.val.fatRootDirSectorsCount, pFatDirEntries)
     else
-        dirEntriesCount <- 32 // TODO: Implement this properly
+        dirEntriesCount <- 128 // TODO: Implement this properly (fails with 32)
         pFatDirEntries <- @BSys::memAlloc(dirEntriesCount * FAT_BYTES_PER_ENTRY).ptr<data<u8>>
         it.val.readEntry.val(it, parentEntry, pFatDirEntries)
     ;

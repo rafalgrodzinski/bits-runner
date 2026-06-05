@@ -8,8 +8,9 @@
 
 ;
 ; Initialize memory manager
-%define .args_count 1
+%define .args_count 2
 %define .page_directory_adr [ebp + 8]
+%define .kernel_pages_count [ebp + 12]
 [bits 32]
 memory_setup_paging_32:
     push ebp
@@ -64,16 +65,19 @@ memory_setup_paging_32:
     cmp ecx, 256
     jb .loop_0
 
-    ; Map kernel memory (4MiB - stack size)
-    mov ecx, 0x400 - 0x40
+    ; Map kernel image + heap
+    mov ecx, 0
     add ebx, 0x1000 ; page_directory_adr + 4096 * 2
-.table_512:
+.loop_512:
     mov eax, 0x1000
     mul ecx
-    add eax, KERNEL_PHY_ADR - 0x1000
+    add eax, KERNEL_PHY_ADR
     or eax, 0x03 ; RW & P
-    mov [ebx + (ecx - 1) * 4], eax
-    loop .table_512
+    mov [ebx + ecx * 4], eax
+
+    inc ecx
+    cmp ecx, .kernel_pages_count
+    jb .loop_512
 
     ; Map kernel stack
     mov ecx, 0x40 ; 64 pages * 4096 = 256KiB
@@ -104,5 +108,6 @@ memory_setup_paging_32:
     mov esp, ebp
     pop ebp
     ret 4 * .args_count
+%undef .kernel_pages_count
 %undef .page_directory_adr
 %undef .args_count

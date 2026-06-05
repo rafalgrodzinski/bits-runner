@@ -33,10 +33,6 @@ busPci blob<@Bus::BusPci>
     @Int::initSyscallHandler(storageFs)
     @Term::printString("All ready, welcome to Bits Runner!\n", @Term::FOREGROUND_GREEN)
 
-    /*rep i u32, i < @Bus::devicesPciCount, i <- i + 1
-        @DeviceVideo::deviceSvga2.init(@Bus::devicesPci[i])
-    ;*/
-
     // Load apps
     fsEntry blob<@Storage::StorageFsEntry>
     pApp ptr<data<u8>>
@@ -45,21 +41,21 @@ busPci blob<@Bus::BusPci>
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B::String("/APPS/COUNT.BIN"))
     pApp <- @BSys::memAlloc(fsEntry.entrySize).ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
-    @Dispatch::Dispatcher::instance..createProcess(pApp, fsEntry.entrySize)
+    @Dispatch::Dispatcher::instance.createProcess(pApp, fsEntry.entrySize)
 
     // Load shell
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B::String("/APPS/SHELL.BIN"))
     pApp <- @BSys::memAlloc(fsEntry.entrySize).ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
-    @Dispatch::Dispatcher::instance..createProcess(pApp, fsEntry.entrySize)
+    @Dispatch::Dispatcher::instance.createProcess(pApp, fsEntry.entrySize)
 
     // Load vdemo
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B::String("/APPS/VDEMO.BIN"))
     pApp <- @BSys::memAlloc(fsEntry.entrySize).ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
-    @Dispatch::Dispatcher::instance..createProcess(pApp, fsEntry.entrySize)
+    @Dispatch::Dispatcher::instance.createProcess(pApp, fsEntry.entrySize)
 
-    @Dispatch::Dispatcher::instance..runNextProcess()
+    @Dispatch::Dispatcher::instance.runNextProcess()
 
     rep:
 ;

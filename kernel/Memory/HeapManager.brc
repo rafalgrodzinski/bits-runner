@@ -34,7 +34,11 @@
             it.heapLayout.allocatedBytes <- it.heapLayout.allocatedBytes + size + fillerSize
         else
             requiredSize u32 <- (size + fillerSize) - (it.heapLayout.heapSize - it.heapLayout.allocatedBytes)
-            allocatedSize u32 <- PagingManager::instance.allocateKernelPages(requiredSize)
+            allocatedSize u32 <- PagingManager::instance.allocateKernelPages(
+                PagingManager::PAGE_KERNEL,
+                requiredSize,
+                (it.heapLayout.pHeapStart.vadr + it.heapLayout.heapSize).u32
+            )
             if allocatedSize > 0
                 it.heapLayout.heapSize <- it.heapLayout.heapSize + allocatedSize
                 address <- it.heapLayout.pHeapStart.vadr + it.heapLayout.allocatedBytes + fillerSize

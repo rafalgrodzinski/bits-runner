@@ -25,7 +25,7 @@ Process::STATE_RUNNING u32 <- 1
     ;
 ;
 
-Process::new fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
+@export Process::new fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
     pCurrentPageDirectory ptr<data<u32>>
     oldCr3 u32
 
@@ -60,10 +60,22 @@ Process::new fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProce
     pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x13 // PCD & RW & P
 
     // allocate user memory pages
-    @Memory::PagingManager::instance.allocateUserPages(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, imageSize, USER_ADR)
+    @Memory::PagingManager::instance.allocateUserPages(
+        pCurrentPageDirectory,
+        { pProcess.val.pageDirectory.adr },
+        @Memory::PagingManager::PAGE_USER,
+        imageSize,
+        USER_ADR
+    )
 
     // allocate user stack memory pages
-    @Memory::PagingManager::instance.allocateUserPages(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, USER_STACK_SIZE, USER_STACK_END_ADR - USER_STACK_SIZE)
+    @Memory::PagingManager::instance.allocateUserPages(
+        pCurrentPageDirectory,
+        { pProcess.val.pageDirectory.adr },
+        @Memory::PagingManager::PAGE_USER_STACK,
+        USER_STACK_SIZE,
+        USER_STACK_END_ADR - USER_STACK_SIZE
+    )
 
     // Copy user image to target address
     @BSys::setCr3(pProcess.val.cr3)
@@ -90,7 +102,13 @@ Process::new fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProce
     // or allocate kernel stack memory pages
     else
         // allocate new kernel stack just bellow the desired 1022 slot, so we can use the existing stack for the allocation process
-        @Memory::PagingManager::instance.allocateUserPages(pCurrentPageDirectory, { pProcess.val.pageDirectory.adr }, KERNEL_STACK_SIZE, KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE - 0x40_0000)
+        @Memory::PagingManager::instance.allocateUserPages(
+            pCurrentPageDirectory,
+            { pProcess.val.pageDirectory.adr },
+            @Memory::PagingManager::PAGE_KERNEL_STACK,
+            KERNEL_STACK_SIZE,
+            KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE - 0x40_0000
+        )
         // and them put it in the right location
         pProcess.val.pageDirectory[1022] <- pProcess.val.pageDirectory[1021]
         pProcess.val.pageDirectory[1021] <- 0
