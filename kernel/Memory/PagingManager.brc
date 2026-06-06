@@ -166,7 +166,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
     ;
 
     getInfoTotalSize fun -> u32
-        ret it.pMemoryLayout.val.pagesCount + it.pMemoryLayout.val.pageSize
+        ret it.pMemoryLayout.val.pagesCount * it.pMemoryLayout.val.pageSize
     ;
 
     getInfoTotalPages fun -> u32

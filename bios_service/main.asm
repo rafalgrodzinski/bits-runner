@@ -4,12 +4,20 @@
 %define RAM_MIN 0x1000000 ; 16MiB
 %define STACK_END_ADR 0x2000 ; @ 8 KiB
 
+%define BIOS_SERVICE_ADR 0x1000
+%define BUFFER_SIZE 0x200 ; 512 bytes for read/write buffer
+
 %define KERNEL_ADR 0x80000000 ; @ 2 GiB
 %define KERNEL_PHY_ADR 0x100000 ; @ 1MiB
 
 %define KERNEL_STACK_END_ADR 0x100000000 - 0x400000 ; @ 4GiB - 4MiB (for pages directory self reference)
 %define KERNEL_STACK_PHY_END_ADR 0x500000 ; @ 4MiB
 %define KERNEL_STACK_SIZE 0x40000 ; 256 KiB
+
+%define PAGE_SIZE 0x1000 ; 4096 bytes
+%define PAGING_ENTRY_SIZE 0x1000 ; 4096 bytes
+%define PAGING_ENTRIES_SIZE PAGING_ENTRY_SIZE * 4 ; page tables directory + 3 * pages table
+%define MEMORY_LAYOUT_INFO_SIZE 0x04 * 3 ; kernelImageSize + pageSize + pagesCount
 
 %define PAGE_UNAVAILABLE 0xff
 %define PAGE_FREE 0x00
@@ -105,10 +113,16 @@ saved_gdt_data: dw GDT_DATA_PROTECTED_MODE
 saved_gdt_stack: dw GDT_DATA_PROTECTED_MODE
 saved_esp: dd 0
 
+; kernel info
 boot_drive_number: dd 0
 boot_partition_first_sector: dd 0
 kernel_file_name: db `KERNEL  BIN`
 kernel_image_size: dd 0
+
+; memory info
+memory_size: dd 0
+pages_count: dd 0
+memory_map_entries_count: dd 0 ; each entry is 24 bits
 
 ;
 ; Messages
@@ -167,7 +181,7 @@ start_16:
 
 .after_a20_check:
     ; Get memory size and layout
-    call scan_memory_16
+    call memory_scan_16
 
     ; Report memory detected
     mov si, msg_memory_detected0
@@ -177,6 +191,7 @@ start_16:
     mov si, msg_memory_detected1
     call term_print_string_16
     call term_print_new_line_16
+
     ; Check RAM size
     cmp dword [memory_size], RAM_MIN
     jae .ram_size_ok
@@ -188,9 +203,11 @@ start_16:
     call term_print_string_16
     call term_print_new_line_16
     cli
+
     ; Mark paging as uninitialized
     mov eax, 0x00
     mov cr3, eax
+
     ; Load GDT and switch to protected mode
     lgdt [gdt_descriptor]
     call switch_to_protected_mode_16
@@ -219,36 +236,32 @@ start_16:
 
 .kernel_file_found:
     ; Provide memory information to kernel
-
-    ; call init_memory_layout_32
+    ; call memory_setup_kernel_memory_layout_info_32
     push dword [kernel_image_size]
     push buffer ; memory_map_entries_adr
     push dword [memory_map_entries_count] ; memory_map_entries_count
-    push dword 0x1000 ; page_size
-    push dword [memory_size] ; memory_size
+    push dword PAGE_SIZE ; page_size
+    push dword [pages_count] ; pages_count
     mov eax, KERNEL_PHY_ADR
     add eax, [kernel_image_size]
-    add eax, 0x1000 * 4  ; page directory + 3 * page table
+    add eax, PAGING_ENTRIES_SIZE
     push eax ; layout_data_adr
-    call init_memory_layout_32
+    call memory_setup_kernel_memory_layout_info_32
 
     ; call memory_setup_paging_32
-    ; kernel_pages_count
+    ; calculate image + heap krnel pages count
+    xchg bx, bx
+    mov eax, [kernel_image_size]
+    add eax, PAGING_ENTRIES_SIZE + MEMORY_LAYOUT_INFO_SIZE
+    add eax, [pages_count]
     mov edx, 0
-    mov ebx, 0x1000
-
-    mov eax, [memory_size]
-    div ebx ; eax <- memory_size / page_size
-    add eax, [kernel_image_size] ; + kernel_image_size
-    add eax, 0x1000 * 4 + 0x04 * 3 ; + page directory & tables + kernelImageSize & pageSize & pagesCount
-
+    mov ebx, PAGE_SIZE
     div ebx
     cmp edx, 0
     jz .no_remainder
     inc eax ; is partially on the next page?
 .no_remainder:
     push eax ; kernel_pages_count
-
     ; page_directory_adr
     mov eax, KERNEL_PHY_ADR
     add eax, [kernel_image_size]
@@ -314,179 +327,6 @@ is_a20_enabled_16:
 .end:
     pop es
 	ret
-
-;
-; Initialize memory maps and get memory size
-[bits 16]
-scan_memory_16:
-    mov ebx, 0
-    mov di, buffer
-
-.loop:
-    mov eax, 0xe820
-    mov ecx, 24 ; 8 base + 8 size + 4 type
-    mov edx, 0x534d4150 ; SMAP
-    int 0x15
-    
-    ; process result
-    inc byte [memory_map_entries_count] ; increase count of entries
-
-    ; check if we found bigger memory limit
-    cmp dword [di + 16], 2 ; check if marks unavailable regions
-    je .size_not_updated
-    mov eax, [di] ; region base address
-    add eax, [di + 8] ; + region size
-    cmp eax, [memory_size]
-    jna .size_not_updated
-    mov dword [memory_size], eax
-
-.size_not_updated:
-    add di, 24
-    cmp ebx, 0 ; once ebx becomes 0, scanning has finished
-    jne .loop
-
-    ret
-
-;
-; Provide memory information to kernel
-; in
-;  layout_data_adr
-;  memory_size
-;  page_size
-;  memory_map_entries_count
-;  memory_map_entries_adr
-;  kernel_image_size
-%define .args_count 6
-%define .layout_data_adr [ebp + 8]
-%define .memory_size [ebp + 12]
-%define .page_size [ebp + 16]
-%define .memory_map_entries_count [ebp + 20]
-%define .memory_map_entries_adr [ebp + 24]
-%define .kernel_image_size [ebp + 28]
-[bits 32]
-init_memory_layout_32:
-    push ebp
-    mov ebp, esp
-
-    sub sp, 8
-    %define .current_map_entry [ebp - 0]
-    %define .pages_count [ebp - 4]
-
-    ; setup layout info
-    mov edi, .layout_data_adr
-
-    mov ebx, .kernel_image_size
-    mov [edi], ebx ; kernelImageSize
-
-    mov ebx, .page_size
-    mov dword [edi + 4], ebx ; pageSize
-
-    mov eax, .memory_size
-    mov edx, 0x00
-    div ebx
-    mov [edi + 8], eax ; pagesCount
-    mov .pages_count, eax
-
-    mov ecx, 0 ; page currently being processed
-.loop_page_entry:    
-    ; calculate current address
-    mov eax, ecx
-    mul dword .page_size
-
-    ; mark real mode memory
-    cmp eax, 0x500 ; 1024 real mode IVT + 256 BDA
-    jae .not_real_memory
-    mov al, PAGE_UNAVAILABLE
-    jmp .set_entry
-.not_real_memory:
-
-    ; mark kernel memory
-    cmp eax, KERNEL_PHY_ADR
-    jb .not_kernel_memory
-    mov ebx, KERNEL_PHY_ADR
-    add ebx, .kernel_image_size
-    add ebx, 0x1000 * 4 + 0x04 * 3 ; kernel_memory = kernel_image_size + page directory & tables + kernelImageSize & pageSize & pagesCount +
-    add ebx, .pages_count ; + pages_count (1 byte per page)
-    cmp eax, ebx
-    jae .not_kernel_memory
-    mov al, PAGE_KERNEL
-    jmp .set_entry
-.not_kernel_memory:
-
-    ; mark kernel stack
-    cmp eax, KERNEL_STACK_PHY_END_ADR - KERNEL_STACK_SIZE
-    jb .not_kernel_stack_memory
-    cmp eax, KERNEL_STACK_PHY_END_ADR
-    jae .not_kernel_stack_memory
-    mov al, PAGE_KERNEL_STACK
-    jmp .set_entry
-.not_kernel_stack_memory:
-
-    ; mark bios service
-    cmp eax, 0x1000
-    jb .not_bios_service_memory
-    cmp eax, buffer + 0x200 ; 512 bytes for read/write buffer
-    jae .not_bios_service_memory
-    mov al, PAGE_UNAVAILABLE
-    jmp .set_entry
-.not_bios_service_memory:
-
-    ; search for memory map entry
-    ; start search from the first entry
-    mov dword .current_map_entry, 0
-    mov esi, .memory_map_entries_adr
-.loop_find_entry:
-    ; Past last entry?
-    mov ebx, .current_map_entry
-    cmp ebx, .memory_map_entries_count
-    jb .not_past_last_entry
-    mov al, PAGE_UNAVAILABLE
-    jmp .set_entry
-.not_past_last_entry:
-
-    ; within current entry?
-    ; is below entry?
-    cmp eax, [esi] ; < base?
-    jb .try_next_entry
-
-    ; is above entry?
-    cmp eax, [esi + 8] ; >= base + length
-    jae .try_next_entry
-
-    ; is usable RAM?
-    mov al, [esi + 16]
-    cmp al, 1 ; 1: usable ram
-    jne .not_usuable_ram
-    mov al, PAGE_FREE
-    jmp .set_entry
-.not_usuable_ram:
-
-    mov al, PAGE_UNAVAILABLE ; mark as unavailable
-    jmp .set_entry
-
-.try_next_entry:
-    add esi, 24 ; go to the next entry
-    inc dword .current_map_entry
-    jmp .loop_find_entry
-
-.set_entry:
-    mov [edi + 12 + ecx], al
-    inc ecx
-    cmp ecx, .pages_count
-    jb .loop_page_entry
-
-    mov esp, ebp
-    pop ebp
-    ret 4 * .args_count
-%undef .pages_count
-%undef .current_map_entry
-%undef .kernel_image_size
-%undef .memory_map_entries_adr
-%undef .memory_map_entries_count
-%undef .page_size
-%undef .memory_size
-%undef .layout_data_adr
-%undef .args_count
 
 ;
 ; Initialize 32 bit protected mode
@@ -749,6 +589,4 @@ fatal_error_16:
 %include "bios_service/memory.asm"
 %include "bios_service/bios_service.asm"
 
-memory_size: dd 0
-memory_map_entries_count: db 0 ; each entry is 24 bits
 buffer:
