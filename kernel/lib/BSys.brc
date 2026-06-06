@@ -90,7 +90,7 @@ printCharRaw raw<"m, m, ~{eax}, ~{ebx}">: character u32/*$0*/, attribute u32/*$1
 ;
 
 @export memAlignedAlloc fun: size u32, alignment u32 -> a
-    ret @Memory::HeapManager::instance.allocateAligned(size, alignment)
+    ret @Memory::HeapManager::instance.allocateAligned({0}, size, alignment)
 ;
 
 @export memFree fun: address a

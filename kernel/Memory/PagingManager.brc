@@ -1,6 +1,8 @@
 @module Memory
 
 @import BSys
+@import B
+@import Dispatch
 
 MemoryLayout blob
     kernelImageSize u32
@@ -28,7 +30,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
     kernelStackPagesCount u32
 
     init fun
-        it.pMemoryLayout <- { heap.adr + 0x1000 * 4 } // first 4096 bytes for page directory + 3 * 4096 bytes for page tables
+        it.pMemoryLayout <- {heap.adr + 0x1000 * 4} // first 4096 bytes for page directory + 3 * 4096 bytes for page tables
         // Figure out pages stats
         rep i u32 <- 0, i < it.pMemoryLayout.val.pagesCount, i <- i + 1
             if it.pMemoryLayout.val.memoryPages[i] = PagingManager::PAGE_FREE: it.freePagesCount <- it.freePagesCount + 1
@@ -41,11 +43,12 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         ;
     ;
 
-    allocateKernelPages fun: pageTag u8, size u32, linearAddress u32 -> u32
+    allocateKernelPages fun: pProcess ptr<blob<@Dispatch::Process>>, pageTag u8, size u32, linearAddress u32 -> u32
         @BSys::disableInterrupts()
-        pPagesDirectory ptr<data<u32>> <- { (@BSys::getCr3() & 0x0f_ffff) + KERNEL_ADR }.ptr<data<u32>>
+        pPagesDirectory ptr<data<u32>> <- {(@BSys::getCr3() & 0x0f_ffff) + KERNEL_ADR}.ptr<data<u32>>
 
         allocatedSize u32 <- it.allocatePages(
+            pProcess,
             pPagesDirectory,
             pageTag,
             size,
@@ -57,7 +60,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         ret allocatedSize
     ;
 
-    allocateUserPages fun: pCurrentPagesDirectory ptr<data<u32>>, pPagesDirectory ptr<data<u32>>, pageTag u8, size u32, linearAddress u32 -> u32
+    allocateUserPages fun: pProcess ptr<blob<@Dispatch::Process>>, pCurrentPagesDirectory ptr<data<u32>>, pPagesDirectory ptr<data<u32>>, pageTag u8, size u32, linearAddress u32 -> u32
         @BSys::disableInterrupts()
         // use that last current directory page to self-reference the new directory tables
         oldSelfReference u32 <- pCurrentPagesDirectory.val[1023]
@@ -66,7 +69,8 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         PagingManager::flushTlbRaw()
 
         allocatedSize u32 <- it.allocatePages(
-            pPagesDirectory,
+            pProcess,
+            pPagesDirectory, // {pProcess.val.pageDirectory.adr},
             pageTag,
             size,
             linearAddress
@@ -80,7 +84,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         ret allocatedSize
     ;
 
-    allocatePages fun: pPagesDirectory ptr<data<u32>>, pageTag u8, size u32, linearAddress u32 -> u32
+    allocatePages fun: pProcess ptr<blob<@Dispatch::Process>>, pPagesDirectory ptr<data<u32>>, pageTag u8, size u32, linearAddress u32 -> u32
         // check if we have enough remaining pages
         requestedPagesCount u32 <- (size + it.pMemoryLayout.val.pageSize - 1) / it.pMemoryLayout.val.pageSize
         if it.freePagesCount < requestedPagesCount: ret 0
@@ -91,6 +95,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
             if it.pMemoryLayout.val.memoryPages[i] = PagingManager::PAGE_FREE
                 pageIndex u32 <- requestedPagesCount - remainingPagesCount
                 it.registerPageForLinearAddress(
+                    pProcess,
                     pPagesDirectory,
                     i,
                     pageTag,
@@ -98,6 +103,8 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
                 )
                 
                 remainingPagesCount <- remainingPagesCount - 1
+
+                if pProcess.vadr != 0: pProcess.val.registerPage(i)
             ;
         ;
 
@@ -105,7 +112,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         ret requestedPagesCount * it.pMemoryLayout.val.pageSize
     ;
 
-    registerPageForLinearAddress fun: pPagesDirectory ptr<data<u32>>, pageIndex u32, pageTag u8, linearAddress u32
+    registerPageForLinearAddress fun: pProcess ptr<blob<@Dispatch::Process>>, pPagesDirectory ptr<data<u32>>, pageIndex u32, pageTag u8, linearAddress u32
         // register in bitmap
         it.pMemoryLayout.val.memoryPages[pageIndex] <- pageTag
 
@@ -115,14 +122,14 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
 
         // create directory page if it doesn't exist
         if pPagesDirectory.val[directoryIndex] &? 0x01 = false
-            pPageTable ptr<data<u32>> <- HeapManager::instance.allocateAligned(u32.size * 1024, 4096).ptr<data<u32>>
+            pPageTable ptr<data<u32>> <- HeapManager::instance.allocateAligned(pProcess, u32.size * 1024, 4096).ptr<data<u32>>
             rep i u32 <- 0, i < 1024, i <- i + 1: pPageTable.val[i] <- 0
             pPagesDirectory.val[directoryIndex] <- (PagingManager::lAdrToPAdr(pPageTable.vadr).u32 & 0xffff_f000) | 0b10111
             PagingManager::flushTlbRaw()
         ;
 
         // update new table entries relative to the last directory entry
-        pPageTables ptr<data<u32>> <- { 0xffc0_0000 }
+        pPageTables ptr<data<u32>> <- {0xffc0_0000}
         pPageTables.val[directoryIndex * 1024 + tableIndex] <- ((pageIndex * it.pMemoryLayout.val.pageSize) & 0xffff_f000) | 0b10111
         PagingManager::flushTlbRaw()
     ;
@@ -143,7 +150,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         rep iTable u32 <- startTable, iTable < startTable + tablesCount, iTable <- iTable + 1
             // add a new pages table to directory if necessary
             if pCurrentPagingDirectory.val[iTable] & 0x01 = 0
-                aPagesTable a <- HeapManager::instance.allocateAligned(u32.size * 0x400, 0x1000)
+                aPagesTable a <- HeapManager::instance.allocateAligned({0}, u32.size * 0x400, 0x1000)
                 rep i u32, i < 1024, i <- i + 1: aPagesTable.ptr<data<u32>>.val[i] <- 0
                 pCurrentPagingDirectory.val[iTable] <- (PagingManager::lAdrToPAdr(aPagesTable).u32 & 0xffff_f000) | 0b10111
                 PagingManager::flushTlbRaw()
@@ -153,7 +160,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
             rep iPage u32 <- pageOffset, remainingPages > 0 and iPage < 1024, iPage <- iPage + 1
                 // update table entry relative to the last directory entry
                 memAdr u32 <- (iTable * 0x400 + iPage) * it.pMemoryLayout.val.pageSize
-                pPageTables ptr<data<u32>> <- { 0xffc0_0000 }
+                pPageTables ptr<data<u32>> <- {0xffc0_0000}
                 pPageTables.val[iTable * 0x400 + iPage] <- (memAdr & 0xffff_f000) | 0b10111
 
                 remainingPages <- remainingPages - 1
@@ -212,7 +219,7 @@ PagingManager::flushTlbRaw raw<"~{eax}, ~{memory}">
 ;
 
 @export PagingManager::lAdrToPAdr fun: lAdr a -> a
-    pPageDirectory ptr<data<u32>> <- { 0xffc0_0000 }
+    pPageDirectory ptr<data<u32>> <- {0xffc0_0000}
 
     directoryIndex u32 <- (lAdr.u32 & 0xffc0_0000) >> 22
     tableIndex u32 <- (lAdr.u32 & 0x003f_f000) >> 12

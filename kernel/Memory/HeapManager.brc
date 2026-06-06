@@ -24,7 +24,7 @@
         it.heapLayout.allocatedBytes <- 0x1000 * 4 + blob<MemoryLayout>.size + pMemoryLayout.val.pagesCount
     ;
 
-    allocateAligned fun: size u32, alignment u32 -> a
+    allocateAligned fun: pProcess ptr<blob<@Dispatch::Process>>, size u32, alignment u32 -> a
         address a
 
         fillerSize u32 <- if alignment > 1: (alignment - ((it.heapLayout.pHeapStart.vadr.u32 + it.heapLayout.allocatedBytes) % alignment)) % alignment else: 0
@@ -35,6 +35,7 @@
         else
             requiredSize u32 <- (size + fillerSize) - (it.heapLayout.heapSize - it.heapLayout.allocatedBytes)
             allocatedSize u32 <- PagingManager::instance.allocateKernelPages(
+                pProcess,
                 PagingManager::PAGE_KERNEL,
                 requiredSize,
                 (it.heapLayout.pHeapStart.vadr + it.heapLayout.heapSize).u32

@@ -12,7 +12,7 @@ Process::STATE_RUNNING u32 <- 1
     esp0 u32
     state u32
 
-    //pages blob<@B::Array, u32>
+    pages blob<@B::Array, u32>
 
     run fun
         if it.state = Process::STATE_NOT_STARTED
@@ -23,6 +23,10 @@ Process::STATE_RUNNING u32 <- 1
             Process::resumeRaw(it.esp0, it.cr3)
         ;
     ;
+
+    registerPage fun: page u32
+        it.pages.push(page)
+    ;
 ;
 
 @export Process::new fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
@@ -31,11 +35,11 @@ Process::STATE_RUNNING u32 <- 1
 
     if pCurrentProcess.vadr != 0
         oldCr3 <- pCurrentProcess.val.cr3
-        pCurrentPageDirectory <- { pCurrentProcess.val.pageDirectory.adr }
+        pCurrentPageDirectory <- {pCurrentProcess.val.pageDirectory.adr}
     else
         oldCr3 <- @BSys::getCr3()
         linearAdr u32 <- (oldCr3 & 0x0f_ffff) + KERNEL_ADR
-        pCurrentPageDirectory <- { linearAdr }
+        pCurrentPageDirectory <- {linearAdr}
     ;
 
     pProcess ptr<blob<Process>> <- @BSys::memAlignedAlloc(blob<Process>.size, 0x1000).ptr<blob<Process>>
@@ -61,8 +65,9 @@ Process::STATE_RUNNING u32 <- 1
 
     // allocate user memory pages
     @Memory::PagingManager::instance.allocateUserPages(
+        {0}, //pProcess,
         pCurrentPageDirectory,
-        { pProcess.val.pageDirectory.adr },
+        {pProcess.val.pageDirectory.adr},
         @Memory::PagingManager::PAGE_USER,
         imageSize,
         USER_ADR
@@ -70,8 +75,9 @@ Process::STATE_RUNNING u32 <- 1
 
     // allocate user stack memory pages
     @Memory::PagingManager::instance.allocateUserPages(
+        {0}, //pProcess,
         pCurrentPageDirectory,
-        { pProcess.val.pageDirectory.adr },
+        {pProcess.val.pageDirectory.adr},
         @Memory::PagingManager::PAGE_USER_STACK,
         USER_STACK_SIZE,
         USER_STACK_END_ADR - USER_STACK_SIZE
@@ -81,14 +87,14 @@ Process::STATE_RUNNING u32 <- 1
     @BSys::setCr3(pProcess.val.cr3)
 
     // setup iret frame
-    pStack ptr<data<u32>> <- { pProcess.val.esp }
+    pStack ptr<data<u32>> <- {pProcess.val.esp}
     pStack.val[4] <- GDT_USER_DATA // ss
     pStack.val[3] <- USER_STACK_END_ADR
     pStack.val[2] <- 0x0202 // eflags IF & 1
     pStack.val[1] <- GDT_USER_CODE // cs
     pStack.val[0] <- USER_ADR
 
-    imageTargetAddrss ptr<data<u8>> <- { USER_ADR }
+    imageTargetAddrss ptr<data<u8>> <- {USER_ADR}
 
     rep i u32 <- 0, i < imageSize, i <- i + 1
         imageTargetAddrss.val[i] <- imageSourceAddress.val[i]
@@ -103,8 +109,9 @@ Process::STATE_RUNNING u32 <- 1
     else
         // allocate new kernel stack just bellow the desired 1022 slot, so we can use the existing stack for the allocation process
         @Memory::PagingManager::instance.allocateUserPages(
+            {0}, //pProcess,
             pCurrentPageDirectory,
-            { pProcess.val.pageDirectory.adr },
+            {pProcess.val.pageDirectory.adr},
             @Memory::PagingManager::PAGE_KERNEL_STACK,
             KERNEL_STACK_SIZE,
             KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE - 0x40_0000
