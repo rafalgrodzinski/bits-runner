@@ -250,7 +250,6 @@ start_16:
 
     ; call memory_setup_paging_32
     ; calculate image + heap krnel pages count
-    xchg bx, bx
     mov eax, [kernel_image_size]
     add eax, PAGING_ENTRIES_SIZE + MEMORY_LAYOUT_INFO_SIZE
     add eax, [pages_count]

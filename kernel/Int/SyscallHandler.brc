@@ -23,6 +23,9 @@ CALL_INPUT_MOUSE_GET_STATE u32 <- 0x110
 // Memory
 CALL_GET_INFO_MEM u32 <- 0x20
 
+// Process
+CALL_GET_INFO_PROCESS u32 <- 0x22
+
 // Storage
 CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
 
@@ -85,6 +88,10 @@ handleSyscall fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         pInfoMem.val[6] <- @Memory::PagingManager::instance.getInfoHeapStart().u32
         pInfoMem.val[7] <- @Memory::PagingManager::instance.getInfoHeapSize()
         pInfoMem.val[8] <- @Memory::PagingManager::instance.getInfoAllocatedBytes()
+    else if eax = CALL_GET_INFO_PROCESS
+        pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
+        currentProcessIndex u32 <- @Dispatch::Dispatcher::instance.currentProcessIndex
+        pInfo.val[0] <- @Dispatch::Dispatcher::instance.currentProcessPagesCount()
     else if eax = CALL_STORAGE_GET_INFO_FS_ENTRY
         pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
         pEntryPath ptr<blob<@B::String>> <- ecx.a.ptr<blob<@B::String>>

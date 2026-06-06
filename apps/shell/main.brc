@@ -6,6 +6,7 @@ CMD_TIME blob<@B::String>
 CMD_M_INFO blob<@B::String>
 CMD_P_INFO blob<@B::String>
 CMD_F_INFO blob<@B::String>
+CMD_INFO blob<@B::String>
 CMD_YIELD blob<@B::String>
 
 @export start fun
@@ -16,6 +17,7 @@ CMD_YIELD blob<@B::String>
     CMD_M_INFO <- @B::String("minfo")
     CMD_P_INFO <- @B::String("pinfo")
     CMD_F_INFO <- @B::String("finfo")
+    CMD_INFO <- @B::String("info")
     CMD_YIELD <- @B::String("yield")
 
     character u8 <- 0
@@ -130,6 +132,10 @@ CMD_YIELD blob<@B::String>
             text.print()
             text <- @B::StringForU32(info.entrySize)
             text.println()
+        else if cmd.isEqual(CMD_INFO)
+            info blob<@Syscall::InfoProcess> <- @Syscall::getInfoProcess()
+            @B::String("Allocated pages: ").print()
+            @B::StringForU32(info.pagesCount).println()
         else if cmd.isEqual(CMD_YIELD)
             @Syscall::processYield()
         else

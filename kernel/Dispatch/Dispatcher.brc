@@ -93,6 +93,11 @@ Dispatcher::tss blob<Tss>
 
         ret pCurrentPageDirectory
     ;
+
+    currentProcessPagesCount fun -> u32
+        if it.currentProcessIndex > it.processes.count: ret 0
+        ret it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.pages.count
+    ;
 ;
 
 Dispatcher::setTssRaw raw<"m, ~{eax}">: gdtEntry u32

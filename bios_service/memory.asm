@@ -37,7 +37,6 @@ memory_scan_16:
     jne .loop
 
     ; calculate pages_count
-    xchg bx, bx
     mov edx, 0
     mov ebx, PAGE_SIZE
     mov eax, [memory_size]

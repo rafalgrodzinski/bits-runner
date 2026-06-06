@@ -6,6 +6,7 @@
 CALL_REBOOT u32 <- 0x00
 CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_GET_INFO_MEM u32 <- 0x20
+CALL_GET_INFO_PROCESS u32 <- 0x22
 CALL_SYS_INFO_PCI u32 <- 0x021
 
 // Input
@@ -46,6 +47,10 @@ CALL_PROCESS_YIELD u32 <- 0x400
     allocateBytes u32
 ;
 
+@export InfoProcess blob
+    pagesCount u32
+;
+
 @export InfoPciDevice blob
         busNum u32
         deviceNum u32
@@ -73,7 +78,7 @@ CALL_PROCESS_YIELD u32 <- 0x400
     deltaY s32
 ;
 
-syscallRaw raw<"=r,m,m,m,m,~{eax},~{ebx},~{ecx},~{edx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/, arg2 u32/*$3*/, arg3 u32/*s4*/ -> u32/*$0*/
+syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/, arg2 u32/*$3*/, arg3 u32/*s4*/ -> u32/*$0*/
     mov eax, $1
     mov ebx, $2
     mov ecx, $3
@@ -93,6 +98,12 @@ syscallRaw raw<"=r,m,m,m,m,~{eax},~{ebx},~{ecx},~{edx}">: syscallNum u32/*$1*/, 
 @export getInfoMem fun -> blob<InfoMem>
     info blob<InfoMem>
     syscallRaw(CALL_GET_INFO_MEM, info.adr.u32, 0, 0)
+    ret info
+;
+
+@export getInfoProcess fun -> blob<InfoProcess>
+    info blob<InfoProcess>
+    syscallRaw(CALL_GET_INFO_PROCESS, info.adr.u32, 0, 0)
     ret info
 ;
 
