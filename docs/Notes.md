@@ -9,3 +9,5 @@ Changelist:
   - Initial kernel stack is reused for the first process
   - Kernel page directory and tables are now dynamically allocated in kernel's heap
   - Sourcecode improvements for the latest version of brb
+  - Refactored dispatch and memory management
+  - Allocate pages for kernel and user allocations
