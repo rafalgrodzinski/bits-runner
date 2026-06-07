@@ -2,10 +2,9 @@
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE}")"
 SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
-#PREFIX="`brew --prefix`/lib/brc"
-PREFIX="/Users/Rafal/Workspace/Bits Runner/bits-runner-builder"
+PREFIX="${PREFIX:-`brew --prefix`}"
 PATH="${PREFIX}/bin:${PREFIX}/build:${PATH}"
-BLIB="${PREFIX}/lib/B"
+BLIB="${PREFIX}/lib/brc/B"
 
 function check {
     if [ $? -ne 0 ]; then
