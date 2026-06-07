@@ -1,0 +1,106 @@
+@module Dispatch
+
+@import B
+@import BSys
+
+Tss blob
+    unused0 u32
+    esp0 u32
+    ss0 u32
+    unused1 data<u32, 23>
+;
+
+KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
+KERNEL_STACK_END_ADR u32 <- 0x1_0000_0000 - 0x40_0000 // @ 4GiB - 4MiB (for pages directory self reference)
+KERNEL_STACK_SIZE u32 <- 256 * 1024 // 256KiB 4_0000
+
+USER_ADR u32 <- 0x40_0000 // @ 4 MiB
+USER_STACK_END_ADR u32 <- 0x8000_0000 // just bellow kernel @ 2GiB
+USER_STACK_SIZE u32 <- 256 * 1024 // 256KiB
+
+GDT_DATA u32 <- 0x10
+GDT_USER_CODE u32 <- 0x28 | 0x03
+GDT_USER_DATA u32 <- 0x30 | 0x03
+GDT_TSS u32 <- 0x38
+
+Dispatcher::tss blob<Tss>
+
+@export Dispatcher::instance blob<Dispatcher>
+
+@export Dispatcher blob
+    currentProcessIndex u32
+    processes blob<@B::Array, ptr<blob<Process>>>
+
+    init fun: aGdtTss a
+        it.currentProcessIndex <- 0xffff
+
+        Dispatcher::tss.ss0 <- GDT_DATA
+        pGdtTss ptr<data<u8>> <- { aGdtTss }
+
+        pGdtTss.val[0] <- (blob<Tss>.size & 0x0000_00ff)
+        pGdtTss.val[1] <- (blob<Tss>.size & 0x0000_ff00) >> 8
+        pGdtTss.val[2] <- (Dispatcher::tss.adr & 0x0000_00ff).u8
+        pGdtTss.val[3] <- ((Dispatcher::tss.adr & 0x0000_ff00) >> 8).u8
+        pGdtTss.val[4] <- ((Dispatcher::tss.adr & 0x00ff_0000) >> 16).u8
+        pGdtTss.val[5] <- 0b1000_1001 // <7: present> <6-5: Priviledge Level> <4: 0 for TSS> <3: 32bit> <2-1: 0 for TSS> <0: 1 for TSS>
+        pGdtTss.val[6] <- (blob<Tss>.size & 0x000f_0000) >> 16
+        pGdtTss.val[7] <- ((Dispatcher::tss.adr & 0xff00_0000) >> 24).u8
+
+        Dispatcher::setTssRaw(GDT_TSS)
+    ;
+
+    createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32
+        @BSys::disableInterrupts()
+
+        pCurrentProcess ptr<blob<Process>> <- if it.currentProcessIndex < it.processes.count: it.processes.at(it.currentProcessIndex).ptr<blob<Process>> else: {0}
+        pProcess ptr<blob<Process>> <- Process::new(
+            imageSourceAddress,
+            imageSize,
+            pCurrentProcess,
+            it.processes.count = 0
+        )
+
+        it.processes.push(pProcess)
+
+        @BSys::enableInterrupts()
+    ;
+
+    runNextProcess fun
+        if it.processes.count = 0: ret
+
+        @BSys::disableInterrupts()
+        // preserve current kernel stack pointer
+        if it.currentProcessIndex < it.processes.count
+            it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.esp0 <- @BSys::getEsp()
+        ;
+
+        it.currentProcessIndex <- it.currentProcessIndex + 1
+        if it.currentProcessIndex >= it.processes.count: it.currentProcessIndex <- 0
+
+        it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.run()
+
+        @BSys::enableInterrupts()
+    ;
+
+    getCurrentPageDirectoryPtr fun -> ptr<data<u32>>
+        pCurrentPageDirectory ptr<data<u32>>
+
+        if it.currentProcessIndex < it.processes.count
+            pCurrentPageDirectory <- { it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.pageDirectory.adr }
+        else
+            pCurrentPageDirectory <- { @BSys::getCr3() }
+        ;
+
+        ret pCurrentPageDirectory
+    ;
+
+    currentProcessPagesCount fun -> u32
+        if it.currentProcessIndex > it.processes.count: ret 0
+        ret it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.pages.count
+    ;
+;
+
+Dispatcher::setTssRaw raw<"m, ~{eax}">: gdtEntry u32
+    mov ax, $0
+    ltr ax
+;

@@ -1,0 +1,149 @@
+@module Dispatch
+
+@import Memory
+
+Process::STATE_NOT_STARTED u32 <- 0
+Process::STATE_RUNNING u32 <- 1
+
+@export Process blob
+    pageDirectory data<u32, 1024>
+    cr3 u32
+    esp u32
+    esp0 u32
+    state u32
+
+    pages blob<@B::Array, u32>
+
+    run fun
+        if it.state = Process::STATE_NOT_STARTED
+            Dispatcher::tss.esp0 <- it.esp0
+            it.state <- Process::STATE_RUNNING
+            Process::startRaw(it.esp, it.cr3, GDT_USER_DATA)
+        else
+            Process::resumeRaw(it.esp0, it.cr3)
+        ;
+    ;
+
+    registerPage fun: page u32
+        it.pages.push(page)
+    ;
+;
+
+@export Process::new fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
+    pCurrentPageDirectory ptr<data<u32>>
+    oldCr3 u32
+
+    if pCurrentProcess.vadr != 0
+        oldCr3 <- pCurrentProcess.val.cr3
+        pCurrentPageDirectory <- {pCurrentProcess.val.pageDirectory.adr}
+    else
+        oldCr3 <- @BSys::getCr3()
+        linearAdr u32 <- (oldCr3 & 0x0f_ffff) + KERNEL_ADR
+        pCurrentPageDirectory <- {linearAdr}
+    ;
+
+    pProcess ptr<blob<Process>> <- @BSys::memAlignedAlloc(blob<Process>.size, 0x1000).ptr<blob<Process>>
+    pProcess.val.state <- Process::STATE_NOT_STARTED
+
+    pProcess.val.cr3 <- @Memory::PagingManager::lAdrToPAdr(pProcess.val.pageDirectory.adr).u32
+    pProcess.val.esp <- USER_STACK_END_ADR - 5 * u32.size // 5 slots for iret frame
+    pProcess.val.esp0 <- KERNEL_STACK_END_ADR
+
+    // Setup new page directory
+
+    // copy first identity page directory
+    pProcess.val.pageDirectory[0] <- pCurrentPageDirectory.val[0]
+
+    // copy kernel page directories
+    rep i u32 <- 512, i < 1023, i <- i + 1: pProcess.val.pageDirectory[i] <- pCurrentPageDirectory.val[i]
+
+    // clear user page tables
+    rep i u32 <- 1, i < 512, i <- i + 1: pProcess.val.pageDirectory[i] <-  0
+
+    // self-refence pages directory
+    pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x13 // PCD & RW & P
+
+    // allocate user memory pages
+    @Memory::PagingManager::instance.allocateUserPages(
+        {0}, //pProcess,
+        pCurrentPageDirectory,
+        {pProcess.val.pageDirectory.adr},
+        @Memory::PagingManager::PAGE_USER,
+        imageSize,
+        USER_ADR
+    )
+
+    // allocate user stack memory pages
+    @Memory::PagingManager::instance.allocateUserPages(
+        {0}, //pProcess,
+        pCurrentPageDirectory,
+        {pProcess.val.pageDirectory.adr},
+        @Memory::PagingManager::PAGE_USER_STACK,
+        USER_STACK_SIZE,
+        USER_STACK_END_ADR - USER_STACK_SIZE
+    )
+
+    // Copy user image to target address
+    @BSys::setCr3(pProcess.val.cr3)
+
+    // setup iret frame
+    pStack ptr<data<u32>> <- {pProcess.val.esp}
+    pStack.val[4] <- GDT_USER_DATA // ss
+    pStack.val[3] <- USER_STACK_END_ADR
+    pStack.val[2] <- 0x0202 // eflags IF & 1
+    pStack.val[1] <- GDT_USER_CODE // cs
+    pStack.val[0] <- USER_ADR
+
+    imageTargetAddrss ptr<data<u8>> <- {USER_ADR}
+
+    rep i u32 <- 0, i < imageSize, i <- i + 1
+        imageTargetAddrss.val[i] <- imageSourceAddress.val[i]
+    ;
+
+    @BSys::setCr3(oldCr3)
+
+    // reuse the existing stack if it's the first process
+    if isFirst
+        pProcess.val.pageDirectory[1022] <- pCurrentPageDirectory.val[1022]
+    // or allocate kernel stack memory pages
+    else
+        // allocate new kernel stack just bellow the desired 1022 slot, so we can use the existing stack for the allocation process
+        @Memory::PagingManager::instance.allocateUserPages(
+            {0}, //pProcess,
+            pCurrentPageDirectory,
+            {pProcess.val.pageDirectory.adr},
+            @Memory::PagingManager::PAGE_KERNEL_STACK,
+            KERNEL_STACK_SIZE,
+            KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE - 0x40_0000
+        )
+        // and them put it in the right location
+        pProcess.val.pageDirectory[1022] <- pProcess.val.pageDirectory[1021]
+        pProcess.val.pageDirectory[1021] <- 0
+    ;
+
+    ret pProcess
+;
+
+Process::startRaw raw<"r, r, r, ~{eax}, ~{memory}">: esp u32/*$0*/, cr3 u32/*$1*/, gdtUserData u32/*$2*/
+    mov eax, $2
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    mov eax, $1
+    mov cr3, eax
+
+    mov eax, $0
+    mov esp, eax
+
+    iretd
+;
+
+Process::resumeRaw raw<"r, r, ~{eax}, ~{memory}">: esp0 u32, cr3 u32 //, eip0 u32
+    mov eax, $1
+    mov cr3, eax
+
+    mov eax, $0
+    mov esp, eax
+;

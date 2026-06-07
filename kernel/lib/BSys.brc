@@ -1,0 +1,98 @@
+@module BSys
+
+@import Memory
+
+@export getEax raw<"=r"> -> u32
+    mov $0, eax
+;
+
+@export getEbx raw<"=r"> -> u32
+    mov $0, ebx
+;
+
+@export getEcx raw<"=r"> -> u32
+    mov $0, ecx
+;
+
+@export getEdx raw<"=r"> -> u32
+    mov $0, edx
+;
+
+@export getEsp raw<"=r"> -> u32
+    mov $0, esp
+;
+
+@export getCr3 raw<"=r"> -> u32
+    mov $0, cr3
+;
+
+@export setCr3 raw<"r, ~{memory}">: address u32
+    mov cr3, $0
+;
+
+@export out8 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u8
+    mov dx, $0
+    mov al, $1
+    out dx, al
+;
+
+@export out16 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u16
+    mov dx, $0
+    mov ax, $1
+    out dx, ax
+;
+
+@export out32 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u32
+    mov dx, $0
+    mov eax, $1
+    out dx, eax
+;
+
+@export in8 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u8
+    mov dx, $1
+    in al, dx
+    mov $0, al
+;
+
+@export in16 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u16
+    mov dx, $1
+    in ax, dx
+    mov $0, ax
+;
+
+@export in32 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u32
+    mov dx, $1
+    in eax, dx
+    mov $0, eax
+;
+
+@export disableInterrupts raw<"">
+    cli
+;
+
+@export enableInterrupts raw<"">
+    sti
+;
+
+printCharRaw raw<"m, m, ~{eax}, ~{ebx}">: character u32/*$0*/, attribute u32/*$1*/
+    mov eax, 0x01
+    mov ebx, $0
+    mov ecx, $1
+    int 0x30
+;
+
+@export printChar fun: character u8
+    printCharRaw(character, 0x07)
+;
+
+@export memAlloc fun: size u32 -> a
+    ret memAlignedAlloc(size, 0)
+;
+
+@export memAlignedAlloc fun: size u32, alignment u32 -> a
+    ret @Memory::HeapManager::instance.allocateAligned({0}, size, alignment)
+;
+
+@export memFree fun: address a
+    @Memory::HeapManager::instance.free(address)
+;

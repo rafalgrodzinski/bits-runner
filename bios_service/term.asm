@@ -36,6 +36,8 @@ term_print_new_line_32:
 ; Prints a new line
 [bits 16]
 term_print_new_line_16:
+	pusha
+
 	mov bx, 0
 	mov ah, 0x0e
 
@@ -44,6 +46,7 @@ term_print_new_line_16:
 	mov al, 0x0a ; LF
 	int 0x10
 
+	popa
     ret
 
 ;
@@ -51,7 +54,7 @@ term_print_new_line_16:
 ;  eax: integer to print
 [bits 16]
 term_print_int_16:
-	pusha
+	pushad
 
 	mov ecx, 0
 process_digit:
@@ -70,7 +73,7 @@ print_digit:
     add sp, 2
     loop print_digit
 
-	popa
+	popad
 	ret
 
 ;
@@ -105,7 +108,7 @@ term_print_hex_32:
 ;  eax: integer to print
 [bits 16]
 term_print_hex_16:
-    pusha
+    pushad
 
     mov ecx, 0 ; Count number of digits
 .loop_process_digit:
@@ -147,5 +150,5 @@ term_print_hex_16:
 	add sp, 2
 	loop .loop_print_digit
 
-    popa
+    popad
     ret

@@ -18,22 +18,22 @@ enableInterrupts raw<"">
 ;
 
 waitForWriteReady fun
-    rep @BSys.in8(CMD_PORT) &? 0x02:
+    rep @BSys::in8(CMD_PORT) &? 0x02:
 ;
 
 waitForReadReady fun
-    rep not @BSys.in8(CMD_PORT) &? 0x01:
+    rep not @BSys::in8(CMD_PORT) &? 0x01:
 ;
 
 writeMouse fun: value u8
     waitForWriteReady()
-    @BSys.out8(CMD_PORT, 0xd4)
+    @BSys::out8(CMD_PORT, 0xd4)
 
     waitForWriteReady()
-    @BSys.out8(DATA_PORT, value)
+    @BSys::out8(DATA_PORT, value)
 
     waitForReadReady()
-    @BSys.in8(DATA_PORT) // get ACK 0xfa
+    @BSys::in8(DATA_PORT) // get ACK 0xfa
 ;
 
 @export DeviceMouse blob
@@ -50,7 +50,7 @@ writeMouse fun: value u8
 
         // Enable second PS/2 port
         waitForWriteReady()
-        @BSys.out8(CMD_PORT, 0xa8)
+        @BSys::out8(CMD_PORT, 0xa8)
 
         // first try enabling scroll wheel mode
         writeMouse(0xf3)
@@ -64,7 +64,7 @@ writeMouse fun: value u8
 
         writeMouse(0xf2)
         waitForReadReady()
-        it.mode <- @BSys.in8(DATA_PORT)
+        it.mode <- @BSys::in8(DATA_PORT)
 
         // if succeeded, try enableing 5-button mode
         if it.mode = SCROLL_WHEEL_MODE
@@ -79,25 +79,25 @@ writeMouse fun: value u8
 
             writeMouse(0xf2)
             waitForReadReady()
-            it.mode <- @BSys.in8(DATA_PORT)    
+            it.mode <- @BSys::in8(DATA_PORT)    
         ;
 
         // Enable interrupts
         waitForWriteReady()
-        @BSys.out8(CMD_PORT, 0x20)
+        @BSys::out8(CMD_PORT, 0x20)
 
         waitForReadReady()
-        status u8 <- @BSys.in8(DATA_PORT)
+        status u8 <- @BSys::in8(DATA_PORT)
 
         // Enable mouse
         status <- status | 0b0000_0010 // enable IRQ 12
         status <- status & 0b1101_1111 // enable mouse clock
 
         waitForWriteReady()
-        @BSys.out8(CMD_PORT, 0x60)
+        @BSys::out8(CMD_PORT, 0x60)
 
         waitForWriteReady()
-        @BSys.out8(DATA_PORT, status)
+        @BSys::out8(DATA_PORT, status)
 
         // Enable data reporting
         writeMouse(0xf4)
@@ -108,7 +108,7 @@ writeMouse fun: value u8
 
     handleInterrupt fun
         // store received data in current slot
-        it.status[it.currentStatusIndex] <- @BSys.in8(DATA_PORT)
+        it.status[it.currentStatusIndex] <- @BSys::in8(DATA_PORT)
 
         it.currentStatusIndex <- it.currentStatusIndex + 1
         if it.mode = STANDARD_MODE and it.currentStatusIndex < 3: ret
