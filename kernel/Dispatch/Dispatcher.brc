@@ -2,6 +2,7 @@
 
 @import B
 @import BSys
+@import Devices
 
 Tss blob
     unused0 u32
@@ -47,6 +48,11 @@ Dispatcher::tss blob<Tss>
         pGdtTss.val[7] <- ((Dispatcher::tss.adr & 0xff00_0000) >> 24).u8
 
         Dispatcher::setTssRaw(GDT_TSS)
+    ;
+
+    start fun
+        @Devices::Timer::Pit::instance.callback <- {Dispatcher::timerCallback.adr}
+        rep: @BSys::halt()
     ;
 
     createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32
@@ -103,4 +109,8 @@ Dispatcher::tss blob<Tss>
 Dispatcher::setTssRaw raw<"m, ~{eax}">: gdtEntry u32
     mov ax, $0
     ltr ax
+;
+
+Dispatcher::timerCallback fun
+    Dispatcher::instance.runNextProcess()
 ;

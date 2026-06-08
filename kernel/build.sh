@@ -34,6 +34,7 @@ OBJS=(
     DeviceMouse.o
     DeviceVideo.o
     DrvCmos.o
+    Devices.o
     Int.o
     int_raw.o
     Memory.o

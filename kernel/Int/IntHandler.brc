@@ -6,6 +6,7 @@
 @import DeviceKeyboard
 @import DeviceMouse
 @import DeviceVideo
+@import Devices
 
 @extern interrupt_init_protected_mode fun
 
@@ -43,6 +44,7 @@ getCr2 raw<"=r"> -> u32
         @Term::printNewLine()
         halt()
     else if interrupt = INT_IRQ0
+        @Devices::Timer::Pit::instance.handleInterrupt()
     else if interrupt = INT_IRQ1
         deviceKeyboard.handleInterrupt()
     else if interrupt = INT_IRQ12

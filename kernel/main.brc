@@ -9,6 +9,7 @@
 @import Int
 @import Bus
 @import DeviceVideo
+@import Devices
 
 busPci blob<@Bus::BusPci>
 
@@ -28,6 +29,7 @@ busPci blob<@Bus::BusPci>
     @Term::init(@Term::MODE_80x25)
 
     @Term::printString("Initializing Bits Runner...\n", @Term::FOREGROUND_GRAY)
+    @Devices::Timer::Pit::instance.init()
     //busPci.scan()
     storageFs blob<@Storage::StorageFs> <- @Storage::bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
     @Int::initSyscallHandler(storageFs)
@@ -49,13 +51,13 @@ busPci blob<@Bus::BusPci>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
     @Dispatch::Dispatcher::instance.createProcess(pApp, fsEntry.entrySize)
 
+    /*
     // Load vdemo
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B::String("/APPS/VDEMO.BIN"))
     pApp <- @BSys::memAlloc(fsEntry.entrySize).ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
     @Dispatch::Dispatcher::instance.createProcess(pApp, fsEntry.entrySize)
+    */
 
-    @Dispatch::Dispatcher::instance.runNextProcess()
-
-    rep:
+    @Dispatch::Dispatcher::instance.start()
 ;

@@ -1,0 +1,33 @@
+@module Devices
+
+@import BSys
+@import Term
+
+Timer::Pit::DATA0_PORT u8 <- 0x40
+Timer::Pit::CMD_PORT u8 <- 0x43
+
+Timer::Pit::FREQ u32 <- 1_193_182 // Hz
+
+@export Timer::Pit::instance blob<TimerPit>
+
+@export TimerPit blob
+    callback ptr<fun>
+
+    init fun
+        it.setInterval(1_000_000)
+    ;
+
+    setInterval fun: interval u32
+        if interval < 1: interval <- 1
+        divider u32 <- Timer::Pit::FREQ / (1_000_000 / interval)
+        if divider < 0: divider <- 0
+        if divider > 65_536: divider <- 0
+
+        @BSys::out8(Timer::Pit::DATA0_PORT, (divider & 0xff).u8)
+        @BSys::out8(Timer::Pit::DATA0_PORT, ((divider >> 8) & 0xff).u8)
+    ;
+
+    handleInterrupt fun
+        if it.callback.vadr != 0: it.callback.val()
+    ;
+;
