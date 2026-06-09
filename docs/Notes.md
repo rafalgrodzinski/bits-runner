@@ -3,7 +3,7 @@
 Development relase of the Bits Runner OS created with the Bits Runner Code language.
 
 Changelist:
-- [1.0.0-dev-15]()
+- [1.0.0-dev-15](https://github.com/rafalgrodzinski/bits-runner/pull/46)
   - Timer-based process switching
   - Sleep system call
 - [1.0.0-dev-14](https://github.com/rafalgrodzinski/bits-runner/pull/43)
