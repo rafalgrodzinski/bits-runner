@@ -3,6 +3,7 @@
 @import B
 @import BSys
 @import Devices
+@import Term
 
 Tss blob
     unused0 u32
@@ -74,18 +75,72 @@ Dispatcher::tss blob<Tss>
     runNextProcess fun
         if it.processes.count = 0: ret
 
-        @BSys::disableInterrupts()
+        //@BSys::disableInterrupts()
+
         // preserve current kernel stack pointer
         if it.currentProcessIndex < it.processes.count
             it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.esp0 <- @BSys::getEsp()
         ;
 
-        it.currentProcessIndex <- it.currentProcessIndex + 1
-        if it.currentProcessIndex >= it.processes.count: it.currentProcessIndex <- 0
+        //i u32 <- it.currentProcessIndex + 1
+        //if i >= it.processes.count: i <- 0
 
-        it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.run()
+        shouldRun bool
+        //rep not shouldRun
+            pProcess ptr<blob<Process>>
+            nextProcessIndex u32
+            rep nextProcessIndex <- it.currentProcessIndex, true, nextProcessIndex != it.currentProcessIndex and not shouldRun
+                nextProcessIndex <- nextProcessIndex + 1
+                if nextProcessIndex >= it.processes.count: nextProcessIndex <- 0
 
-        @BSys::enableInterrupts()
+                pProcess <- it.processes.at(nextProcessIndex).ptr<blob<Process>>
+
+                if pProcess.val.state = Process::State::SLEEPING
+                    if @Devices::Timer::Pit::instance.timestamp >= pProcess.val.sleepTimeout
+                        @Term::printString("enable", @Term::BACKGROUND_RED)
+                        shouldRun <- true
+                    ;
+                else : shouldRun <- true
+                //shouldRun <- pProcess.val.state != Process::State::SLEEPING
+            ;
+
+            /*
+            // preserve current kernel stack pointer
+
+            */
+
+            //@BSys::enableInterrupts()
+            if shouldRun
+                @Term::printString("run", @Term::BACKGROUND_WHITE)
+                it.currentProcessIndex <- nextProcessIndex
+                pProcess.val.run()
+                ret
+            else
+                rep
+                    @Term::printString("no!", @Term::BACKGROUND_RED)
+                    @BSys::enableInterrupts()                
+                    //@BSys::haltLoop()
+                    @BSys::halt()
+                    //rep: //@BSys::halt()
+                ;
+            ;
+        //;
+    ;
+
+    yield fun
+        it.runNextProcess()
+    ;
+
+    sleep fun: milliseconds u32
+        pProcess ptr<blob<Process>> <- it.processes.at(it.currentProcessIndex).ptr<blob<Process>>
+        pProcess.val.sleepTimeout <- @Devices::Timer::Pit::instance.timestamp + milliseconds
+        pProcess.val.state <- Process::State::SLEEPING
+
+        @Term::printString("before sleep", @Term::FOREGROUND_GREEN)
+        @Term::printNumber(@Devices::Timer::Pit::instance.timestamp, @Term::BACKGROUND_MAGENTA)
+        @Term::printNumber(pProcess.val.sleepTimeout, @Term::BACKGROUND_CYAN)
+
+        it.runNextProcess()
     ;
 
     getCurrentPageDirectoryPtr fun -> ptr<data<u32>>
@@ -112,5 +167,6 @@ Dispatcher::setTssRaw raw<"m, ~{eax}">: gdtEntry u32
 ;
 
 Dispatcher::timerCallback fun
+    @Term::printString("tick", @Term::BACKGROUND_BROWN)
     Dispatcher::instance.runNextProcess()
 ;

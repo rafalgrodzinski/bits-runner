@@ -6,8 +6,12 @@
 CALL_REBOOT u32 <- 0x00
 CALL_GET_TIMESTAMP u32 <- 0x10
 CALL_GET_INFO_MEM u32 <- 0x20
-CALL_GET_INFO_PROCESS u32 <- 0x22
 CALL_SYS_INFO_PCI u32 <- 0x021
+
+// Process
+CALL_GET_INFO_PROCESS u32 <- 0x22
+Syscall::Process::SLEEP u32 <- 0x201
+CALL_PROCESS_YIELD u32 <- 0x400
 
 // Input
 CALL_INPUT_KEYBOARD_GET_ASCII u32 <- 0x101
@@ -22,9 +26,6 @@ CALL_GFX_COMMIT_DRAWING u32 <- 0x310
 CALL_GFX_CLEAR_SCREEN u32 <- 0x320
 CALL_GFX_DRAW_PIXEL u32 <- 0x321
 CALL_GFX_DRAW_LINE u32 <- 0x322
-
-// Process
-CALL_PROCESS_YIELD u32 <- 0x400
 
 @export GFX_MODE_RES_320x240 u32 <- 0x0140_00f0
 @export GFX_MODE_RES_640x480 u32 <- 0x0280_01e0
@@ -101,12 +102,6 @@ syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: syscallNum u32
     ret info
 ;
 
-@export getInfoProcess fun -> blob<InfoProcess>
-    info blob<InfoProcess>
-    syscallRaw(CALL_GET_INFO_PROCESS, info.adr.u32, 0, 0)
-    ret info
-;
-
 @export getInfoPci fun -> blob<InfoPci>
     info blob<InfoPci>
     syscallRaw(CALL_SYS_INFO_PCI, info.adr.u32, 0, 0)
@@ -117,6 +112,21 @@ syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: syscallNum u32
     info blob<InfoFsEntry>
     syscallRaw(CALL_STORAGE_GET_INFO_FS_ENTRY, info.adr.u32, entryPath.adr.u32, 0)
     ret info
+;
+
+// Process
+@export getInfoProcess fun -> blob<InfoProcess>
+    info blob<InfoProcess>
+    syscallRaw(CALL_GET_INFO_PROCESS, info.adr.u32, 0, 0)
+    ret info
+;
+
+@export Process::sleep fun: milliseconds u32
+    syscallRaw(Syscall::Process::SLEEP, milliseconds, 0, 0)
+;
+
+@export processYield fun
+    syscallRaw(CALL_PROCESS_YIELD, 0, 0, 0)
 ;
 
 // Input
@@ -151,9 +161,4 @@ syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: syscallNum u32
     p1 u32 <- (x1 << 16) | (y1 & 0xffff)
     p2 u32 <- (x2 << 16) | (y2 & 0xffff)
     syscallRaw(CALL_GFX_DRAW_LINE, p1, p2, color)
-;
-
-// Process
-@export processYield fun
-    syscallRaw(CALL_PROCESS_YIELD, 0, 0, 0)
 ;

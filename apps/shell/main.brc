@@ -8,6 +8,7 @@ CMD_P_INFO blob<@B::String>
 CMD_F_INFO blob<@B::String>
 CMD_INFO blob<@B::String>
 CMD_YIELD blob<@B::String>
+CMD_SLEEP blob<@B::String>
 
 @export start fun
     @B::String("shell.bin >").println()
@@ -19,6 +20,7 @@ CMD_YIELD blob<@B::String>
     CMD_F_INFO <- @B::String("finfo")
     CMD_INFO <- @B::String("info")
     CMD_YIELD <- @B::String("yield")
+    CMD_SLEEP <- @B::String("sleep")
 
     character u8 <- 0
     input blob<@B::String> <- @B::String("")
@@ -132,12 +134,15 @@ CMD_YIELD blob<@B::String>
             text.print()
             text <- @B::StringForU32(info.entrySize)
             text.println()
-        else if cmd.isEqual(CMD_INFO)
+        /*else if cmd.isEqual(CMD_INFO)
             info blob<@Syscall::InfoProcess> <- @Syscall::getInfoProcess()
             @B::String("Allocated pages: ").print()
             @B::StringForU32(info.pagesCount).println()
         else if cmd.isEqual(CMD_YIELD)
-            @Syscall::processYield()
+            @Syscall::processYield()*/
+        else if cmd.isEqual(CMD_SLEEP)
+            @Syscall::Process::sleep(1_000)
+            @B::String("After").println()
         else
             message blob<@B::String> <- @B::String("Unknown command")
             message.println()
