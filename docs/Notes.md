@@ -3,7 +3,10 @@
 Development relase of the Bits Runner OS created with the Bits Runner Code language.
 
 Changelist:
-- [1.0.0.0-dev-14](https://github.com/rafalgrodzinski/bits-runner/pull/43)
+- [1.0.0-dev-15]()
+  - Timer-based process switching
+  - Sleep system call
+- [1.0.0-dev-14](https://github.com/rafalgrodzinski/bits-runner/pull/43)
   - Builds with O2 optimizaion for much smaller sizes
   - Corrected memory detection
   - Initial kernel stack is reused for the first process

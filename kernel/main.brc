@@ -6,7 +6,7 @@
 @import Dispatch
 @import Storage
 @import BSys
-@import Int
+@import Interrupt
 @import Bus
 @import DeviceVideo
 @import Devices
@@ -25,14 +25,14 @@ busPci blob<@Bus::BusPci>
     @Dispatch::Dispatcher::instance.init(gdtTssAdr)
     @Memory::PagingManager::instance.init()
     @Memory::HeapManager::instance.init()
-    @Int::init()
+    @Interrupt::Handler::instance.init()
     @Term::init(@Term::MODE_80x25)
 
     @Term::printString("Initializing Bits Runner...\n", @Term::FOREGROUND_GRAY)
     @Devices::Timer::Pit::instance.init()
     //busPci.scan()
     storageFs blob<@Storage::StorageFs> <- @Storage::bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
-    @Int::initSyscallHandler(storageFs)
+    @Interrupt::SyscallHandler::instance.init(storageFs)
     @Term::printString("All ready, welcome to Bits Runner!\n", @Term::FOREGROUND_GREEN)
 
     // Load apps

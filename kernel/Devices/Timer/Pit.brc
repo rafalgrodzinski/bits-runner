@@ -11,23 +11,28 @@ Timer::Pit::FREQ u32 <- 1_193_182 // Hz
 @export Timer::Pit::instance blob<TimerPit>
 
 @export TimerPit blob
+    timestamp u32
+    interval u32
     callback ptr<fun>
 
     init fun
-        it.setInterval(1_000_000)
+        it.setInterval(1)
     ;
 
-    setInterval fun: interval u32
-        if interval < 1: interval <- 1
-        divider u32 <- Timer::Pit::FREQ / (1_000_000 / interval)
+    setInterval fun: milliseconds u32
+        if milliseconds < 1: milliseconds <- 1
+        divider u32 <- Timer::Pit::FREQ / (1_000 / milliseconds)
         if divider < 0: divider <- 0
-        if divider > 65_536: divider <- 0
+        if divider > 65_535: divider <- 65_535
+
+        it.interval <- 1_000 / (Timer::Pit::FREQ / divider)
 
         @BSys::out8(Timer::Pit::DATA0_PORT, (divider & 0xff).u8)
         @BSys::out8(Timer::Pit::DATA0_PORT, ((divider >> 8) & 0xff).u8)
     ;
 
     handleInterrupt fun
+        it.timestamp <- it.timestamp + it.interval
         if it.callback.vadr != 0: it.callback.val()
     ;
 ;

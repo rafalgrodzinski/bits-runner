@@ -4,6 +4,7 @@
 
 Process::STATE_NOT_STARTED u32 <- 0
 Process::STATE_RUNNING u32 <- 1
+Process::State::SLEEPING u32 <- 2
 
 @export Process blob
     pageDirectory data<u32, 1024>
@@ -13,13 +14,15 @@ Process::STATE_RUNNING u32 <- 1
     state u32
 
     pages blob<@B::Array, u32>
+    sleepTimeout u32
 
     run fun
         if it.state = Process::STATE_NOT_STARTED
-            Dispatcher::tss.esp0 <- it.esp0
             it.state <- Process::STATE_RUNNING
+            Dispatcher::tss.esp0 <- it.esp0
             Process::startRaw(it.esp, it.cr3, GDT_USER_DATA)
         else
+            it.state <- Process::STATE_RUNNING
             Process::resumeRaw(it.esp0, it.cr3)
         ;
     ;

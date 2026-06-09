@@ -35,8 +35,8 @@ OBJS=(
     DeviceVideo.o
     DrvCmos.o
     Devices.o
-    Int.o
-    int_raw.o
+    Interrupt.o
+    interrupt_handler.o
     Memory.o
     Dispatch.o
     Storage.o
@@ -76,7 +76,7 @@ brb ${FLAGS[@]} ${SOURCES[@]}
 check
 
 # and the assembly files
-nasm -f elf32 -o int_raw.o "${SCRIPT_DIR}/Int/int_raw.asm"
+nasm -f elf32 -o interrupt_handler.o "${SCRIPT_DIR}/Interrupt/interrupt_handler.asm"
 check
 
 # and finally link everything

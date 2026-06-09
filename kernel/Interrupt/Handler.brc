@@ -1,0 +1,69 @@
+@module Interrupt
+
+@import B
+@import BSys
+@import Bus
+@import Term
+@import DeviceKeyboard
+@import DeviceMouse
+@import DeviceVideo
+@import Devices
+
+@extern interrupt_handler_init fun
+
+INT_PAGE_FAULT u32 <- 0x0e
+INT_IRQ0 u32 <- 0x20 // timer
+INT_IRQ1 u32 <- 0x21 // keyboard
+INT_IRQ12 u32 <- 0x2c // mouse
+INT_SYSCALL u32 <- 0x30
+
+deviceKeyboard blob<@DeviceKeyboard::DeviceKeyboard>
+deviceMouse blob<@DeviceMouse::DeviceMouse>
+deviceVideo proto<@DeviceVideo::DeviceVideo>
+
+@export Handler::instance blob<Handler>
+
+@export Handler blob
+    init fun
+        interrupt_handler_init()
+        deviceKeyboard.init()
+        deviceMouse.init()
+        deviceVideo <- @DeviceVideo::getPrimary()
+    ;
+
+    handle fun: eax u32, ebx u32, ecx u32, edx u32, interrupt u32, errorCode u32 -> u32
+        // Page fault
+        if interrupt = INT_PAGE_FAULT
+            @Term::printString("Page fault accessing memory at: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+            @Term::printHex(@BSys::getCr2(), @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+            @Term::printNewLine()
+            rep: @BSys::halt()
+        // Timer
+        else if interrupt = INT_IRQ0
+            @Devices::Timer::Pit::instance.handleInterrupt()
+        // Keyboard
+        else if interrupt = INT_IRQ1
+            deviceKeyboard.handleInterrupt()
+        // Mouse
+        else if interrupt = INT_IRQ12
+            deviceMouse.handleInterrupt()
+        // Syscall
+        else if interrupt = INT_SYSCALL
+            ret SyscallHandler::instance.handle(eax, ebx, ecx, edx)
+        // Other
+        else
+            @Term::printString("Unhandled interrupt: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+            @Term::printHex(interrupt, @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+            @Term::printString(", error code: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+            @Term::printHex(errorCode, @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
+            @Term::printNewLine()
+            rep: @BSys::halt()
+        ;
+
+        ret eax
+    ;
+;
+
+@export handleInterrupt fun: eax u32, ebx u32, ecx u32, edx u32, interrupt u32, errorCode u32 -> u32
+    ret Handler::instance.handle(eax, ebx, ecx, edx, interrupt, errorCode)
+;
