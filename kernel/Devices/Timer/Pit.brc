@@ -16,7 +16,8 @@ Timer::Pit::FREQ u32 <- 1_193_182 // Hz
     callback ptr<fun>
 
     init fun
-        it.setInterval(1)
+        // 10 or less doesn't work correctly on VirtualBox
+        it.setInterval(50)
     ;
 
     setInterval fun: milliseconds u32
@@ -27,6 +28,7 @@ Timer::Pit::FREQ u32 <- 1_193_182 // Hz
 
         it.interval <- 1_000 / (Timer::Pit::FREQ / divider)
 
+        @BSys::out8(Timer::Pit::CMD_PORT, 0b00_11_011_0)
         @BSys::out8(Timer::Pit::DATA0_PORT, (divider & 0xff).u8)
         @BSys::out8(Timer::Pit::DATA0_PORT, ((divider >> 8) & 0xff).u8)
     ;

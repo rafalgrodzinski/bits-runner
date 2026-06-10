@@ -511,7 +511,10 @@ interrupt_handler:
     ; Acknowledge interrupt
     mov al, 0x20
     out PIC1_CMD_PORT, al
+    cmp dword .interrupt, 0x28 ; < IRQ8 ?
+    jb .skip_ack_pic2
     out PIC2_CMD_PORT, al
+.skip_ack_pic2:
 
     ; Skip pushed arguments
     add esp, 4 * 6

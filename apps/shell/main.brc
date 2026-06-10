@@ -134,14 +134,14 @@ CMD_SLEEP blob<@B::String>
             text.print()
             text <- @B::StringForU32(info.entrySize)
             text.println()
-        /*else if cmd.isEqual(CMD_INFO)
+        else if cmd.isEqual(CMD_INFO)
             info blob<@Syscall::InfoProcess> <- @Syscall::getInfoProcess()
             @B::String("Allocated pages: ").print()
             @B::StringForU32(info.pagesCount).println()
         else if cmd.isEqual(CMD_YIELD)
-            @Syscall::processYield()*/
+            @Syscall::processYield()
         else if cmd.isEqual(CMD_SLEEP)
-            @Syscall::Process::sleep(1_000)
+            @Syscall::Process::sleep(2_000)
             @B::String("After").println()
         else
             message blob<@B::String> <- @B::String("Unknown command")

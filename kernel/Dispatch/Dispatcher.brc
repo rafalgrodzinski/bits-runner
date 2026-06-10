@@ -3,7 +3,6 @@
 @import B
 @import BSys
 @import Devices
-@import Term
 
 Tss blob
     unused0 u32
@@ -75,59 +74,51 @@ Dispatcher::tss blob<Tss>
     runNextProcess fun
         if it.processes.count = 0: ret
 
-        //@BSys::disableInterrupts()
-
         // preserve current kernel stack pointer
         if it.currentProcessIndex < it.processes.count
             it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.esp0 <- @BSys::getEsp()
         ;
 
-        //i u32 <- it.currentProcessIndex + 1
-        //if i >= it.processes.count: i <- 0
+        shouldRun bool <- false
+        nextProcessIndex u32 <- it.currentProcessIndex + 1 // start from the next process
+        if nextProcessIndex >= it.processes.count: nextProcessIndex <- 0
+        pNextProcess ptr<blob<Process>>
 
-        shouldRun bool
-        //rep not shouldRun
-            pProcess ptr<blob<Process>>
-            nextProcessIndex u32
-            rep nextProcessIndex <- it.currentProcessIndex, true, nextProcessIndex != it.currentProcessIndex and not shouldRun
+        // Loop until we found a process to run
+        rep not shouldRun
+            pNextProcess <- it.processes.at(nextProcessIndex).ptr<blob<Process>>
+
+            // if the process is sleeping, check if it can be woken up
+            if pNextProcess.val.state = Process::State::SLEEPING
+                if @Devices::Timer::Pit::instance.timestamp >= pNextProcess.val.sleepTimeout
+                    shouldRun <- true
+                ;
+            // if not sleeping, we can run it
+            else: shouldRun <- true
+
+            // We checked all the processes, so let's wait for a tick
+            if nextProcessIndex = it.currentProcessIndex and not shouldRun
+                @BSys::enableInterrupts()                
+                @BSys::halt()
+            ;
+
+            // try the next process
+            if not shouldRun
                 nextProcessIndex <- nextProcessIndex + 1
                 if nextProcessIndex >= it.processes.count: nextProcessIndex <- 0
-
-                pProcess <- it.processes.at(nextProcessIndex).ptr<blob<Process>>
-
-                if pProcess.val.state = Process::State::SLEEPING
-                    if @Devices::Timer::Pit::instance.timestamp >= pProcess.val.sleepTimeout
-                        @Term::printString("enable", @Term::BACKGROUND_RED)
-                        shouldRun <- true
-                    ;
-                else : shouldRun <- true
-                //shouldRun <- pProcess.val.state != Process::State::SLEEPING
             ;
+        ;
 
-            /*
-            // preserve current kernel stack pointer
-
-            */
-
-            //@BSys::enableInterrupts()
-            if shouldRun
-                @Term::printString("run", @Term::BACKGROUND_WHITE)
-                it.currentProcessIndex <- nextProcessIndex
-                pProcess.val.run()
-                ret
-            else
-                rep
-                    @Term::printString("no!", @Term::BACKGROUND_RED)
-                    @BSys::enableInterrupts()                
-                    //@BSys::haltLoop()
-                    @BSys::halt()
-                    //rep: //@BSys::halt()
-                ;
-            ;
-        //;
+        // Next process to run has been found
+        it.currentProcessIndex <- nextProcessIndex
+        pNextProcess.val.run()
     ;
 
     yield fun
+        // Check if current process is sleeping
+        if it.currentProcessIndex < it.processes.count
+            if it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.state = Process::State::SLEEPING: ret
+        ;
         it.runNextProcess()
     ;
 
@@ -135,10 +126,6 @@ Dispatcher::tss blob<Tss>
         pProcess ptr<blob<Process>> <- it.processes.at(it.currentProcessIndex).ptr<blob<Process>>
         pProcess.val.sleepTimeout <- @Devices::Timer::Pit::instance.timestamp + milliseconds
         pProcess.val.state <- Process::State::SLEEPING
-
-        @Term::printString("before sleep", @Term::FOREGROUND_GREEN)
-        @Term::printNumber(@Devices::Timer::Pit::instance.timestamp, @Term::BACKGROUND_MAGENTA)
-        @Term::printNumber(pProcess.val.sleepTimeout, @Term::BACKGROUND_CYAN)
 
         it.runNextProcess()
     ;
@@ -167,6 +154,5 @@ Dispatcher::setTssRaw raw<"m, ~{eax}">: gdtEntry u32
 ;
 
 Dispatcher::timerCallback fun
-    @Term::printString("tick", @Term::BACKGROUND_BROWN)
-    Dispatcher::instance.runNextProcess()
+    Dispatcher::instance.yield()
 ;

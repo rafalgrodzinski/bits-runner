@@ -96,12 +96,10 @@ CALL_GFX_DRAW_LINE u32 <- 0x322
             currentProcessIndex u32 <- @Dispatch::Dispatcher::instance.currentProcessIndex
             pInfo.val[0] <- @Dispatch::Dispatcher::instance.currentProcessPagesCount()
         else if eax = Syscall::Process::SLEEP
-            @Term::printNumber(ebx, @Term::FOREGROUND_MAGENTA)
             @Dispatch::Dispatcher::instance.sleep(ebx)
         else if eax = CALL_STORAGE_GET_INFO_FS_ENTRY
             pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
             pEntryPath ptr<blob<@B::String>> <- ecx.a.ptr<blob<@B::String>>
-
             entry blob<@Storage::StorageFsEntry> <- it.storageFs.entryForPath.val({it.storageFs.adr}, pEntryPath.val)
             pInfo.val[0] <- entry.kind
             pInfo.val[1] <- entry.entrySize
