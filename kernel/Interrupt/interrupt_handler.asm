@@ -1,7 +1,7 @@
 [cpu 386]
 [bits 32]
 
-extern Int.handleInterrupt
+extern Interrupt.handleInterrupt
 
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
@@ -98,8 +98,8 @@ idt_protected_mode_end:
 
 ;
 ; Intialize the interrupt service for protected mode
-global interrupt_init_protected_mode
-interrupt_init_protected_mode:
+global interrupt_handler_init
+interrupt_handler_init:
     cli
     push eax
 
@@ -503,7 +503,7 @@ interrupt_handler:
     push dword .ebx
     push dword .eax
 
-    call Int.handleInterrupt
+    call Interrupt.handleInterrupt
 
     ; Store return value
     mov .eax, eax
@@ -511,7 +511,10 @@ interrupt_handler:
     ; Acknowledge interrupt
     mov al, 0x20
     out PIC1_CMD_PORT, al
+    cmp dword .interrupt, 0x28 ; < IRQ8 ?
+    jb .skip_ack_pic2
     out PIC2_CMD_PORT, al
+.skip_ack_pic2:
 
     ; Skip pushed arguments
     add esp, 4 * 6
