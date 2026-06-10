@@ -16,7 +16,6 @@
         ;
         text <- @B::String("")
         text.println()
-        //@Syscall::processYield()
         @Syscall::Process::sleep(1_000)
     ;
 ;
