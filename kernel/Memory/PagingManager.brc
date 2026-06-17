@@ -60,8 +60,9 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         ret allocatedSize
     ;
 
-    allocateUserPages fun: pProcess ptr<blob<@Dispatch::Process>>, pCurrentPagesDirectory ptr<data<u32>>, pPagesDirectory ptr<data<u32>>, pageTag u8, size u32, linearAddress u32 -> u32
+    allocateUserPages fun: pProcess ptr<blob<@Dispatch::Process>>, pCurrentPagesDirectory ptr<data<u32>>, pageTag u8, size u32, linearAddress u32 -> u32
         @BSys::disableInterrupts()
+        pPagesDirectory ptr<data<u32>> <- {pProcess.val.pageDirectory.adr}
         // use that last current directory page to self-reference the new directory tables
         oldSelfReference u32 <- pCurrentPagesDirectory.val[1023]
         selfReference u32 <- (PagingManager::lAdrToPAdr(pPagesDirectory.vadr).u32 & 0xffff_f000) | 0b10111 //0x13 // PCD & RW & P
@@ -70,7 +71,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
 
         allocatedSize u32 <- it.allocatePages(
             pProcess,
-            pPagesDirectory, // {pProcess.val.pageDirectory.adr},
+            pPagesDirectory,
             pageTag,
             size,
             linearAddress

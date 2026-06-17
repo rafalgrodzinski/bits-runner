@@ -28,7 +28,7 @@ Process::State::SLEEPING u32 <- 2
     ;
 
     registerPage fun: page u32
-        it.pages.push(page)
+        //it.pages.push(page)
     ;
 ;
 
@@ -68,9 +68,8 @@ Process::State::SLEEPING u32 <- 2
 
     // allocate user memory pages
     @Memory::PagingManager::instance.allocateUserPages(
-        {0}, //pProcess,
+        pProcess,
         pCurrentPageDirectory,
-        {pProcess.val.pageDirectory.adr},
         @Memory::PagingManager::PAGE_USER,
         imageSize,
         USER_ADR
@@ -78,9 +77,8 @@ Process::State::SLEEPING u32 <- 2
 
     // allocate user stack memory pages
     @Memory::PagingManager::instance.allocateUserPages(
-        {0}, //pProcess,
+        pProcess,
         pCurrentPageDirectory,
-        {pProcess.val.pageDirectory.adr},
         @Memory::PagingManager::PAGE_USER_STACK,
         USER_STACK_SIZE,
         USER_STACK_END_ADR - USER_STACK_SIZE
@@ -112,9 +110,8 @@ Process::State::SLEEPING u32 <- 2
     else
         // allocate new kernel stack just bellow the desired 1022 slot, so we can use the existing stack for the allocation process
         @Memory::PagingManager::instance.allocateUserPages(
-            {0}, //pProcess,
+            pProcess,
             pCurrentPageDirectory,
-            {pProcess.val.pageDirectory.adr},
             @Memory::PagingManager::PAGE_KERNEL_STACK,
             KERNEL_STACK_SIZE,
             KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE - 0x40_0000
