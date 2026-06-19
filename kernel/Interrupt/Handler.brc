@@ -2,7 +2,6 @@
 
 @import B
 @import BSys
-@import Bus
 @import Term
 @import DeviceKeyboard
 @import DeviceMouse
