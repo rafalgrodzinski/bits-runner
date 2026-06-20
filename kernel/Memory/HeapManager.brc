@@ -41,6 +41,8 @@
                 (it.heapLayout.pHeapStart.vadr + it.heapLayout.heapSize).u32
             )
             if allocatedSize > 0
+                // filler size has to be recalculated because the heap layout could have changed when allocating pages
+                fillerSize <- if alignment > 1: (alignment - ((it.heapLayout.pHeapStart.vadr.u32 + it.heapLayout.allocatedBytes) % alignment)) % alignment else: 0
                 it.heapLayout.heapSize <- it.heapLayout.heapSize + allocatedSize
                 address <- it.heapLayout.pHeapStart.vadr + it.heapLayout.allocatedBytes + fillerSize
                 it.heapLayout.allocatedBytes <- it.heapLayout.allocatedBytes + size + fillerSize

@@ -28,7 +28,7 @@ Process::State::SLEEPING u32 <- 2
     ;
 
     registerPage fun: page u32
-        //it.pages.push(page)
+        it.pages.push(page)
     ;
 ;
 
