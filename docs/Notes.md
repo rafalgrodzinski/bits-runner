@@ -3,6 +3,9 @@
 Development relase of the Bits Runner OS created with the Bits Runner Code language.
 
 Changelist:
+- [1.0.0-dev-16](https://github.com/rafalgrodzinski/bits-runner/pull/48)
+  - Process gets a list of allocated pages
+  - Fixed a bunch of memory issues
 - [1.0.0-dev-15](https://github.com/rafalgrodzinski/bits-runner/pull/46)
   - Timer-based process switching
   - Sleep system call
