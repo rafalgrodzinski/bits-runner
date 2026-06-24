@@ -3,9 +3,8 @@ Bits Runner is a 32 bit operating system for x86, written in [BRC (Bits Runner C
 
 It already boots from a floppy and a hard disk on a real hardware. It supports paged virual memory, preemptive multitasking, user mode processes, FAT 12/16, PS/2 keyboard and mouse, and VGA.
 
-<video width="800" autoplay loop muted>
-    <source src="https://github.com/user-attachments/assets/e14b9e52-6a4e-43ad-8768-2606df7f3601"/>
-</video>
+</video><img width="600" src="https://github.com/user-attachments/assets/c1628637-8eb3-4634-8f87-cc761a273efe" />
+
 
 ### In this readme
 - [💾 How to run](README.md#-how-to-run)
