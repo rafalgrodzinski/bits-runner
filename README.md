@@ -5,7 +5,6 @@ It already boots from a floppy and a hard disk on a real hardware. It supports p
 
 </video><img width="600" src="https://github.com/user-attachments/assets/c1628637-8eb3-4634-8f87-cc761a273efe" />
 
-
 ### In this readme
 - [💾 How to run](README.md#-how-to-run)
 - [🧩 Features](README.md#-features)
