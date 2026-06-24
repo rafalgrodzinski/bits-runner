@@ -41,13 +41,13 @@ busPci blob<@Bus::BusPci>
 
     // Load count
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B::String("/APPS/COUNT.BIN"))
-    pApp <- @BSys::memAlloc(fsEntry.entrySize).ptr<data<u8>>
+    // TODO: Right now the memory has to be allocated in multiples of cluster sizes
+    pApp <- @BSys::memAlloc(((fsEntry.entrySize + 2048 - 1) / 2048) * 2048).ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
     @Dispatch::Dispatcher::instance.createProcess(pApp, fsEntry.entrySize)
-
     // Load shell
     fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B::String("/APPS/SHELL.BIN"))
-    pApp <- @BSys::memAlloc(fsEntry.entrySize).ptr<data<u8>>
+    pApp <- @BSys::memAlloc(((fsEntry.entrySize + 2048 - 1) / 2048) * 2048).ptr<data<u8>>
     storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
     @Dispatch::Dispatcher::instance.createProcess(pApp, fsEntry.entrySize)
 
