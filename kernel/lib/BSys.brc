@@ -1,6 +1,7 @@
 @module BSys
 
 @import Memory
+@import Term
 
 @export getEax raw<"=r"> -> u32
     mov $0, eax
@@ -82,25 +83,30 @@
     hlt
 ;
 
-printCharRaw raw<"m, m, ~{eax}, ~{ebx}">: character u32/*$0*/, attribute u32/*$1*/
-    mov eax, 0x01
-    mov ebx, $0
-    mov ecx, $1
-    int 0x30
-;
-
-@export printChar fun: character u8
-    printCharRaw(character, 0x07)
+// Memory
+@export memAlignedAlloc fun: size u32, alignment u32 -> a
+    ret @Memory::HeapManager::instance.allocateAligned({0}, size, alignment)
 ;
 
 @export memAlloc fun: size u32 -> a
     ret memAlignedAlloc(size, 0)
 ;
 
-@export memAlignedAlloc fun: size u32, alignment u32 -> a
-    ret @Memory::HeapManager::instance.allocateAligned({0}, size, alignment)
-;
-
 @export memFree fun: address a
     @Memory::HeapManager::instance.free(address)
+;
+
+// Print
+printAttribute u8 <- 0x07
+
+@export printChar fun: character u8
+    @Term::printCharacter(character, printAttribute)
+;
+
+@export setPrintAttribute fun: attribute u8
+    printAttribute <- attribute
+;
+
+@export resetPrintAttribute fun
+    printAttribute <- 0x07
 ;

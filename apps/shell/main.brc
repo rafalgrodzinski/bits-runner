@@ -144,8 +144,7 @@ CMD_SLEEP blob<@B::String>
             @Syscall::Process::sleep(2_000)
             @B::String("After").println()
         else
-            message blob<@B::String> <- @B::String("Unknown command")
-            message.println()
+            @B::String("Dunno").printlnColor(@B::String::FOREGROUND_RED)
         ;
 
         character <- '\0'
