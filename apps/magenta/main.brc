@@ -1,0 +1,16 @@
+@import B
+@import Syscall
+
+@export start fun
+    num u32 <- 0
+    rep
+        rep i u32, i < 5, i <- i + 1
+            @B::StringForU32(num).printColor(@B::String::FOREGROUND_MAGENTA)
+            @B::String(" ").print()
+            num <- num + 1
+            @Syscall::Process::sleep(100)
+        ;
+        @B::String::println()
+        @Syscall::Process::sleep(1_300)
+    ;
+;
