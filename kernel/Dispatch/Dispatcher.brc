@@ -51,7 +51,7 @@ Dispatcher::tss blob<Tss>
     ;
 
     start fun
-        @Devices::Timer::Pit::instance.callback <- {Dispatcher::timerCallback.adr}
+        @Devices::Timer::Pit::instance.callback0 <- {Dispatcher::timerCallback.adr}
         rep: @BSys::halt()
     ;
 

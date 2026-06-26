@@ -13,13 +13,13 @@ Timer::Pit::CHANNEL_2 u8 <- 0b10_000000
 
 Timer::Pit::MODE_SQUARE_WAVE u8 <- 0b011_0
 
-@export Timer::Pit::instance blob<TimerPit>
+@export Timer::Pit::instance blob<Timer::Pit>
 
-@export TimerPit blob
+@export Timer::Pit blob
     timestamp u32
     interval u32
-    callback ptr<fun>
-    callback2 ptr<fun>
+    callback0 ptr<fun>
+    callback1 ptr<fun>
 
     init fun
         // 100Hz or more doesn't work correctly on VirtualBox
@@ -45,7 +45,7 @@ Timer::Pit::MODE_SQUARE_WAVE u8 <- 0b011_0
 
     handleInterrupt fun
         it.timestamp <- it.timestamp + it.interval
-        if it.callback.vadr != 0: it.callback.val()
-        if it.callback2.vadr != 0: it.callback2.val()
+        if it.callback0.vadr != 0: it.callback0.val()
+        if it.callback1.vadr != 0: it.callback1.val()
     ;
 ;

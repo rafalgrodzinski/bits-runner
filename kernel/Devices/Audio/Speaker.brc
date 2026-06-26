@@ -17,7 +17,7 @@ Audio::Speaker::PORT u16 <- 0x61
         if durationMs > 0
             it.timeout <- Timer::Pit::instance.timestamp + durationMs
             // Setup callback for the timer so we know when to stop
-            Timer::Pit::instance.callback2 <- {Audio::Speaker::timerCallback.adr}
+            Timer::Pit::instance.callback1 <- {Audio::Speaker::timerCallback.adr}
         ;
 
         Timer::Pit::instance.setTimer(
@@ -32,7 +32,7 @@ Audio::Speaker::PORT u16 <- 0x61
 
     stop fun
         it.timeout <- 0
-        Timer::Pit::instance.callback2 <- {0}
+        Timer::Pit::instance.callback1 <- {0}
 
         portValue u8 <- @BSys::in8(Audio::Speaker::PORT)
         @BSys::out8(Audio::Speaker::PORT, portValue & 0b1111_1100)
