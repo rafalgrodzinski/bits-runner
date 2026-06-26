@@ -38,6 +38,9 @@ CALL_GFX_CLEAR_SCREEN u32 <- 0x320
 CALL_GFX_DRAW_PIXEL u32 <- 0x321
 CALL_GFX_DRAW_LINE u32 <- 0x322
 
+// Audio
+Syscall::Audio::PLAY u32 <- 0x500
+Syscall::Audio::STOP u32 <- 0x501
 
 @export SyscallHandler::instance blob<SyscallHandler>
 
@@ -119,6 +122,11 @@ CALL_GFX_DRAW_LINE u32 <- 0x322
             deviceVideo.drawLine(x1, y1, x2, y2, edx)
         else if eax = CALL_PROCESS_YIELD
             @Dispatch::Dispatcher::instance.yield()
+        // Audio
+        else if eax = Syscall::Audio::PLAY
+            @Devices::Audio::Speaker::instance.play(ebx, ecx)
+        else if eax = Syscall::Audio::STOP
+            @Devices::Audio::Speaker::instance.stop()
         ;
 
         ret 0

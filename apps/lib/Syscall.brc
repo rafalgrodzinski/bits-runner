@@ -36,6 +36,10 @@ CALL_GFX_DRAW_LINE u32 <- 0x322
 @export GFX_MODE_BPP_16 u32 <- 0x10
 @export GFX_MODE_BPP_32 u32 <- 0x20
 
+// Audio
+Syscall::Audio::PLAY u32 <- 0x500
+Syscall::Audio::STOP u32 <- 0x501
+
 @export InfoMem blob
     totalSize u32
     totalPages u32
@@ -161,4 +165,13 @@ syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: syscallNum u32
     p1 u32 <- (x1 << 16) | (y1 & 0xffff)
     p2 u32 <- (x2 << 16) | (y2 & 0xffff)
     syscallRaw(CALL_GFX_DRAW_LINE, p1, p2, color)
+;
+
+// Audio
+@export Audio::play fun: frequency u32, durationMs u32
+    syscallRaw(Syscall::Audio::PLAY, frequency, durationMs, 0)
+;
+
+@export Audio::stop fun
+    syscallRaw(Syscall::Audio::STOP, 0, 0, 0)
 ;

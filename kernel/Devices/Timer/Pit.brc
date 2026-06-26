@@ -19,19 +19,22 @@ Timer::Pit::MODE_SQUARE_WAVE u8 <- 0b011_0
     timestamp u32
     interval u32
     callback ptr<fun>
+    callback2 ptr<fun>
 
     init fun
-        // 10 or less doesn't work correctly on VirtualBox
-        it.setTimer(Timer::Pit::CHANNEL_0, Timer::Pit::MODE_SQUARE_WAVE, 50)
+        // 100Hz or more doesn't work correctly on VirtualBox
+        it.setTimer(Timer::Pit::CHANNEL_0, Timer::Pit::MODE_SQUARE_WAVE, 20)
     ;
 
-    setTimer fun: channel u8, mode u8, intervalMs u32
-        if intervalMs < 1: intervalMs <- 1
-        divider u32 <- Timer::Pit::FREQ / (1_000 / intervalMs)
+    setTimer fun: channel u8, mode u8, frequency u32
+        if frequency < 1: frequency <- 1
+        divider u32 <- Timer::Pit::FREQ / frequency
         if divider < 0: divider <- 0
         if divider > 65_535: divider <- 65_535
 
-        it.interval <- 1_000 / (Timer::Pit::FREQ / divider)
+        if channel = Timer::Pit::CHANNEL_0
+            it.interval <- 1_000 / (Timer::Pit::FREQ / divider)
+        ;
 
         @BSys::out8(Timer::Pit::CMD_PORT, channel | mode)
 
@@ -43,5 +46,6 @@ Timer::Pit::MODE_SQUARE_WAVE u8 <- 0b011_0
     handleInterrupt fun
         it.timestamp <- it.timestamp + it.interval
         if it.callback.vadr != 0: it.callback.val()
+        if it.callback2.vadr != 0: it.callback2.val()
     ;
 ;

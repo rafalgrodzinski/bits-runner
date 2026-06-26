@@ -1,0 +1,48 @@
+@module Devices
+
+@import BSys
+
+Audio::Speaker::PORT u16 <- 0x61
+
+@export Audio::Speaker::instance blob<Audio::Speaker>
+
+@export Audio::Speaker blob
+    timeout u32
+
+    play fun: frequency u32, durationMs u32
+        // First stop whatever is being played
+        it.stop()
+
+        // 0 indicates constant play
+        if durationMs > 0
+            it.timeout <- Timer::Pit::instance.timestamp + durationMs
+            // Setup callback for the timer so we know when to stop
+            Timer::Pit::instance.callback2 <- {Audio::Speaker::timerCallback.adr}
+        ;
+
+        Timer::Pit::instance.setTimer(
+            Timer::Pit::CHANNEL_2,
+            Timer::Pit::MODE_SQUARE_WAVE,
+            frequency
+        )
+
+        portValue u8 <- @BSys::in8(Audio::Speaker::PORT)
+        @BSys::out8(Audio::Speaker::PORT, portValue | 0b0011)
+    ;
+
+    stop fun
+        it.timeout <- 0
+        Timer::Pit::instance.callback2 <- {0}
+
+        portValue u8 <- @BSys::in8(Audio::Speaker::PORT)
+        @BSys::out8(Audio::Speaker::PORT, portValue & 0b1111_1100)
+    ;
+;
+
+Audio::Speaker::timerCallback fun
+    if Audio::Speaker::instance.timeout = 0: ret
+
+    if Timer::Pit::instance.timestamp >= Audio::Speaker::instance.timeout
+        Audio::Speaker::instance.stop()
+    ;
+;
