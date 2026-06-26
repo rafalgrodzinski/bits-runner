@@ -3,58 +3,9 @@
 @import B
 
 // System
-CALL_REBOOT u32 <- 0x00
-CALL_GET_TIMESTAMP u32 <- 0x10
-CALL_GET_INFO_MEM u32 <- 0x20
-CALL_SYS_INFO_PCI u32 <- 0x021
-
-// Process
-CALL_GET_INFO_PROCESS u32 <- 0x22
-Syscall::Process::SLEEP u32 <- 0x201
-CALL_PROCESS_YIELD u32 <- 0x400
-
-// Input
-CALL_INPUT_KEYBOARD_GET_ASCII u32 <- 0x101
-CALL_INPUT_MOUSE_GET_STATE u32 <- 0x110
-
-// Storage
-CALL_STORAGE_GET_INFO_FS_ENTRY u32 <- 0x200
-
-// GFX
-CALL_GFX_SET_MODE u32 <- 0x300
-CALL_GFX_COMMIT_DRAWING u32 <- 0x310
-CALL_GFX_CLEAR_SCREEN u32 <- 0x320
-CALL_GFX_DRAW_PIXEL u32 <- 0x321
-CALL_GFX_DRAW_LINE u32 <- 0x322
-
-@export GFX_MODE_RES_320x240 u32 <- 0x0140_00f0
-@export GFX_MODE_RES_640x480 u32 <- 0x0280_01e0
-@export GFX_MODE_RES_800x600 u32 <- 0x0320_0258
-
-@export GFX_MODE_BPP_4 u32 <- 0x04
-@export GFX_MODE_BPP_8 u32 <- 0x08
-@export GFX_MODE_BPP_16 u32 <- 0x10
-@export GFX_MODE_BPP_32 u32 <- 0x20
-
-// Audio
-Syscall::Audio::PLAY u32 <- 0x500
-Syscall::Audio::STOP u32 <- 0x501
-
-@export InfoMem blob
-    totalSize u32
-    totalPages u32
-    unavailablePages u32
-    freePages u32
-    kernelPages u32
-    kernelStackPages u32
-    heapStart u32
-    heapSize u32
-    allocateBytes u32
-;
-
-@export InfoProcess blob
-    pagesCount u32
-;
+System::REBOOT u32 <- 0x00
+System::GET_TIMESTAMP u32 <- 0x10
+System::GET_INFO_PCI u32 <- 0x021
 
 @export InfoPciDevice blob
         busNum u32
@@ -72,16 +23,70 @@ Syscall::Audio::STOP u32 <- 0x501
     devices data<blob<InfoPciDevice>, 16>
 ;
 
+// Memory
+Memory::GET_INFO u32 <- 0x20
+
+@export InfoMem blob
+    totalSize u32
+    totalPages u32
+    unavailablePages u32
+    freePages u32
+    kernelPages u32
+    kernelStackPages u32
+    heapStart u32
+    heapSize u32
+    allocateBytes u32
+;
+
+// Process
+Process::YIELD u32 <- 0x400
+Process::SLEEP u32 <- 0x201
+Process::GET_INFO u32 <- 0x22
+
+@export InfoProcess blob
+    pagesCount u32
+;
+
+// Storage
+Storage::GET_INFO_FS_ENTRY u32 <- 0x200
+
 @export InfoFsEntry blob
     kind u32
     entrySize u32
 ;
+
+// Input
+Input::KEYBOARD_GET_ASCII u32 <- 0x101
+Input::MOUSE_GET_STATE u32 <- 0x110
 
 @export MouseState blob
     buttonsState u32
     deltaX s32
     deltaY s32
 ;
+
+// Terminal
+Terminal::PRINT_CHARACTER u32 <- 0x01
+
+// Video
+Video::SET_MODE u32 <- 0x300
+Video::COMMIT_DRAWING u32 <- 0x310
+Video::CLEAR_SCREEN u32 <- 0x320
+Video::DRAW_PIXEL u32 <- 0x321
+Video::DRAW_LINE u32 <- 0x322
+
+@export Video::RES_320x240 u32 <- 0x0140_00f0
+@export Video::RES_640x480 u32 <- 0x0280_01e0
+@export Video::RES_800x600 u32 <- 0x0320_0258
+
+@export Video::BPP_4 u32 <- 0x04
+@export Video::BPP_8 u32 <- 0x08
+@export Video::BPP_16 u32 <- 0x10
+@export Video::BPP_32 u32 <- 0x20
+
+// Audio
+Audio::PLAY u32 <- 0x500
+Audio::STOP u32 <- 0x501
 
 syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/, arg2 u32/*$3*/, arg3 u32/*s4*/ -> u32/*$0*/
     mov eax, $1
@@ -92,86 +97,94 @@ syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: syscallNum u32
     mov $0, eax
 ;
 
-@export reboot fun
-    syscallRaw(CALL_REBOOT, 0, 0, 0)
+// System
+@export System::reboot fun
+    syscallRaw(System::REBOOT, 0, 0, 0)
 ;
 
-@export getTimestamp fun -> u32
-    ret syscallRaw(CALL_GET_TIMESTAMP, 0, 0, 0)
+@export System::getTimestamp fun -> u32
+    ret syscallRaw(System::GET_TIMESTAMP, 0, 0, 0)
 ;
 
-@export getInfoMem fun -> blob<InfoMem>
-    info blob<InfoMem>
-    syscallRaw(CALL_GET_INFO_MEM, info.adr.u32, 0, 0)
-    ret info
-;
-
-@export getInfoPci fun -> blob<InfoPci>
+@export System::getInfoPci fun -> blob<InfoPci>
     info blob<InfoPci>
-    syscallRaw(CALL_SYS_INFO_PCI, info.adr.u32, 0, 0)
+    syscallRaw(System::GET_INFO_PCI, info.adr.u32, 0, 0)
     ret info
 ;
 
-@export getInfoFsEntry fun: entryPath blob<@B::String> -> blob<InfoFsEntry>
-    info blob<InfoFsEntry>
-    syscallRaw(CALL_STORAGE_GET_INFO_FS_ENTRY, info.adr.u32, entryPath.adr.u32, 0)
+// Memory
+@export Memory::getInfo fun -> blob<InfoMem>
+    info blob<InfoMem>
+    syscallRaw(Memory::GET_INFO, info.adr.u32, 0, 0)
     ret info
 ;
 
 // Process
-@export getInfoProcess fun -> blob<InfoProcess>
-    info blob<InfoProcess>
-    syscallRaw(CALL_GET_INFO_PROCESS, info.adr.u32, 0, 0)
-    ret info
+@export Process::yield fun
+    syscallRaw(Process::YIELD, 0, 0, 0)
 ;
 
 @export Process::sleep fun: milliseconds u32
-    syscallRaw(Syscall::Process::SLEEP, milliseconds, 0, 0)
+    syscallRaw(Process::SLEEP, milliseconds, 0, 0)
 ;
 
-@export processYield fun
-    syscallRaw(CALL_PROCESS_YIELD, 0, 0, 0)
+@export Process::getInfo fun -> blob<InfoProcess>
+    info blob<InfoProcess>
+    syscallRaw(Process::GET_INFO, info.adr.u32, 0, 0)
+    ret info
+;
+
+// Storage
+@export Storage::getInfoFsEntry fun: entryPath blob<@B::String> -> blob<InfoFsEntry>
+    info blob<InfoFsEntry>
+    syscallRaw(Storage::GET_INFO_FS_ENTRY, info.adr.u32, entryPath.adr.u32, 0)
+    ret info
 ;
 
 // Input
-@export getAscii fun -> u32
-    ret syscallRaw(CALL_INPUT_KEYBOARD_GET_ASCII, 0, 0, 0)
+@export Input::getAscii fun -> u32
+    ret syscallRaw(Input::KEYBOARD_GET_ASCII, 0, 0, 0)
 ;
 
-@export getMouseState fun -> blob<MouseState>
+@export Input::getMouseState fun -> blob<MouseState>
     mouseState blob<MouseState>
-    syscallRaw(CALL_INPUT_MOUSE_GET_STATE, mouseState.adr.u32, 0, 0)
+    syscallRaw(Input::MOUSE_GET_STATE, mouseState.adr.u32, 0, 0)
     ret mouseState
 ;
 
-// GFX
-@export gfxSetMode fun: resolution u32, bitsPerPixel u32
-    syscallRaw(CALL_GFX_SET_MODE, resolution, bitsPerPixel, 0)
+// Terminal
+@export Terminal::printCharacter fun: character u8, attribute u8
+    syscallRaw(Terminal::PRINT_CHARACTER, character, attribute, 0)
 ;
 
-@export gfxCommitDrawing fun
-    syscallRaw(CALL_GFX_COMMIT_DRAWING, 0, 0, 0)
+// Video
+@export Video::setMode fun: resolution u32, bitsPerPixel u32
+    syscallRaw(Video::SET_MODE, resolution, bitsPerPixel, 0)
 ;
 
-@export gfxClearScreen fun: color u32
-    syscallRaw(CALL_GFX_CLEAR_SCREEN, color, 0, 0)
+@export Video::commitDrawing fun
+    syscallRaw(Video::COMMIT_DRAWING, 0, 0, 0)
 ;
 
-@export gfxDrawPixel fun: x u32, y u32, color u32
-    syscallRaw(CALL_GFX_DRAW_PIXEL, x, y, color)
+@export Video::clearScreen fun: color u32
+    syscallRaw(Video::CLEAR_SCREEN, color, 0, 0)
 ;
 
-@export gfxDrawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
+@export Video::drawPixel fun: x u32, y u32, color u32
+    syscallRaw(Video::DRAW_PIXEL, x, y, color)
+;
+
+@export Video::drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
     p1 u32 <- (x1 << 16) | (y1 & 0xffff)
     p2 u32 <- (x2 << 16) | (y2 & 0xffff)
-    syscallRaw(CALL_GFX_DRAW_LINE, p1, p2, color)
+    syscallRaw(Video::DRAW_LINE, p1, p2, color)
 ;
 
 // Audio
 @export Audio::play fun: frequency u32, durationMs u32
-    syscallRaw(Syscall::Audio::PLAY, frequency, durationMs, 0)
+    syscallRaw(Audio::PLAY, frequency, durationMs, 0)
 ;
 
 @export Audio::stop fun
-    syscallRaw(Syscall::Audio::STOP, 0, 0, 0)
+    syscallRaw(Audio::STOP, 0, 0, 0)
 ;

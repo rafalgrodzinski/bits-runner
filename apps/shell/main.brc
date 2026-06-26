@@ -31,7 +31,7 @@ CMD_PLAY blob<@B::String>
 
     rep
         rep character != '\n'
-            character <- @Syscall::getAscii().u8
+            character <- @Syscall::Input::getAscii().u8
             if character = '\b': input.removeLast()
             else if character != '\n' and character != '\0': input.append(character)
 
@@ -53,13 +53,13 @@ CMD_PLAY blob<@B::String>
         if cmd.isEqual(CMD_REBOOT)
             message blob<@B::String> <- @B::String("Rebooting...")
             message.println()
-            @Syscall::reboot()
+            @Syscall::System::reboot()
         else if cmd.isEqual(CMD_TIME)
-            timestamp u32 <- @Syscall::getTimestamp()
+            timestamp u32 <- @Syscall::System::getTimestamp()
             message blob<@B::String> <- @B::StringForU32(timestamp)
             message.println()
         else if cmd.isEqual(CMD_M_INFO)
-            info blob<@Syscall::InfoMem> <- @Syscall::getInfoMem()
+            info blob<@Syscall::InfoMem> <- @Syscall::Memory::getInfo()
             text blob<@B::String>
 
             text <- @B::String("Total size: ")
@@ -107,7 +107,7 @@ CMD_PLAY blob<@B::String>
             text <- @B::StringForU32(info.allocateBytes)
             text.println()
         else if cmd.isEqual(CMD_P_INFO)
-            info blob<@Syscall::InfoPci> <- @Syscall::getInfoPci()
+            info blob<@Syscall::InfoPci> <- @Syscall::System::getInfoPci()
             rep i u32, i < info.devicesCount, i <- i + 1
                 @B::StringHexForU32(info.devices[i].busNum).print()
                 @B::String(" ").print()
@@ -124,7 +124,7 @@ CMD_PLAY blob<@B::String>
                 @B::StringHexForU32(info.devices[i].subclass).println()
             ;
         else if cmd.isEqual(CMD_F_INFO)
-            info blob<@Syscall::InfoFsEntry> <- @Syscall::getInfoFsEntry(arg)
+            info blob<@Syscall::InfoFsEntry> <- @Syscall::Storage::getInfoFsEntry(arg)
             text blob<@B::String>
 
             text <- @B::String("Kind: ")
@@ -137,11 +137,11 @@ CMD_PLAY blob<@B::String>
             text <- @B::StringForU32(info.entrySize)
             text.println()
         else if cmd.isEqual(CMD_INFO)
-            info blob<@Syscall::InfoProcess> <- @Syscall::getInfoProcess()
+            info blob<@Syscall::InfoProcess> <- @Syscall::Process::getInfo()
             @B::String("Allocated pages: ").print()
             @B::StringForU32(info.pagesCount).println()
         else if cmd.isEqual(CMD_YIELD)
-            @Syscall::processYield()
+            @Syscall::Process::yield()
         else if cmd.isEqual(CMD_SLEEP)
             @Syscall::Process::sleep(2_000)
             @B::String("After").println()
