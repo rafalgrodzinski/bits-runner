@@ -42,6 +42,18 @@ Mode/Command:
   10: Channel 2
 ```
 
+### PC Speaker
+Speaker is connected to Channel 2 of the PIT.
+
+Port `0x61` is for keyboard controller, but is also used to enable the spaker:
+```
+0 Set to connect spaker to the PIT
+---
+1 Enable the speaker
+```
+
+In short, to use the speaker program the PIT and the set the two lowest bits in port `0x61`
+
 
 ## Additional Resources
 - Programmable Interval Timer at OSDev Wiki:

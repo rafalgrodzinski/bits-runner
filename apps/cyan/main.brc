@@ -1,0 +1,11 @@
+@import B
+@import Syscall
+
+@export start fun
+    num u32 <- 1
+    rep
+        @B::StringHexForU32(num).printlnColor(@B::String::FOREGROUND_CYAN)
+        num <- num * 2
+        @Syscall::Process::sleep(1_000)
+    ;
+;

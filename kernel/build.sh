@@ -56,7 +56,7 @@ SOURCES_DIRS=(
 
 for SOURCES_DIR in "${SOURCES_DIRS[@]}"; do
     # find .brc files (except for BSys.brc, cause it is specific per system)
-    FILES=`find "${SOURCES_DIR}" -name *.brc ! -name "*Storage*.brc" -type f | sort`
+    FILES=`find "${SOURCES_DIR}" -name *.brc ! -name "*Storage*.brc" ! -name Speaker.brc ! -name Pit.brc -type f | sort`
     for FILE in ${FILES}; do
         # and add them to the list
         SOURCES+=("${FILE}")
@@ -70,6 +70,8 @@ SOURCES+=("${SCRIPT_DIR}/Storage/StorageDevice/BiosBootStorageDevice.brc")
 SOURCES+=("${SCRIPT_DIR}/Storage/StorageArea/StorageArea.brc")
 SOURCES+=("${SCRIPT_DIR}/Storage/StorageFs/StorageFs.brc")
 SOURCES+=("${SCRIPT_DIR}/Storage/StorageFs/StorageFsFat.brc")
+SOURCES+=("${SCRIPT_DIR}/Devices/Timer/Pit.brc")
+SOURCES+=("${SCRIPT_DIR}/Devices/Audio/Speaker.brc")
 
 # build the source
 brb ${FLAGS[@]} ${SOURCES[@]}

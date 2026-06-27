@@ -26,31 +26,41 @@ check "Failed to build BIOS service"
 
 echo
 
-# Kernel
+# kernel
 echo "🛠️ Building kernel..."
 ./kernel/build.sh
 check "Failed to build kernel"
 
 echo
 
-## Shell
+## shell
 echo "🛠️ Building shell..."
 ./apps/shell/build.sh
 check "Failed to build shell"
 
 echo
 
-## VDemo
+## vdemo
 echo "🛠️ Building vdemo..."
 ./apps/vdemo/build.sh
 check "Failed to build vdemo"
 
 echo
 
-## VDemo
+## count
 echo "🛠️ Building count..."
 ./apps/count/build.sh
 check "Failed to build count"
+
+## cyan
+echo "🛠️ Building cyan..."
+./apps/cyan/build.sh
+check "Failed to build cyan"
+
+## magenta
+echo "🛠️ Building magenta..."
+./apps/magenta/build.sh
+check "Failed to build magenta"
 
 echo
 
@@ -78,6 +88,8 @@ mkdir "${FDD_MOUNT_POINT}/apps" &&
 cp shell.bin "${FDD_MOUNT_POINT}/apps/" &&
 cp vdemo.bin "${FDD_MOUNT_POINT}/apps/" &&
 cp count.bin "${FDD_MOUNT_POINT}/apps/" &&
+cp cyan.bin "${FDD_MOUNT_POINT}/apps/" &&
+cp magenta.bin "${FDD_MOUNT_POINT}/apps/" &&
 
 hdiutil eject "${FDD_MOUNT_POINT}"
 check "Failed to create FDD image"
@@ -115,6 +127,8 @@ mkdir "${HDD_MOUNT_POINT}/apps" &&
 cp shell.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp count.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp cyan.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp magenta.bin "${HDD_MOUNT_POINT}/apps/" &&
 
 hdiutil eject "${DISK_HDD}" &&
 check "Failed to create HDD image"
@@ -129,6 +143,8 @@ mkdir "${HDD_MOUNT_POINT}/apps" &&
 cp shell.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp count.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp cyan.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp magenta.bin "${HDD_MOUNT_POINT}/apps/" &&
 
 hdiutil eject "${DISK_HDD}" &&
 check "Failed to create HDD image"
