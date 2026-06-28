@@ -46,11 +46,11 @@ Syscall::Audio::STOP u32 <- 0x501
 @export SyscallHandler::instance blob<SyscallHandler>
 
 @export SyscallHandler blob
-    storageFs blob<@Storage::StorageFs>
+    //storageFs blob<@Storage::StorageFs>
 
-    init fun: storageFs blob<@Storage::StorageFs>
+    /*init fun: storageFs blob<@Storage::StorageFs>
         it.storageFs <- storageFs
-    ;
+    ;*/
 
     handle fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         // System
@@ -93,12 +93,12 @@ Syscall::Audio::STOP u32 <- 0x501
             currentProcessIndex u32 <- @Dispatch::Dispatcher::instance.currentProcessIndex
             pInfo.val[0] <- @Dispatch::Dispatcher::instance.currentProcessPagesCount()
         // Storage
-        else if eax = Syscall::Storage::GET_INFO_FS_ENTRY
+        /*else if eax = Syscall::Storage::GET_INFO_FS_ENTRY
             pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
             pEntryPath ptr<blob<@B::String>> <- ecx.a.ptr<blob<@B::String>>
             entry blob<@Storage::StorageFsEntry> <- it.storageFs.entryForPath.val({it.storageFs.adr}, pEntryPath.val)
             pInfo.val[0] <- entry.kind
-            pInfo.val[1] <- entry.entrySize
+            pInfo.val[1] <- entry.entrySize*/
         // Input
         else if eax = Syscall::Input::KEYBOARD_GET_ASCII
             ascii u32 <- deviceKeyboard.getAscii()

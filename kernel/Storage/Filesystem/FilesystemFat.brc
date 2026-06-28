@@ -273,3 +273,32 @@ storageFsFatReadEntry fun: it ptr<blob<StorageFs>>, entry blob<StorageFsEntry>, 
     ;
     ret 0
 ;
+
+@export FilesystemFat blob: Filesystem
+    area blob<Area>
+
+    init fun: area blob<Area>
+    ;
+
+    getRootEntry fun -> blob<StorageFsEntry>
+        rootEntry blob<StorageFsEntry>
+        rootEntry.kind <- STORAGE_FS_ENTRY_KIND_DIR
+        rootEntry.name <- "/"
+        ret rootEntry
+    ;
+
+    getChildEntries fun: parentEntry blob<StorageFsEntry> -> data<blob<StorageFsEntry>, 32>
+        subEntries data<blob<StorageFsEntry>, 32>
+
+        ret subEntries
+    ;
+
+    getEntryForPath fun: path blob<@B::String> -> blob<StorageFsEntry>
+        currentEntry blob<StorageFsEntry>
+        ret currentEntry
+    ;
+
+    readEntry fun: entry blob<StorageFsEntry>, targetAddress a -> u32
+        ret 0
+    ;
+;

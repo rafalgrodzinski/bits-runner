@@ -31,8 +31,10 @@ busPci blob<@Bus::BusPci>
     @B::String("Initializing Bits Runner...").println()
     @Devices::Timer::Pit::instance.init()
     //busPci.scan()
-    storageFs blob<@Storage::StorageFs> <- @Storage::bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
-    @Interrupt::SyscallHandler::instance.init(storageFs)
+    //storageFs blob<@Storage::StorageFs> <- @Storage::bootStorageFs(biosBootDriveNumber, bootPartitionFirstSector)
+    @Storage::instance.init(biosBootDriveNumber, bootPartitionFirstSector)
+    //@Interrupt::SyscallHandler::instance.init(@Storage::instance.bootStorageFs)
+    
     @B::String("All ready, welcome to Bits Runner!").printlnColor(@B::String::FOREGROUND_GREEN)
 
     // Load apps
@@ -40,9 +42,11 @@ busPci blob<@Bus::BusPci>
     pApp ptr<data<u8>>
 
     // Load shell
-    fsEntry <- storageFs.entryForPath.val({storageFs.adr}, @B::String("/APPS/SHELL.BIN"))
+    //fsEntry <- @Storage::instance.bootStorageFs.entryForPath.val({@Storage::instance.bootStorageFs.adr}, @B::String("/APPS/SHELL.BIN"))
+    fsEntry <- @Storage::instance.bootFilesystem.getEntryForPath(@B::String("/APPS/SHELL.BIN"))
     pApp <- @BSys::memAlloc(((fsEntry.entrySize + 2048 - 1) / 2048) * 2048).ptr<data<u8>>
-    storageFs.readEntry.val({storageFs.adr}, fsEntry, pApp)
+    //@Storage::instance.bootStorageFs.readEntry.val({@Storage::instance.bootStorageFs.adr}, fsEntry, pApp)
+    @Storage::instance.bootFilesystem.readEntry(fsEntry, pApp.vadr)
     @Dispatch::Dispatcher::instance.createProcess(pApp, fsEntry.entrySize)
 
     @Dispatch::Dispatcher::instance.start()

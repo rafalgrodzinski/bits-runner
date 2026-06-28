@@ -56,7 +56,7 @@ SOURCES_DIRS=(
 
 for SOURCES_DIR in "${SOURCES_DIRS[@]}"; do
     # find .brc files (except for BSys.brc, cause it is specific per system)
-    FILES=`find "${SOURCES_DIR}" -name *.brc ! -name "*Storage*.brc" ! -name Speaker.brc ! -name Pit.brc -type f | sort`
+    FILES=`find "${SOURCES_DIR}" -name *.brc ! -name "*Storage*.brc" ! -name Speaker.brc ! -name Pit.brc ! -name Device.brc ! -name BiosDevice.brc ! -name Area.brc ! -name Filesystem.brc ! -name FilesystemFat.brc -type f | sort`
     for FILE in ${FILES}; do
         # and add them to the list
         SOURCES+=("${FILE}")
@@ -65,11 +65,11 @@ done
 
 # Storage files need to be specifically ordered
 SOURCES+=("${SCRIPT_DIR}/Storage/Storage.brc")
-SOURCES+=("${SCRIPT_DIR}/Storage/StorageDevice/StorageDevice.brc")
-SOURCES+=("${SCRIPT_DIR}/Storage/StorageDevice/BiosBootStorageDevice.brc")
-SOURCES+=("${SCRIPT_DIR}/Storage/StorageArea/StorageArea.brc")
-SOURCES+=("${SCRIPT_DIR}/Storage/StorageFs/StorageFs.brc")
-SOURCES+=("${SCRIPT_DIR}/Storage/StorageFs/StorageFsFat.brc")
+SOURCES+=("${SCRIPT_DIR}/Storage/Device/Device.brc")
+SOURCES+=("${SCRIPT_DIR}/Storage/Device/BiosDevice.brc")
+SOURCES+=("${SCRIPT_DIR}/Storage/Area/Area.brc")
+SOURCES+=("${SCRIPT_DIR}/Storage/Filesystem/Filesystem.brc")
+SOURCES+=("${SCRIPT_DIR}/Storage/Filesystem/FilesystemFat.brc")
 SOURCES+=("${SCRIPT_DIR}/Devices/Timer/Pit.brc")
 SOURCES+=("${SCRIPT_DIR}/Devices/Audio/Speaker.brc")
 

@@ -7,16 +7,31 @@ MBR_PARTITION_SECTORS_COUNT_OFFSET u32 <- 0x0c
 
 buffer data<u8, 512>
 
-@export bootStorageFs fun: biosBootDriveNumber u32, bootPartitionFirstSector u32 -> blob<StorageFs>
+@export instance blob<Storage>
+
+@export Storage blob
+  biosDevice blob<BiosDevice>
+  //device proto<Device>
+  bootFilesystem proto<Filesystem>
+
+  filesystemFat blob<FilesystemFat>
+
+//  bootStorageFs blob<StorageFs>
+
+  init fun: biosBootDriveNumber u32, bootPartitionFirstSector u32
     // First setup the storage device
+    it.biosDevice.init(biosBootDriveNumber)
+    device proto<Device> <- {it.biosDevice.adr.ptr<blob<BiosDevice>>}
+
     storageDevice blob<StorageDevice> <- BiosBootStorageDevice(biosBootDriveNumber)
 
     // if starting sector is > 0 then find matching partition entry
     // otherwise claim the whole disk space for the area
     storageAreaPartitionNumber u32 <- 0
-    storageAreaSectorsCount u32 <- storageDevice.sectorsCount
+    //storageAreaSectorsCount u32 <- storageDevice.sectorsCount
+    storageAreaSectorsCount u32 <- device.sectorsCount
     if bootPartitionFirstSector > 0
-      storageDevice.readSectors.val({storageDevice.adr}, 0, 1, {buffer.adr})
+      device.readSectors(0, 1, buffer.adr)
       rep i u32 <- 0, i < 4, i <- i + 1
         pFirstSector ptr<u32> <- {buffer.adr + MBR_FIRST_PARTITION_ENTRY_OFFSET + MBR_PARTITION_ENTRY_SIZE * i + MBR_PARTITION_FIRST_SECTOR_OFFSET}
         pSectorsCount ptr<u32> <- {buffer.adr + MBR_FIRST_PARTITION_ENTRY_OFFSET + MBR_PARTITION_ENTRY_SIZE * i + MBR_PARTITION_SECTORS_COUNT_OFFSET}
@@ -29,8 +44,12 @@ buffer data<u8, 512>
     ;
 
     // Then the storage area
-    storageArea blob<StorageArea> <- StorageArea(storageDevice, storageAreaPartitionNumber, bootPartitionFirstSector, storageAreaSectorsCount)
+    //storageArea blob<StorageArea> <- StorageArea(storageDevice, storageAreaPartitionNumber, bootPartitionFirstSector, storageAreaSectorsCount)
+    area blob<Area>
+    area.init(device, storageAreaPartitionNumber, bootPartitionFirstSector, storageAreaSectorsCount)
 
-    // And finally the storage filesystem
-    ret StorageFsFat(storageArea)
+    //it.bootStorageFs <- StorageFsFat(storageArea)
+    it.filesystemFat.init(area)
+    it.bootFilesystem <- {it.filesystemFat.adr.ptr<blob<FilesystemFat>>}
+  ;
 ;

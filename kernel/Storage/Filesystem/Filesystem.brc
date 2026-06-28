@@ -30,3 +30,12 @@
     // FAT specific
     fatCluster u32
 ;
+
+@export Filesystem proto
+    area blob<Area>
+
+    getRootEntry fun -> blob<StorageFsEntry>
+    getChildEntries fun: parentEntry blob<StorageFsEntry> -> data<blob<StorageFsEntry>, 32>
+    getEntryForPath fun: path blob<@B::String> -> blob<StorageFsEntry>
+    readEntry fun: entry blob<StorageFsEntry>, targetAddress a -> u32
+;
