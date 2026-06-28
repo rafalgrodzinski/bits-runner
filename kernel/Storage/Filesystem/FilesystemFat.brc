@@ -52,31 +52,31 @@ FAT_FILE_FREE u8 <- 0xe5
         it.area <- area
 
         // Init FAT
-        pFatBuffer ptr<data<u8>> <- @BSys::memAlloc(512).ptr<data<u8>>
-        it.area.readSectors(0, 1, pFatBuffer.vadr)
+        aFatBuffer a <- @BSys::memAlloc(512)
+        it.area.readSectors(0, 1, aFatBuffer)
 
         pInfo ptr<u32>
 
         // read values
-        pInfo <- {pFatBuffer.vadr + FAT_BYTES_PER_SECTOR_OFFSET}
+        pInfo <- {aFatBuffer + FAT_BYTES_PER_SECTOR_OFFSET}
         bytesPerSector u32 <- pInfo.val & 0xffff
         it.fatBytesPerSector <- bytesPerSector
 
-        pInfo <- {pFatBuffer.vadr + FAT_SECTORS_PER_CLUSTER_OFFSET}
+        pInfo <- {aFatBuffer + FAT_SECTORS_PER_CLUSTER_OFFSET}
         sectorsPerCluster u32 <- pInfo.val & 0xff
         it.fatSectorsPerCluster <- sectorsPerCluster
 
-        pInfo <- {pFatBuffer.vadr + FAT_RESERVED_SECTORS_COUNT_OFFSET}
+        pInfo <- {aFatBuffer + FAT_RESERVED_SECTORS_COUNT_OFFSET}
         reservedSectorsCount u32 <- pInfo.val & 0xff
 
-        pInfo <- {pFatBuffer.vadr + FAT_FATS_COUNT_OFFSET}
+        pInfo <- {aFatBuffer + FAT_FATS_COUNT_OFFSET}
         fatsCount u32 <- pInfo.val & 0xff
 
-        pInfo <- {pFatBuffer.vadr + FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET}
+        pInfo <- {aFatBuffer + FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET}
         rootDirEntriesCount u32 <- pInfo.val & 0xffff
         it.fatRootDirEntriesCount <- rootDirEntriesCount
 
-        pInfo <- {pFatBuffer.vadr + FAT_SECTORS_PER_FAT_OFFSET}
+        pInfo <- {aFatBuffer + FAT_SECTORS_PER_FAT_OFFSET}
         sectorsPerFat u32 <- pInfo.val & 0xffff
 
         // calculated values
@@ -89,7 +89,7 @@ FAT_FILE_FREE u8 <- 0xe5
         it.fatFirstDataSector <- it.fatRootDirFirstSector + it.fatRootDirSectorsCount
 
         // FAT type
-        pInfo <- {pFatBuffer.vadr + FAT_FS_ID_OFFSET + 4}
+        pInfo <- {aFatBuffer + FAT_FS_ID_OFFSET + 4}
         if pInfo.val & 0xff = '2': it.kind <- FS_KIND_FAT12
         else if pInfo.val & 0xff = '6': it.kind <- FS_KIND_FAT16
 
