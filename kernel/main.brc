@@ -37,7 +37,7 @@ busPci blob<@Bus::BusPci>
     @B::String("All ready, welcome to Bits Runner!").printlnColor(@B::String::FOREGROUND_GREEN)
 
     // Load apps
-    fsEntry blob<@Storage::StorageFsEntry>
+    fsEntry blob<@Storage::Entry>
     pApp ptr<data<u8>>
 
     // Load shell

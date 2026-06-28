@@ -2,21 +2,12 @@
 
 @import B
 
-@export StorageFsEntry blob
-    kind u32
-    name data<u8, 16>
-    entrySize u32
-
-    // FAT specific
-    fatCluster u32
-;
-
 @export Filesystem proto
     kind u32
     area blob<Area>
 
-    getRootEntry fun -> blob<StorageFsEntry>
-    getChildEntries fun: parentEntry blob<StorageFsEntry> -> data<blob<StorageFsEntry>, 32>
-    getEntryForPath fun: path blob<@B::String> -> blob<StorageFsEntry>
-    readEntry fun: entry blob<StorageFsEntry>, targetAddress a -> u32
+    getRootEntry fun -> blob<Entry>
+    getChildEntries fun: parentEntry blob<Entry> -> data<blob<Entry>, 32>
+    getEntryForPath fun: path blob<@B::String> -> blob<Entry>
+    readEntry fun: entry blob<Entry>, targetAddress a -> u32
 ;

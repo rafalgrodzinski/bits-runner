@@ -1,0 +1,10 @@
+@module Storage
+
+@export Entry blob
+    kind u32
+    name data<u8, 16>
+    entrySize u32
+
+    // FAT specific
+    fatCluster u32
+;
