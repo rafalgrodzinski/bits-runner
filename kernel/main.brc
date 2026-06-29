@@ -37,13 +37,14 @@ busPci blob<@Bus::BusPci>
 
     // Load apps
     entry blob<@Storage::Entry>
-    imageAddress a
+    aFileBuffer a
 
     // Load shell
     entry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
-    imageAddress <- @BSys::memAlloc(((entry.fileSize + 2048 - 1) / 2048) * 2048)
-    @Storage::instance.bootFilesystem.readEntry(entry, imageAddress)
-    @Dispatch::Dispatcher::instance.createProcess(imageAddress, entry.fileSize)
+    aFileBuffer <- @BSys::memAlloc(entry.fileSize)
+    copied u32 <- @Storage::instance.bootFilesystem.readEntry(entry, 0, entry.fileSize, aFileBuffer)
+    @B::StringForU32(copied).println()
+    @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, entry.fileSize)
 
     @Dispatch::Dispatcher::instance.start()
 ;

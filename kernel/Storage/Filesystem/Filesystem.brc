@@ -10,5 +10,5 @@
     getChildEntriesCount fun: parentEntry blob<Entry> -> u32
     //getChildEntries fun: parentEntry blob<Entry> -> data<blob<Entry>, 32>
     getEntry fun: path blob<@B::String> -> blob<Entry>
-    readEntry fun: entry blob<Entry>, targetAddress a -> u32
+    readEntry fun: entry blob<Entry>, startByte u32, bytesCount u32, targetAddress a -> u32
 ;

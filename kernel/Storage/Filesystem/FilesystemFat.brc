@@ -340,37 +340,57 @@ FAT_FILE_FREE u8 <- 0xe5
         ret currentEntry
     ;
 
-    readEntry fun: entry blob<Entry>, targetAddress a -> u32
+    readEntry fun: entry blob<Entry>, startByte u32, bytesCount u32, targetAddress a -> u32
         cluster u32 <- entry.fatCluster
-        isFinished bool <- false
+        bytesPerCluster u32 <- it.fatSectorsPerCluster * it.fatBytesPerSector
 
-        rep not isFinished
-            sector u32 <- (cluster - 2) * it.fatSectorsPerCluster + it.fatFirstDataSector
-            it.area.readSectors(sector, it.fatSectorsPerCluster, targetAddress)
-            targetAddress <- targetAddress + it.fatBytesPerSector * it.fatSectorsPerCluster
+        bytesCopied u32
+        // Make sure we don't copy more than the size of the file
+        if startByte >= entry.fileSize: ret 0
+        bytesCount <- if startByte + bytesCount < entry.fileSize: bytesCount else: entry.fileSize - startByte
 
-            if it.kind = FS_KIND_FAT12
-                // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
-                clusterIndex u32 <- cluster * 3 / 2
-                // calculate next cluster depending on wethere cluster index is odd or even
-                pCluster ptr<u32> <- {it.pFat.vadr + clusterIndex}
+        // Start at the correct cluster
+        startClusterIndex u32 <- startByte / bytesPerCluster
+        rep i u32, i < startClusterIndex, i <- i + 1
+            cluster <- it.nextCluster(cluster)
+        ;
+        firstClusterBytesOffset u32 <- startByte % bytesPerCluster
+        firstClusterBytesCount u32 <- bytesPerCluster - firstClusterBytesOffset
+        lastClusterBytesCount u32 <- (bytesCount - firstClusterBytesCount) % bytesPerCluster
 
-                if cluster & 0x01 = 0
-                    cluster <- pCluster.val & 0x0fff
-                else
-                    cluster <- (pCluster.val & 0xfff0) >> 4
+        rep bytesCopied < bytesCount
+            //sector u32 <- (cluster - 2) * it.fatSectorsPerCluster + it.fatFirstDataSector
+            sector u32 <- it.sectorForCluster(cluster)
+            cluster <- it.nextCluster(cluster)
+
+            // Handle copying from the offset of the first cluster
+            if bytesCopied = 0 and firstClusterBytesOffset > 0
+                aBuffer a <- @BSys::memAlloc(bytesPerCluster)
+                it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
+                // copy just the required bytes
+                rep i u32, i < firstClusterBytesCount, i <- i + 1
+                    targetAddress.ptr<data<u8>>.val[i] <- aBuffer.ptr<data<u8>>.val[firstClusterBytesOffset + i]
                 ;
-
-                isFinished <- cluster >= FAT12_EOF
-            else if it.kind = FS_KIND_FAT16
-                clusterIndex u32 <- cluster * 2
-                pCluster ptr<u32> <- {it.pFat.vadr + clusterIndex}
-                cluster <- pCluster.val & 0xffff // just get 2 bytes
-
-                isFinished <- cluster >= FAT16_EOF
+                @BSys::memFree(aBuffer)
+                bytesCopied <- firstClusterBytesCount
+            // Handle copying remainder of less than a cluster size
+            else if bytesCount - bytesCopied < bytesPerCluster
+                aBuffer a <- @BSys::memAlloc(bytesPerCluster)
+                it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
+                // copy just the required bytes
+                rep i u32, i < lastClusterBytesCount, i <- i + 1
+                    targetAddress.ptr<data<u8>>.val[bytesCopied + i] <- aBuffer.ptr<data<u8>>.val[i]
+                ;
+                @BSys::memFree(aBuffer)
+                bytesCopied <- bytesCopied + lastClusterBytesCount
+            // Copy a full cluster
+            else
+                it.area.readSectors(sector, it.fatSectorsPerCluster, targetAddress + bytesCopied)
+                bytesCopied <- bytesCopied + bytesPerCluster
             ;
         ;
-        ret 0
+
+        ret bytesCopied
     ;
 
     nextCluster fun: cluster u32 -> u32
