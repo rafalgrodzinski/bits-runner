@@ -26,25 +26,34 @@ busPci blob<@Bus::BusPci>
     @Memory::PagingManager::instance.init()
     @Memory::HeapManager::instance.init()
     @Interrupt::Handler::instance.init()
-    @Term::init(@Term::MODE_80x25)
+    @Term::init(@Term::MODE_80x50)
 
     @B::String("Initializing Bits Runner...").println()
     @Devices::Timer::Pit::instance.init()
     //busPci.scan()
     @Storage::instance.init(biosBootDriveNumber, bootPartitionFirstSector)
-    //@Interrupt::SyscallHandler::instance.init(@Storage::instance.bootStorageFs)
     
     @B::String("All ready, welcome to Bits Runner!").printlnColor(@B::String::FOREGROUND_GREEN)
 
+    entry blob<@Storage::Entry> <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/"))
+    entry.entryName.println()
+    @B::StringForU32(entry.kind).println()
+    @B::StringForU32(entry.entrySize).println()
+    @B::StringForU32(entry.fatCluster).println()
+    count u32 <- @Storage::instance.bootFilesystem.getChildEntriesCount(entry)
+    @B::StringForU32(count).printlnColor(@B::String::FOREGROUND_CYAN)
+
+    /*
     // Load apps
     fsEntry blob<@Storage::Entry>
     pApp ptr<data<u8>>
 
     // Load shell
-    fsEntry <- @Storage::instance.bootFilesystem.getEntryForPath(@B::String("/APPS/SHELL.BIN"))
+    fsEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
     pApp <- @BSys::memAlloc(((fsEntry.entrySize + 2048 - 1) / 2048) * 2048).ptr<data<u8>>
     @Storage::instance.bootFilesystem.readEntry(fsEntry, pApp.vadr)
     @Dispatch::Dispatcher::instance.createProcess(pApp, fsEntry.entrySize)
+    */
 
     @Dispatch::Dispatcher::instance.start()
 ;

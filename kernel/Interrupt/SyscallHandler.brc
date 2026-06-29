@@ -23,7 +23,7 @@ Syscall::Process::SLEEP u32 <- 0x201
 Syscall::Process::GET_INFO u32 <- 0x22
 
 // Storage
-Syscall::Storage::GET_INFO_FS_ENTRY u32 <- 0x200
+Syscall::Storage::GET_ENTRY u32 <- 0x600
 
 // Input
 Syscall::Input::KEYBOARD_GET_ASCII u32 <- 0x101
@@ -93,12 +93,12 @@ Syscall::Audio::STOP u32 <- 0x501
             currentProcessIndex u32 <- @Dispatch::Dispatcher::instance.currentProcessIndex
             pInfo.val[0] <- @Dispatch::Dispatcher::instance.currentProcessPagesCount()
         // Storage
-        /*else if eax = Syscall::Storage::GET_INFO_FS_ENTRY
-            pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
-            pEntryPath ptr<blob<@B::String>> <- ecx.a.ptr<blob<@B::String>>
-            entry blob<@Storage::StorageFsEntry> <- it.storageFs.entryForPath.val({it.storageFs.adr}, pEntryPath.val)
-            pInfo.val[0] <- entry.kind
-            pInfo.val[1] <- entry.entrySize*/
+        else if eax = Syscall::Storage::GET_ENTRY
+            pEntry ptr<data<u32>> <- ebx.a.ptr<data<u32>>
+            pPath ptr<blob<@B::String>> <- ecx.a.ptr<blob<@B::String>>
+            storageEntry blob<@Storage::Entry> <- @Storage::instance.bootFilesystem.getEntry(pPath.val)
+            pEntry.val[0] <- storageEntry.kind
+            pEntry.val[1] <- storageEntry.entrySize
         // Input
         else if eax = Syscall::Input::KEYBOARD_GET_ASCII
             ascii u32 <- deviceKeyboard.getAscii()
