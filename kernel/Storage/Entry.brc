@@ -2,17 +2,16 @@
 
 @import B
 
-Entry::KIND_DIRECTORY u32 <- 'd'
-Entry::KIND_FILE u32 <- 'f'
-Entry::KIND_EMPTY u32 <- 0
-Entry::KIND_DELETED u32 <- 1
-Entry::KIND_OTHER u32 <- 2
+@export Entry::KIND_EMPTY u32 <- 0
+@export Entry::KIND_DIRECTORY u32 <- 'd'
+@export Entry::KIND_FILE u32 <- 'f'
+@export Entry::KIND_DELETED u32 <- 1
+@export Entry::KIND_OTHER u32 <- 2
 
 @export Entry blob
     kind u32
-    name data<u8, 16>
-    entryName blob<@B::String>
-    entrySize u32
+    name blob<@B::String>
+    fileSize u32
 
     // FAT specific
     fatCluster u32

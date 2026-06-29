@@ -55,7 +55,7 @@ Dispatcher::tss blob<Tss>
         rep: @BSys::halt()
     ;
 
-    createProcess fun: imageSourceAddress ptr<data<u8>>, imageSize u32
+    createProcess fun: imageSourceAddress a, imageSize u32
         @BSys::disableInterrupts()
 
         pCurrentProcess ptr<blob<Process>> <- if it.currentProcessIndex < it.processes.count: it.processes.at(it.currentProcessIndex).ptr<blob<Process>> else: {0}

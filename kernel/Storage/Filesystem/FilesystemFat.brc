@@ -101,7 +101,7 @@ FAT_FILE_FREE u8 <- 0xe5
     getRootEntry fun -> blob<Entry>
         rootEntry blob<Entry>
         rootEntry.kind <- STORAGE_FS_ENTRY_KIND_DIR
-        rootEntry.name <- "/"
+        rootEntry.name <- @B::String("/")
         ret rootEntry
     ;
 
@@ -110,7 +110,7 @@ FAT_FILE_FREE u8 <- 0xe5
 
         entriesCount u32
     
-        isRoot bool <- @B::String(parentEntry.name).isEqual(@B::String("/"))
+        isRoot bool <- parentEntry.name.isEqual(@B::String("/"))
         aBuffer a
         entriesPerRead u32
         maxEntriesCount u32
@@ -280,7 +280,7 @@ FAT_FILE_FREE u8 <- 0xe5
                 path <- @B::String("")
             ;
 
-            isRoot bool <- @B::String(currentEntry.name).isEqual(@B::String("/"))
+            isRoot bool <- currentEntry.name.isEqual(@B::String("/"))
             aBuffer a
             entriesPerRead u32
             maxEntriesCount u32
@@ -321,7 +321,7 @@ FAT_FILE_FREE u8 <- 0xe5
                     if foundEntry.kind = Entry::KIND_EMPTY
                         isFinished <- true
                     else if foundEntry.kind = Entry::KIND_FILE or foundEntry.kind = Entry::KIND_DIRECTORY
-                        if foundEntry.entryName.isEqual(nextEntryName)
+                        if foundEntry.name.isEqual(nextEntryName)
                             isFinished <- true
                             // Make sure that only the last path component is a file
                             if not isLookingForDir or foundEntry.kind = Entry::KIND_DIRECTORY
@@ -425,7 +425,7 @@ FAT_FILE_FREE u8 <- 0xe5
             entry.fatCluster <- (aFatEntry + FAT_ENTRY_CLUSTER_OFFSET).ptr<u16>.val
 
             // entrySize
-            entry.entrySize <- (aFatEntry + FAT_ENTRY_SIZE_OFFSET).ptr<u32>.val
+            entry.fileSize <- (aFatEntry + FAT_ENTRY_SIZE_OFFSET).ptr<u32>.val
 
             // name
             name data<u8, 13> // 8 + '.' + 3 + \0
@@ -453,7 +453,7 @@ FAT_FILE_FREE u8 <- 0xe5
             ;
             name[targetIndex] <- 0
 
-            entry.entryName <- @B::String(name)
+            entry.name <- @B::String(name)
         ;
 
         ret entry

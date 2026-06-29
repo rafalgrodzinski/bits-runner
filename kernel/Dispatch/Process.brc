@@ -32,7 +32,7 @@ Process::State::SLEEPING u32 <- 2
     ;
 ;
 
-@export Process::new fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
+@export Process::new fun: imageSourceAddress a, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
     pCurrentPageDirectory ptr<data<u32>>
     oldCr3 u32
 
@@ -98,7 +98,7 @@ Process::State::SLEEPING u32 <- 2
     imageTargetAddrss ptr<data<u8>> <- {USER_ADR}
 
     rep i u32 <- 0, i < imageSize, i <- i + 1
-        imageTargetAddrss.val[i] <- imageSourceAddress.val[i]
+        imageTargetAddrss.val[i] <- imageSourceAddress.ptr<data<u8>>.val[i]
     ;
 
     @BSys::setCr3(oldCr3)

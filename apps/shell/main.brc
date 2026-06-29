@@ -145,14 +145,13 @@ CMD_SLEEP blob<@B::String>
 
 // Storage
 cmd_ls fun: path blob<@B::String>
-    entry blob<@Syscall::Storage::Entry> <- @Syscall::Storage::getEntry(path)
-    text blob<@B::String>
+    entryInfo blob<@Syscall::Storage::EntryInfo> <- @Syscall::Storage::getEntryInfo(path)
 
     @B::String("Kind: ").print()
-    @B::StringForU32(entry.kind).println()
+    @B::StringForU32(entryInfo.kind).println()
 
     @B::String("Size: ").print()
-    @B::StringForU32(entry.entrySize).println()
+    @B::StringForU32(entryInfo.entrySize).println()
 ;
 
 // Other

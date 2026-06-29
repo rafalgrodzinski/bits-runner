@@ -35,25 +35,15 @@ busPci blob<@Bus::BusPci>
     
     @B::String("All ready, welcome to Bits Runner!").printlnColor(@B::String::FOREGROUND_GREEN)
 
-    entry blob<@Storage::Entry> <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/"))
-    entry.entryName.println()
-    @B::StringForU32(entry.kind).println()
-    @B::StringForU32(entry.entrySize).println()
-    @B::StringForU32(entry.fatCluster).println()
-    count u32 <- @Storage::instance.bootFilesystem.getChildEntriesCount(entry)
-    @B::StringForU32(count).printlnColor(@B::String::FOREGROUND_CYAN)
-
-    /*
     // Load apps
-    fsEntry blob<@Storage::Entry>
-    pApp ptr<data<u8>>
+    entry blob<@Storage::Entry>
+    imageAddress a
 
     // Load shell
-    fsEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
-    pApp <- @BSys::memAlloc(((fsEntry.entrySize + 2048 - 1) / 2048) * 2048).ptr<data<u8>>
-    @Storage::instance.bootFilesystem.readEntry(fsEntry, pApp.vadr)
-    @Dispatch::Dispatcher::instance.createProcess(pApp, fsEntry.entrySize)
-    */
+    entry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
+    imageAddress <- @BSys::memAlloc(((entry.fileSize + 2048 - 1) / 2048) * 2048)
+    @Storage::instance.bootFilesystem.readEntry(entry, imageAddress)
+    @Dispatch::Dispatcher::instance.createProcess(imageAddress, entry.fileSize)
 
     @Dispatch::Dispatcher::instance.start()
 ;

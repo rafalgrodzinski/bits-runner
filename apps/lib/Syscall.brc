@@ -48,13 +48,13 @@ Process::GET_INFO u32 <- 0x22
 ;
 
 // Storage
-Storage::GET_ENTRY u32 <- 0x600
-//Storage::GET_CHILD_ENTRIES u32 <- 0601
+Storage::GET_ENTRY_INFO u32 <- 0x600
 
-Storage::KIND_FILE u32
-Storage::KIND_DIRECTORY u32
+@export Storage::ENTRY_KIND_EMPTY u32 <- 0
+@export Storage::ENTRY_KIND_FILE u32 <- 'f'
+@export Storage::ENTRY_KIND_DIRECTORY u32 <- 'd'
 
-@export Storage::Entry blob
+@export Storage::EntryInfo blob
     kind u32
     entrySize u32
 ;
@@ -139,13 +139,11 @@ syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: syscallNum u32
 ;
 
 // Storage
-@export Storage::getEntry fun: path blob<@B::String> -> blob<Storage::Entry>
-    entry blob<Storage::Entry>
-    syscallRaw(Storage::GET_ENTRY, entry.adr.u32, path.adr.u32, 0)
-    ret entry
+@export Storage::getEntryInfo fun: path blob<@B::String> -> blob<Storage::EntryInfo>
+    entryInfo blob<Storage::EntryInfo>
+    syscallRaw(Storage::GET_ENTRY_INFO, entryInfo.adr.u32, path.adr.u32, 0)
+    ret entryInfo
 ;
-
-//@export Storage::getChildEntries fun: entry blob<
 
 // Input
 @export Input::getAscii fun -> u32
