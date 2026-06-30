@@ -18,7 +18,8 @@ FLAGS=(
     --gen=obj
     --verb=v2
     --function-sections
-    --triple=i686-unknown-linux-gnu
+    --triple=i386-unknown-none
+    --arch=i386
     --no-zero-initialized-in-bss
     --reloc=static
 )
