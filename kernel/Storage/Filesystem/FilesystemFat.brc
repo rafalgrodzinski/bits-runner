@@ -402,7 +402,7 @@ FAT_FILE_FREE u8 <- 0xe5
             // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
             clusterIndex u32 <- cluster * 3 / 2
             // calculate next cluster depending on wethere cluster index is odd or even
-            pCluster ptr<u32> <- {it.pFat.vadr + clusterIndex}
+            pCluster ptr<u16> <- {it.pFat.vadr + clusterIndex}
 
             if cluster & 0x01 = 0
                 cluster <- pCluster.val & 0x0fff
@@ -414,8 +414,8 @@ FAT_FILE_FREE u8 <- 0xe5
             if cluster >= FAT16_EOF: ret cluster
 
             clusterIndex u32 <- cluster * 2
-            pCluster ptr<u32> <- {it.pFat.vadr + clusterIndex}
-            cluster <- pCluster.val & 0xffff // just get 2 bytes
+            pCluster ptr<u16> <- {it.pFat.vadr + clusterIndex}
+            cluster <- pCluster.val
         ;
 
         ret cluster
