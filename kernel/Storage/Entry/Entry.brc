@@ -14,10 +14,7 @@
     fileSize u32
 
     filesystem proto<Filesystem>
-
-    // FAT specific
-    
-    fatCluster u32
+    aMetadata a
 
     getChildrenCount fun -> u32
         ret it.filesystem.getChildEntriesCount(it)

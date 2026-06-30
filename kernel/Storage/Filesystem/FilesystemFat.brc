@@ -249,7 +249,7 @@ FAT_FILE_FREE u8 <- 0xe5
                 aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
                 entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FAT_BYTES_PER_ENTRY
                 maxEntriesCount <- 65_536
-                cluster <- currentEntry.fatCluster
+                cluster <- currentEntry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
 
             ;
 
@@ -315,7 +315,7 @@ FAT_FILE_FREE u8 <- 0xe5
             aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
             entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FAT_BYTES_PER_ENTRY
             maxEntriesCount <- 65_536
-            cluster <- parentEntry.fatCluster
+            cluster <- parentEntry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
         ;
 
         rep i u32, i < maxEntriesCount and not isFinished, i <- i + entriesPerRead
@@ -342,7 +342,7 @@ FAT_FILE_FREE u8 <- 0xe5
     ;
 
     readEntry fun: entry blob<Entry>, startByte u32, bytesCount u32, targetAddress a -> u32
-        cluster u32 <- entry.fatCluster
+        cluster u32 <- entry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
         bytesPerCluster u32 <- it.fatSectorsPerCluster * it.fatBytesPerSector
 
         bytesCopied u32
@@ -442,8 +442,10 @@ FAT_FILE_FREE u8 <- 0xe5
         else: entry.kind <- Entry::KIND_OTHER
 
         if entry.kind = Entry::KIND_FILE or entry.kind = Entry::KIND_DIRECTORY
-            // fatCluster
-            entry.fatCluster <- (aFatEntry + FAT_ENTRY_CLUSTER_OFFSET).ptr<u16>.val
+            // setup metadata
+            entry.aMetadata <- @BSys::memAlloc(blob<Entry::Metadata::Fat>.size)
+            // cluster
+            entry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster <- (aFatEntry + FAT_ENTRY_CLUSTER_OFFSET).ptr<u16>.val
 
             // entrySize
             entry.fileSize <- (aFatEntry + FAT_ENTRY_SIZE_OFFSET).ptr<u32>.val

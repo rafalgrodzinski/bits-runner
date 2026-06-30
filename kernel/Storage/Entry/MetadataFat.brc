@@ -1,0 +1,5 @@
+@module Storage
+
+Entry::Metadata::Fat blob
+    cluster u32
+;
