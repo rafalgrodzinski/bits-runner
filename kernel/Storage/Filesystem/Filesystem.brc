@@ -6,9 +6,9 @@
     kind u32
     area blob<Area>
 
-    getRootEntry fun -> blob<Entry>
-    getChildEntriesCount fun: parentEntry blob<Entry> -> u32
     //getChildEntries fun: parentEntry blob<Entry> -> data<blob<Entry>, 32>
     getEntry fun: path blob<@B::String> -> blob<Entry>
+    getChildEntriesCount fun: parentEntry blob<Entry> -> u32
     readEntry fun: entry blob<Entry>, startByte u32, bytesCount u32, targetAddress a -> u32
+    deleteEntry fun: entry blob<Entry>
 ;

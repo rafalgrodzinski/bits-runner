@@ -13,6 +13,21 @@
     name blob<@B::String>
     fileSize u32
 
+    filesystem proto<Filesystem>
+
     // FAT specific
+    
     fatCluster u32
+
+    getChildrenCount fun -> u32
+        ret it.filesystem.getChildEntriesCount(it)
+    ;
+
+    read fun: startByte u32, bytesCount u32, targetAddress a -> u32
+        ret it.filesystem.readEntry(it, startByte, bytesCount, targetAddress)
+    ;
+
+    delete fun
+        it.filesystem.deleteEntry(it)
+    ;
 ;

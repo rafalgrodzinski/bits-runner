@@ -105,56 +105,6 @@ FAT_FILE_FREE u8 <- 0xe5
         ret rootEntry
     ;
 
-    getChildEntriesCount fun: parentEntry blob<Entry> -> u32
-        if parentEntry.kind != Entry::KIND_DIRECTORY: ret 0
-
-        entriesCount u32
-    
-        isRoot bool <- parentEntry.name.isEqual(@B::String("/"))
-        aBuffer a
-        entriesPerRead u32
-        maxEntriesCount u32
-        sector u32
-        cluster u32
-        isFinished bool
-
-        // Root directory needs a separate path as it doesn't use clusters
-        if isRoot
-            aBuffer <- @BSys::memAlloc(it.fatBytesPerSector)
-            entriesPerRead <- it.fatBytesPerSector / FAT_BYTES_PER_ENTRY
-            maxEntriesCount <- it.fatRootDirEntriesCount
-            sector <- it.fatRootDirFirstSector
-        // Sub directories use clusters
-        else
-            aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
-            entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FAT_BYTES_PER_ENTRY
-            maxEntriesCount <- 65_536
-            cluster <- parentEntry.fatCluster
-        ;
-
-        rep i u32, i < maxEntriesCount and not isFinished, i <- i + entriesPerRead
-            if isRoot
-                // Root dir is scanned sctor by sector
-                it.area.readSectors(sector, 1, aBuffer)
-                sector <- sector + 1
-            else
-                // Sub dirs are scanned cluster by cluster
-                sector <- it.sectorForCluster(cluster)
-                it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
-                cluster <- it.nextCluster(cluster)
-            ;
-
-            // Iterate over buffered entries
-            rep i u32, i < entriesPerRead and not isFinished, i <- i + 1
-                entry blob<Entry> <- it.entryForFatEntry(aBuffer + i * FAT_BYTES_PER_ENTRY)
-                if entry.kind = Entry::KIND_EMPTY: isFinished <- true
-                else if entry.kind = Entry::KIND_FILE or entry.kind = Entry::KIND_DIRECTORY: entriesCount <- entriesCount + 1
-            ;
-        ;
-
-        ret entriesCount
-    ;
-
     /*
     getChildEntries fun: parentEntry blob<Entry> -> data<blob<Entry>, 32>
         subEntries data<blob<Entry>, 32>
@@ -337,7 +287,58 @@ FAT_FILE_FREE u8 <- 0xe5
             if not isNextEntryFound: ret emptyEntry
         ;
 
+        currentEntry.filesystem <- {it.adr.ptr<blob<FilesystemFat>>}
         ret currentEntry
+    ;
+
+    getChildEntriesCount fun: parentEntry blob<Entry> -> u32
+        if parentEntry.kind != Entry::KIND_DIRECTORY: ret 0
+
+        entriesCount u32
+    
+        isRoot bool <- parentEntry.name.isEqual(@B::String("/"))
+        aBuffer a
+        entriesPerRead u32
+        maxEntriesCount u32
+        sector u32
+        cluster u32
+        isFinished bool
+
+        // Root directory needs a separate path as it doesn't use clusters
+        if isRoot
+            aBuffer <- @BSys::memAlloc(it.fatBytesPerSector)
+            entriesPerRead <- it.fatBytesPerSector / FAT_BYTES_PER_ENTRY
+            maxEntriesCount <- it.fatRootDirEntriesCount
+            sector <- it.fatRootDirFirstSector
+        // Sub directories use clusters
+        else
+            aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
+            entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FAT_BYTES_PER_ENTRY
+            maxEntriesCount <- 65_536
+            cluster <- parentEntry.fatCluster
+        ;
+
+        rep i u32, i < maxEntriesCount and not isFinished, i <- i + entriesPerRead
+            if isRoot
+                // Root dir is scanned sctor by sector
+                it.area.readSectors(sector, 1, aBuffer)
+                sector <- sector + 1
+            else
+                // Sub dirs are scanned cluster by cluster
+                sector <- it.sectorForCluster(cluster)
+                it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
+                cluster <- it.nextCluster(cluster)
+            ;
+
+            // Iterate over buffered entries
+            rep i u32, i < entriesPerRead and not isFinished, i <- i + 1
+                entry blob<Entry> <- it.entryForFatEntry(aBuffer + i * FAT_BYTES_PER_ENTRY)
+                if entry.kind = Entry::KIND_EMPTY: isFinished <- true
+                else if entry.kind = Entry::KIND_FILE or entry.kind = Entry::KIND_DIRECTORY: entriesCount <- entriesCount + 1
+            ;
+        ;
+
+        ret entriesCount
     ;
 
     readEntry fun: entry blob<Entry>, startByte u32, bytesCount u32, targetAddress a -> u32
@@ -477,5 +478,9 @@ FAT_FILE_FREE u8 <- 0xe5
         ;
 
         ret entry
+    ;
+
+    deleteEntry fun: entry blob<Entry>
+        
     ;
 ;

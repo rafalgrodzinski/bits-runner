@@ -42,7 +42,7 @@ busPci blob<@Bus::BusPci>
     // Load shell
     entry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
     aFileBuffer <- @BSys::memAlloc(entry.fileSize)
-    copied u32 <- @Storage::instance.bootFilesystem.readEntry(entry, 0, entry.fileSize, aFileBuffer)
+    copied u32 <- entry.read(0, entry.fileSize, aFileBuffer)
     @B::StringForU32(copied).println()
     @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, entry.fileSize)
 
