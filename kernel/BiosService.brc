@@ -3,6 +3,7 @@
 BIOS_SERVICE_REBOOT u8 <- 0x00
 BIOS_SERVICE_SET_VIDEO_MODE u8 <- 0x01
 BIOS_SERVICE_BOOT_STORAGE_READ_SECTORS u8 <- 0x02
+BIOS_SERVICE_BOOT_STORAGE_WRITE_SECTORS u8 <- 0x04
 BIOS_SERVICE_SECTORS_COUNT u8 <- 0x03
 
 @export VIDEO_MODE_TEXT_80x25 u8 <- 0x00
@@ -59,8 +60,22 @@ bootStorageReadSectorsRaw raw<"=r, m, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edi}
     mov $0, eax
 ;
 
-@export bootStorageReadSectors fun: sector u32, count u32, targetAddress a -> u32
-    ret bootStorageReadSectorsRaw(serviceAdr, BIOS_SERVICE_BOOT_STORAGE_READ_SECTORS, sector, count, targetAddress.u32)
+@export bootStorageReadSectors fun: firstSector u32, sectorsCount u32, targetAddress a -> u32
+    ret bootStorageReadSectorsRaw(serviceAdr, BIOS_SERVICE_BOOT_STORAGE_READ_SECTORS, firstSector, sectorsCount, targetAddress.u32)
+;
+
+// Write sectors
+bootStorageWriteSectorsRaw raw<"=r, m, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edi}, ~{memory}">: biosServiceAdr u32 /*$1*/, biosServiceNumber u8 /*$2*/, firstSector u32 /*$3*/, sectorsCount u32 /*$4*/, sourceAdr u32 /*$5*/ -> u32 /*$0*/
+    mov ah, $2
+    mov ebx, $3
+    mov ecx, $4
+    mov edi, $5
+    call $1
+    mov $0, eax
+;
+
+@export bootStorageWriteSectors fun: firstSector u32, sectorsCount u32, sourceAddress a -> u32
+    ret bootStorageWriteSectorsRaw(serviceAdr, BIOS_SERVICE_BOOT_STORAGE_WRITE_SECTORS, firstSector, sectorsCount, sourceAddress.u32)
 ;
 
 // Sectors count

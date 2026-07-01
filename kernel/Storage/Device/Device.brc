@@ -4,5 +4,6 @@
     biosDriveNumber u32
     sectorsCount u32
 
-    readSectors fun: sector u32, count u32, targetAddress a -> u32
+    readSectors fun: firstSector u32, sectorsCount u32, targetAddress a -> u32
+    writeSectors fun: firstSector u32, sectorsCount u32, sourceAddress a -> u32
 ;

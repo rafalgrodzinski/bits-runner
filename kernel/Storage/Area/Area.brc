@@ -12,7 +12,11 @@
         it.sectorsCount <- sectorsCount
     ;
 
-    readSectors fun: sector u32, count u32, targetAddress a -> u32
-        ret it.device.readSectors(it.firstSector + sector, count, targetAddress)
+    readSectors fun: firstSector u32, sectorsCount u32, targetAddress a -> u32
+        ret it.device.readSectors(it.firstSector + firstSector, sectorsCount, targetAddress)
+    ;
+
+    writeSectors fun: firstSector u32, sectorsCount u32, sourceAddress a -> u32
+        ret it.device.writeSectors(it.firstSector + firstSector, sectorsCount, sourceAddress)
     ;
 ;

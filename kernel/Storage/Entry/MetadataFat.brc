@@ -2,4 +2,6 @@
 
 Entry::Metadata::Fat blob
     cluster u32
+    dirCluster u32
+    dirEntryOffset u32
 ;

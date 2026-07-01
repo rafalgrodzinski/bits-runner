@@ -11,7 +11,11 @@
         it.sectorsCount <- @BiosService::bootStorageSectorsCount()
     ;
 
-    readSectors fun: sector u32, count u32, targetAddress a -> u32
-        ret @BiosService::bootStorageReadSectors(sector, count, targetAddress)
+    readSectors fun: firstSector u32, sectorsCount u32, targetAddress a -> u32
+        ret @BiosService::bootStorageReadSectors(firstSector, sectorsCount, targetAddress)
+    ;
+
+    writeSectors fun: firstSector u32, sectorsCount u32, sourceAddress a -> u32
+        ret @BiosService::bootStorageWriteSectors(firstSector, sectorsCount, sourceAddress)
     ;
 ;

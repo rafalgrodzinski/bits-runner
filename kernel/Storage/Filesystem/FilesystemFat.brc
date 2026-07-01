@@ -1,6 +1,7 @@
 @module Storage
 
 @import BSys
+@import Term
 
 // Predefined
 FAT_BYTES_PER_ENTRY u32 <- 0x20
@@ -102,6 +103,7 @@ FAT_FILE_FREE u8 <- 0xe5
         rootEntry blob<Entry>
         rootEntry.kind <- STORAGE_FS_ENTRY_KIND_DIR
         rootEntry.name <- @B::String("/")
+        rootEntry.aMetadata <- @BSys::memAlloc(blob<Entry::Metadata::Fat>.size)
         ret rootEntry
     ;
 
@@ -250,10 +252,9 @@ FAT_FILE_FREE u8 <- 0xe5
                 entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FAT_BYTES_PER_ENTRY
                 maxEntriesCount <- 65_536
                 cluster <- currentEntry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
-
             ;
 
-            rep i u32, i < maxEntriesCount and not isFinished, i <- i + entriesPerRead
+            rep dirEntryIndex u32, dirEntryIndex < maxEntriesCount and not isFinished, dirEntryIndex <- dirEntryIndex + entriesPerRead
                 if isRoot
                     // Root dir is scanned sctor by sector
                     it.area.readSectors(sector, 1, aBuffer)
@@ -268,6 +269,9 @@ FAT_FILE_FREE u8 <- 0xe5
                 // Iterate over buffered entries
                 rep i u32, i < entriesPerRead and not isFinished, i <- i + 1
                     foundEntry blob<Entry> <- it.entryForFatEntry(aBuffer + i * FAT_BYTES_PER_ENTRY)
+                    foundEntry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirCluster <- currentEntry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
+                    foundEntry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirEntryOffset <- (dirEntryIndex + i) * FAT_BYTES_PER_ENTRY
+
                     if foundEntry.kind = Entry::KIND_EMPTY
                         isFinished <- true
                     else if foundEntry.kind = Entry::KIND_FILE or foundEntry.kind = Entry::KIND_DIRECTORY
@@ -483,6 +487,46 @@ FAT_FILE_FREE u8 <- 0xe5
     ;
 
     deleteEntry fun: entry blob<Entry>
-        
+        pMetadata ptr<blob<Entry::Metadata::Fat>> <- entry.aMetadata.ptr<blob<Entry::Metadata::Fat>>
+        dirEntrySector u32
+        dirEntrySectorOffset u32 <- pMetadata.val.dirEntryOffset % it.fatBytesPerSector
+
+        @Term::printNumber(pMetadata.val.cluster, @Term::FOREGROUND_CYAN)
+        @Term::printString(" ", @Term::FOREGROUND_CYAN)
+        @Term::printNumber(pMetadata.val.dirCluster, @Term::FOREGROUND_CYAN)
+        @Term::printString(" ", @Term::FOREGROUND_CYAN)
+        @Term::printNumber(pMetadata.val.dirEntryOffset, @Term::FOREGROUND_CYAN)
+        @Term::printNewLine()
+
+        // Is in root directory?
+        if pMetadata.val.dirCluster = 0
+            dirEntrySector <- it.fatRootDirFirstSector + pMetadata.val.dirEntryOffset / it.fatBytesPerSector
+        // Is in sub directory
+        else
+            bytesPerCluster u32 <- it.fatBytesPerSector * it.fatSectorsPerCluster
+            // figure out cluster for the entry
+            entryClusterIndex u32 <- pMetadata.val.dirEntryOffset / bytesPerCluster
+            dirEntryCluster u32 <- pMetadata.val.dirCluster
+            rep i u32, i < entryClusterIndex, i <- i + 1: dirEntryCluster <- it.nextCluster(dirEntryCluster)
+            // and then the sector
+            dirEntrySector <- it.sectorForCluster(dirEntryCluster) + ((pMetadata.val.dirEntryOffset % bytesPerCluster) / it.fatBytesPerSector)
+        ;
+
+        aBuffer a <- @BSys::memAlloc(it.fatBytesPerSector)
+        it.area.readSectors(dirEntrySector, 1, aBuffer)
+        //{aBuffer + dirEntrySectorOffset}.ptr<u8>.val <- 0xe5 
+        pDirEntry ptr<data<u8>> <- {aBuffer + dirEntrySectorOffset}.ptr<data<u8>>
+        pDirEntry.val[0] <- 0xe5
+        written u32 <- it.area.writeSectors(dirEntrySector, 1, aBuffer)
+
+        @Term::printNumber(pMetadata.val.dirCluster, @Term::FOREGROUND_GREEN)
+        @Term::printString(" ", @Term::FOREGROUND_GREEN)
+        @Term::printNumber(dirEntrySector, @Term::FOREGROUND_GREEN)
+        @Term::printString(" ", @Term::FOREGROUND_GREEN)
+        @Term::printNumber(dirEntrySectorOffset, @Term::FOREGROUND_GREEN)
+        @Term::printNewLine()
+
+        @Term::printNumber(written, @Term::FOREGROUND_RED)
+        @Term::printNewLine()
     ;
 ;

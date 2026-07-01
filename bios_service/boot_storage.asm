@@ -94,7 +94,7 @@ boot_storage_init_32:
 
 	mov esp, ebp
 	pop ebp
-	ret 4 * .args_count
+	ret U32_SIZE * .args_count
 %undef .boot_partition_entry_adr
 %undef .boot_drive_number
 %undef .args_count
@@ -119,7 +119,6 @@ boot_storage_read_sectors_32:
 	mov ebp, esp
 
 	mov ecx, .sectors_count
-
 .sectors_loop:
 	push ecx
 
@@ -146,7 +145,7 @@ boot_storage_read_sectors_32:
 .end:
 	mov esp, ebp
 	pop ebp
-	ret 4 * .args_count
+	ret U32_SIZE * .args_count
 %undef .buffer_adr
 %undef .target_adr
 %undef .sectors_count
@@ -201,9 +200,115 @@ boot_storage_read_sector_32:
 
 	mov esp, ebp
 	pop ebp
-	ret 4 * .args_count
+	ret U32_SIZE * .args_count
 %undef .target_adr
 %undef .sector
+%undef .args_count
+
+;
+; Write single sector to the boot storage device
+; in
+;  sector
+;  source_adr (within the first memory segment)
+; out
+;  eax: written sectors count (1) or 0 on error
+%define .args_count 2
+%define .sector [ebp + 8]
+%define .source_adr [ebp + 12]
+[bits 32]
+boot_storage_write_sector_32:
+	push ebp
+	mov ebp, esp
+
+	; convert LBA address into CHS in ch, dh, cl
+	push dword .sector
+	call boot_storage_lba_to_chs_32
+
+	mov al, 1 ; write single sector
+	mov bx, .source_adr
+	mov dl, [boot_storage_drive_number]
+	mov edi, 3 ; try reading 3 times
+
+	call switch_to_v86_mode_32
+[bits 16]
+
+.retry_loop:
+	mov ah, 0x03
+	int 0x13
+	jnc .read_successful
+	dec edi
+	jnz .retry_loop
+	jmp .read_failed
+
+.read_successful:
+	mov eax, 1
+	jmp .end
+
+.read_failed:
+	mov eax, 0
+
+.end:
+	call switch_to_protected_mode_16
+[bits 32]
+
+	mov esp, ebp
+	pop ebp
+	ret U32_SIZE * .args_count
+%undef .source_adr
+%undef .sector
+%undef .args_count
+
+;
+; Write sectors to the boot storage device
+; in
+;  first_sector
+;  sectors_count
+;  source_adr
+;  buffer_adr
+; out
+;  eax: written sectors count or 0 on error
+%define .args_count 4
+%define .first_sector [ebp + 8]
+%define .sectors_count [ebp + 12]
+%define .source_adr [ebp + 16]
+%define .buffer_adr [ebp + 20]
+[bits 32]
+boot_storage_write_sectors_32:
+	push ebp
+	mov ebp, esp
+
+	mov ecx, .sectors_count
+.sectors_loop:
+	push ecx
+
+	; copy data from source address into buffer
+	cld
+	mov ecx, [boot_storage_fat_bytes_per_sector]
+	mov esi, .source_adr
+	mov edi, .buffer_adr
+	rep movsb
+	mov .source_adr, esi ; point source address to the next area
+
+	; write temp buffer into given sector
+	push dword .buffer_adr
+	push dword .first_sector
+	call boot_storage_write_sector_32
+	cmp eax, 0
+	jz .end
+
+	inc dword .first_sector ; move the next target sector
+
+	pop ecx
+	loop .sectors_loop
+
+.end:
+	mov esp, ebp
+	pop ebp
+	ret U32_SIZE * .args_count
+%undef .buffer_adr
+%undef .source_adr
+%undef .sectors_count
+%undef .first_sector
 %undef .args_count
 
 ;
@@ -218,7 +323,7 @@ boot_storage_read_sector_32:
 %define .args_count 1
 %define .lba [ebp + 8]
 [bits 32]
-boot_storage_lba_to_chs_32: ; 0x16e6
+boot_storage_lba_to_chs_32:
 	push ebp
 	mov ebp, esp
 
@@ -241,7 +346,7 @@ boot_storage_lba_to_chs_32: ; 0x16e6
 
 	mov esp, ebp
 	pop ebp
-	ret 4 * .args_count
+	ret U32_SIZE * .args_count
 %undef .lba
 %undef .args_count
 
@@ -301,7 +406,7 @@ boot_storage_load_file_32:
 .end:
 	mov esp, ebp
 	pop ebp
-	ret 4 * .args_count
+	ret U32_SIZE * .args_count
 %undef .buffer_adr
 %undef .target_adr
 %undef .file_name_adr
@@ -426,7 +531,7 @@ boot_storage_fat_init_32:
 .end:
 	mov esp, ebp
 	pop ebp
-	ret 4 * .args_count
+	ret U32_SIZE * .args_count
 %undef .buffer_adr
 %undef .fat_adr
 %undef .args_count
@@ -471,7 +576,7 @@ boot_storage_find_fat_file_entry_adr_32:
 .end:
 	mov esp, ebp
 	pop ebp
-	ret 4 * .args_count
+	ret U32_SIZE * .args_count
 %undef .root_dir_adr
 %undef .file_name_adr
 %undef .args_count
@@ -553,7 +658,7 @@ boot_storage_read_clusters_32:
 .end:
 	mov esp, ebp
 	pop ebp
-	ret 4 * .args_count
+	ret U32_SIZE * .args_count
 %undef .buffer_adr
 %undef .target_adr
 %undef .fat_adr
