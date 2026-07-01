@@ -9,6 +9,8 @@
 %define BIOS_SERVICE_GPXS_MODE_640x480x4 0x12
 %define BIOS_SERVICE_GPXS_MODE_320x200x8 0x13
 
+saved_eax: dd 0
+
 ;
 ; BIOS Services
 ; in
@@ -16,14 +18,10 @@
 [bits 32]
 bios_service_32:
     pusha
-
     cli
-
     mov [saved_esp], esp
-
     ; use default real mode stack and put the return address on it
     mov esp, STACK_END_ADR
-
     sti
 
     ; Reboot
@@ -70,12 +68,15 @@ bios_service_32:
 
 .end:
     cli
-
+    ; Restore original kernel stack
     mov esp, [saved_esp]
-
     sti
 
+    ; Restore original register values, but preserve returned value kept in eax
+    mov [saved_eax], eax
     popa
+    mov eax, [saved_eax]
+
     ret
 
 ;
