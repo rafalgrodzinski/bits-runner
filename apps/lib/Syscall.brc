@@ -2,6 +2,15 @@
 
 @import B
 
+syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: /*$1*/syscallNumber u32, /*$2*/arg0 u32, /*$3*/arg1 u32, /*s4*/arg2 u32 -> /*$0*/u32
+    mov eax, $1
+    mov ebx, $2
+    mov ecx, $3
+    mov edx, $4
+    int 0x30
+    mov $0, eax
+;
+
 // System
 System::REBOOT u32 <- 0x00
 System::GET_TIMESTAMP u32 <- 0x10
@@ -91,15 +100,6 @@ Video::DRAW_LINE u32 <- 0x322
 // Audio
 Audio::PLAY u32 <- 0x500
 Audio::STOP u32 <- 0x501
-
-syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/, arg2 u32/*$3*/, arg3 u32/*s4*/ -> u32/*$0*/
-    mov eax, $1
-    mov ebx, $2
-    mov ecx, $3
-    mov edx, $4
-    int 0x30
-    mov $0, eax
-;
 
 // System
 @export System::reboot fun

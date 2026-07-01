@@ -8,7 +8,7 @@
 
     init fun: biosDriveNumber u32
         it.biosDriveNumber <- biosDriveNumber
-        it.sectorsCount <- @BiosService::bootStorageSectorsCount()
+        it.sectorsCount <- @BiosService::bootStorageGetSectorsCount()
     ;
 
     readSectors fun: firstSector u32, sectorsCount u32, targetAddress a -> u32
