@@ -41,9 +41,7 @@ busPci blob<@Bus::BusPci>
 
     // Load shell
     pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
-
     aFileBuffer <- @BSys::memAlloc(pEntry.val.fileSize)
-    @Term::printHex(aFileBuffer.u32, @Term::BACKGROUND_CYAN)
     pEntry.val.read(0, pEntry.val.fileSize, aFileBuffer)
     @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, pEntry.val.fileSize)
     @BSys::memFree(pEntry.vadr)

@@ -101,7 +101,7 @@ Syscall::Audio::STOP u32 <- 0x501
             /*pEntryInfo.val[1] <- if entry.kind = @Storage::Entry::KIND_FILE: entry.fileSize
                                  else if entry.kind = @Storage::Entry::KIND_DIRECTORY: entry.getChildrenCount()
                                  else: 0*/
-            //entry.delete()
+            pEntry.val.delete()
             @BSys::memFree(pEntry.vadr)
         // Input
         else if eax = Syscall::Input::KEYBOARD_GET_ASCII

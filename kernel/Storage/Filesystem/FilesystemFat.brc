@@ -41,13 +41,16 @@ FAT_FILE_FREE u8 <- 0xe5
 
     // FAT specific
     name data<u8, 16>
-    pFat ptr<data<u8>>
+    aFat a
     fatBytesPerSector u32
     fatRootDirEntriesCount u32
     fatSectorsPerCluster u32
     fatFirstDataSector u32
     fatRootDirFirstSector u32
     fatRootDirSectorsCount u32
+    fatFirstSector u32
+    sectorsPerFat u32
+    fatsCount u32
 
     init fun: area blob<Area>
         it.area <- area
@@ -71,19 +74,19 @@ FAT_FILE_FREE u8 <- 0xe5
         reservedSectorsCount u32 <- pInfo.val & 0xff
 
         pInfo <- {aFatBuffer + FAT_FATS_COUNT_OFFSET}
-        fatsCount u32 <- pInfo.val & 0xff
+        it.fatsCount <- pInfo.val & 0xff
 
         pInfo <- {aFatBuffer + FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET}
         rootDirEntriesCount u32 <- pInfo.val & 0xffff
         it.fatRootDirEntriesCount <- rootDirEntriesCount
 
         pInfo <- {aFatBuffer + FAT_SECTORS_PER_FAT_OFFSET}
-        sectorsPerFat u32 <- pInfo.val & 0xffff
+        it.sectorsPerFat <- pInfo.val & 0xffff
 
         // calculated values
-        fatFirstSector u32 <- reservedSectorsCount
+        it.fatFirstSector <- reservedSectorsCount
 
-        it.fatRootDirFirstSector <- fatFirstSector + sectorsPerFat * fatsCount
+        it.fatRootDirFirstSector <- it.fatFirstSector + it.sectorsPerFat * it.fatsCount
 
         it.fatRootDirSectorsCount <- (rootDirEntriesCount * FAT_BYTES_PER_ENTRY) / bytesPerSector
 
@@ -95,8 +98,8 @@ FAT_FILE_FREE u8 <- 0xe5
         else if pInfo.val & 0xff = '6': it.kind <- FS_KIND_FAT16
 
         // load fat
-        it.pFat <- @BSys::memAlloc(sectorsPerFat * bytesPerSector).ptr<data<u8>>
-        it.area.readSectors(fatFirstSector, sectorsPerFat, it.pFat.vadr)
+        it.aFat <- @BSys::memAlloc(it.sectorsPerFat * bytesPerSector)
+        it.area.readSectors(it.fatFirstSector, it.sectorsPerFat, it.aFat)
     ;
 
     getRootEntry fun -> ptr<blob<Entry>>
@@ -412,18 +415,39 @@ FAT_FILE_FREE u8 <- 0xe5
         ret bytesCopied
     ;
 
-    deleteEntry fun: entry ptr<blob<Entry>>
-    /*
-        pMetadata ptr<blob<Entry::Metadata::Fat>> <- entry.aMetadata.ptr<blob<Entry::Metadata::Fat>>
+    deleteEntry fun: pEntry ptr<blob<Entry>>
+        pMetadata ptr<blob<Entry::Metadata::Fat>> <- pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>
         dirEntrySector u32
         dirEntrySectorOffset u32 <- pMetadata.val.dirEntryOffset % it.fatBytesPerSector
 
-        @Term::printNumber(pMetadata.val.cluster, @Term::FOREGROUND_CYAN)
-        @Term::printString(" ", @Term::FOREGROUND_CYAN)
-        @Term::printNumber(pMetadata.val.dirCluster, @Term::FOREGROUND_CYAN)
-        @Term::printString(" ", @Term::FOREGROUND_CYAN)
-        @Term::printNumber(pMetadata.val.dirEntryOffset, @Term::FOREGROUND_CYAN)
-        @Term::printNewLine()
+        // Remove clusters chain
+        cluster u32 <- pMetadata.val.cluster
+        terminalCluster u32 <- if it.kind = FS_KIND_FAT12: FAT12_EOF else: FAT16_EOF
+        rep cluster < terminalCluster
+            currentCluster u32 <- cluster
+            cluster <- it.nextCluster(cluster)
+            if it.kind = FS_KIND_FAT12
+                // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
+                pCurrentCluster ptr<u16> <- {it.aFat + currentCluster * 3 / 2}
+
+                // zero cluster depending on wethere cluster is odd or even
+                if currentCluster &? 0x01
+                    pCurrentCluster.val <- pCurrentCluster.val & 0x000f
+                else
+                    pCurrentCluster.val <- pCurrentCluster.val & 0xf000
+                ;
+            else if it.kind = FS_KIND_FAT16
+                //{it.aFat + cluster * 2}.ptr<u16>.val <- 0
+                pCurrentCluster ptr<u16> <- {it.aFat + currentCluster * 2}.ptr<u16>
+                pCurrentCluster.val <- 0
+            ;
+        ;
+
+        // Write back updated fat tables
+        rep i u32, i < it.fatsCount, i <- i + 1
+            targetSector u32 <- it.fatFirstDataSector + it.sectorsPerFat * i
+            it.area.writeSectors(targetSector, it.sectorsPerFat, it.aFat)
+        ;
 
         // Is in root directory?
         if pMetadata.val.dirCluster = 0
@@ -445,17 +469,6 @@ FAT_FILE_FREE u8 <- 0xe5
         pDirEntry ptr<data<u8>> <- {aBuffer + dirEntrySectorOffset}.ptr<data<u8>>
         pDirEntry.val[0] <- 0xe5
         written u32 <- it.area.writeSectors(dirEntrySector, 1, aBuffer)
-
-        @Term::printNumber(pMetadata.val.dirCluster, @Term::FOREGROUND_GREEN)
-        @Term::printString(" ", @Term::FOREGROUND_GREEN)
-        @Term::printNumber(dirEntrySector, @Term::FOREGROUND_GREEN)
-        @Term::printString(" ", @Term::FOREGROUND_GREEN)
-        @Term::printNumber(dirEntrySectorOffset, @Term::FOREGROUND_GREEN)
-        @Term::printNewLine()
-
-        @Term::printNumber(written, @Term::FOREGROUND_RED)
-        @Term::printNewLine()
-    */
     ;
 
     nextCluster fun: cluster u32 -> u32
@@ -464,21 +477,19 @@ FAT_FILE_FREE u8 <- 0xe5
             if cluster >= FAT12_EOF: ret cluster
 
             // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
-            clusterIndex u32 <- cluster * 3 / 2
-            // calculate next cluster depending on wethere cluster index is odd or even
-            pCluster ptr<u16> <- {it.pFat.vadr + clusterIndex}
+            pCluster ptr<u16> <- {it.aFat + cluster * 3 / 2}
 
-            if cluster & 0x01 = 0
-                cluster <- pCluster.val & 0x0fff
-            else
+            // calculate next cluster depending on wethere cluster is odd or even
+            if cluster &? 0x01
                 cluster <- (pCluster.val & 0xfff0) >> 4
+            else
+                cluster <- pCluster.val & 0x0fff
             ;
         else if it.kind = FS_KIND_FAT16
             // Check if we're aleady at the last cluster
             if cluster >= FAT16_EOF: ret cluster
 
-            clusterIndex u32 <- cluster * 2
-            pCluster ptr<u16> <- {it.pFat.vadr + clusterIndex}
+            pCluster ptr<u16> <- {it.aFat + cluster * 2}
             cluster <- pCluster.val
         ;
 
