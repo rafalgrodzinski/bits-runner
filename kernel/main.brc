@@ -36,15 +36,17 @@ busPci blob<@Bus::BusPci>
     @B::String("All ready, welcome to Bits Runner!").printlnColor(@B::String::FOREGROUND_GREEN)
 
     // Load apps
-    entry blob<@Storage::Entry>
+    pEntry ptr<blob<@Storage::Entry>>
     aFileBuffer a
 
     // Load shell
-    entry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
-    aFileBuffer <- @BSys::memAlloc(entry.fileSize)
-    copied u32 <- entry.read(0, entry.fileSize, aFileBuffer)
-    @B::StringForU32(copied).println()
-    @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, entry.fileSize)
+    pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
+
+    aFileBuffer <- @BSys::memAlloc(pEntry.val.fileSize)
+    @Term::printHex(aFileBuffer.u32, @Term::BACKGROUND_CYAN)
+    pEntry.val.read(0, pEntry.val.fileSize, aFileBuffer)
+    @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, pEntry.val.fileSize)
+    @BSys::memFree(pEntry.vadr)
 
     @Dispatch::Dispatcher::instance.start()
 ;

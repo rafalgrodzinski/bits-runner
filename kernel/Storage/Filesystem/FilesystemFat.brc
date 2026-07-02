@@ -99,12 +99,21 @@ FAT_FILE_FREE u8 <- 0xe5
         it.area.readSectors(fatFirstSector, sectorsPerFat, it.pFat.vadr)
     ;
 
-    getRootEntry fun -> blob<Entry>
-        rootEntry blob<Entry>
-        rootEntry.kind <- STORAGE_FS_ENTRY_KIND_DIR
-        rootEntry.name <- @B::String("/")
-        rootEntry.aMetadata <- @BSys::memAlloc(blob<Entry::Metadata::Fat>.size)
-        ret rootEntry
+    getRootEntry fun -> ptr<blob<Entry>>
+        pEntry ptr<blob<Entry>> <- @BSys::memAlloc(blob<Entry>.size).ptr<blob<Entry>>
+
+        pEntry.val.kind <- STORAGE_FS_ENTRY_KIND_DIR
+        pEntry.val.name <- @B::String("/")
+        pEntry.val.fileSize <- 0
+
+        pEntry.val.aMetadata <- @BSys::memAlloc(blob<Entry::Metadata::Fat>.size)
+        pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster <- 0
+        pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirCluster <- 0
+        pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirEntryOffset <- 0
+
+        pEntry.val.filesystem <- {it.adr.ptr<blob<FilesystemFat>>}
+
+        ret pEntry
     ;
 
     /*
@@ -207,12 +216,11 @@ FAT_FILE_FREE u8 <- 0xe5
     ;
     */
 
-    getEntry fun: path blob<@B::String> -> blob<Entry>
-        emptyEntry blob<Entry>
+    getEntry fun: path blob<@B::String> -> ptr<blob<Entry>>
         // path must start with a slash
-        if path.string[0] != '/': ret emptyEntry
+        if path.string[0] != '/': ret {0}
 
-        currentEntry blob<Entry> <- it.getRootEntry()
+        pCurrentEntry ptr<blob<Entry>> <- it.getRootEntry()
         path <- path.subStringFrom(1)
 
         // go through each path components until the end or if one cannot be found
@@ -232,7 +240,7 @@ FAT_FILE_FREE u8 <- 0xe5
                 path <- @B::String("")
             ;
 
-            isRoot bool <- currentEntry.name.isEqual(@B::String("/"))
+            isRoot bool <- pCurrentEntry.val.name.isEqual(@B::String("/"))
             aBuffer a
             entriesPerRead u32
             maxEntriesCount u32
@@ -240,7 +248,7 @@ FAT_FILE_FREE u8 <- 0xe5
             cluster u32
             isFinished bool
 
-            // Root directory needs a separate path as it doesn't use clusters
+            // Root directory needs a separate logic as it doesn't use clusters
             if isRoot
                 aBuffer <- @BSys::memAlloc(it.fatBytesPerSector)
                 entriesPerRead <- it.fatBytesPerSector / FAT_BYTES_PER_ENTRY
@@ -251,7 +259,7 @@ FAT_FILE_FREE u8 <- 0xe5
                 aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
                 entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FAT_BYTES_PER_ENTRY
                 maxEntriesCount <- 65_536
-                cluster <- currentEntry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
+                cluster <- pCurrentEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
             ;
 
             rep dirEntryIndex u32, dirEntryIndex < maxEntriesCount and not isFinished, dirEntryIndex <- dirEntryIndex + entriesPerRead
@@ -268,18 +276,19 @@ FAT_FILE_FREE u8 <- 0xe5
 
                 // Iterate over buffered entries
                 rep i u32, i < entriesPerRead and not isFinished, i <- i + 1
-                    foundEntry blob<Entry> <- it.entryForFatEntry(aBuffer + i * FAT_BYTES_PER_ENTRY)
-                    foundEntry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirCluster <- currentEntry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
-                    foundEntry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirEntryOffset <- (dirEntryIndex + i) * FAT_BYTES_PER_ENTRY
+                    pFoundEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FAT_BYTES_PER_ENTRY)
 
-                    if foundEntry.kind = Entry::KIND_EMPTY
+                    if pFoundEntry.vadr = 0
                         isFinished <- true
-                    else if foundEntry.kind = Entry::KIND_FILE or foundEntry.kind = Entry::KIND_DIRECTORY
-                        if foundEntry.name.isEqual(nextEntryName)
+                    else if pFoundEntry.val.kind = Entry::KIND_FILE or pFoundEntry.val.kind = Entry::KIND_DIRECTORY
+                        if pFoundEntry.val.name.isEqual(nextEntryName)
                             isFinished <- true
                             // Make sure that only the last path component is a file
-                            if not isLookingForDir or foundEntry.kind = Entry::KIND_DIRECTORY
-                                currentEntry <- foundEntry
+                            if not isLookingForDir or pFoundEntry.val.kind = Entry::KIND_DIRECTORY
+                                pFoundEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirCluster <- pCurrentEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
+                                pFoundEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirEntryOffset <- (dirEntryIndex + i) * FAT_BYTES_PER_ENTRY
+
+                                pCurrentEntry <- pFoundEntry
                                 isNextEntryFound <- true
                             ;
                         ;
@@ -288,14 +297,18 @@ FAT_FILE_FREE u8 <- 0xe5
             ;
 
             // required entry in the path not found
-            if not isNextEntryFound: ret emptyEntry
+            if not isNextEntryFound
+                @BSys::memFree(pCurrentEntry.vadr)
+                ret {0}
+            ;
         ;
 
-        currentEntry.filesystem <- {it.adr.ptr<blob<FilesystemFat>>}
-        ret currentEntry
+        pCurrentEntry.val.filesystem <- {it.adr.ptr<blob<FilesystemFat>>}
+        ret pCurrentEntry
     ;
 
-    getChildEntriesCount fun: parentEntry blob<Entry> -> u32
+    getChildEntriesCount fun: pParentEntry ptr<blob<Entry>> -> u32
+        /*
         if parentEntry.kind != Entry::KIND_DIRECTORY: ret 0
 
         entriesCount u32
@@ -343,16 +356,18 @@ FAT_FILE_FREE u8 <- 0xe5
         ;
 
         ret entriesCount
+        */
+        ret 0
     ;
 
-    readEntry fun: entry blob<Entry>, startByte u32, bytesCount u32, targetAddress a -> u32
-        cluster u32 <- entry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
+    readEntry fun: pEntry ptr<blob<Entry>>, startByte u32, bytesCount u32, targetAddress a -> u32
+        cluster u32 <- pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
         bytesPerCluster u32 <- it.fatSectorsPerCluster * it.fatBytesPerSector
 
         bytesCopied u32
         // Make sure we don't copy more than the size of the file
-        if startByte >= entry.fileSize: ret 0
-        bytesCount <- if startByte + bytesCount < entry.fileSize: bytesCount else: entry.fileSize - startByte
+        if startByte >= pEntry.val.fileSize: ret 0
+        bytesCount <- if startByte + bytesCount < pEntry.val.fileSize: bytesCount else: pEntry.val.fileSize - startByte
 
         // Start at the correct cluster
         startClusterIndex u32 <- startByte / bytesPerCluster
@@ -364,7 +379,6 @@ FAT_FILE_FREE u8 <- 0xe5
         lastClusterBytesCount u32 <- (bytesCount - firstClusterBytesCount) % bytesPerCluster
 
         rep bytesCopied < bytesCount
-            //sector u32 <- (cluster - 2) * it.fatSectorsPerCluster + it.fatFirstDataSector
             sector u32 <- it.sectorForCluster(cluster)
             cluster <- it.nextCluster(cluster)
 
@@ -398,95 +412,8 @@ FAT_FILE_FREE u8 <- 0xe5
         ret bytesCopied
     ;
 
-    nextCluster fun: cluster u32 -> u32
-        if it.kind = FS_KIND_FAT12
-            // Check if we're aleady at the last cluster
-            if cluster >= FAT12_EOF: ret cluster
-
-            // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
-            clusterIndex u32 <- cluster * 3 / 2
-            // calculate next cluster depending on wethere cluster index is odd or even
-            pCluster ptr<u16> <- {it.pFat.vadr + clusterIndex}
-
-            if cluster & 0x01 = 0
-                cluster <- pCluster.val & 0x0fff
-            else
-                cluster <- (pCluster.val & 0xfff0) >> 4
-            ;
-        else if it.kind = FS_KIND_FAT16
-            // Check if we're aleady at the last cluster
-            if cluster >= FAT16_EOF: ret cluster
-
-            clusterIndex u32 <- cluster * 2
-            pCluster ptr<u16> <- {it.pFat.vadr + clusterIndex}
-            cluster <- pCluster.val
-        ;
-
-        ret cluster
-    ;
-
-    sectorForCluster fun: cluster u32 -> u32
-        ret (cluster - 2) * it.fatSectorsPerCluster + it.fatFirstDataSector
-    ;
-
-    entryForFatEntry fun: aFatEntry a -> blob<Entry>
-        entry blob<Entry>
-
-        pFatEntry ptr<data<u8>> <- aFatEntry.ptr<data<u8>>
-
-        attribute u8 <- pFatEntry.val[FAT_ENTRY_ATTRIB_OFFSET]
-        isLongFileName bool <- attribute &? FAT_ATTRIB_LONG_FILE_NAME
-        isVolumeId bool <- attribute &? FAT_ATTRIB_VOLUME_ID and not isLongFileName
-        isNavigationDirectory bool <- (pFatEntry.val[0] = '.' and pFatEntry.val[1] = ' ') or (pFatEntry.val[0] = '.' and pFatEntry.val[1] = '.' and pFatEntry.val[2] = ' ') 
-
-        if pFatEntry.val[0] = 0x00: entry.kind <- Entry::KIND_EMPTY
-        else if pFatEntry.val[0] = 0xe5: entry.kind <- Entry::KIND_DELETED
-        else if attribute &? FAT_ATTRIB_DIR and not isNavigationDirectory: entry.kind <- Entry::KIND_DIRECTORY
-        else if not isLongFileName and not isVolumeId and not isNavigationDirectory: entry.kind <- Entry::KIND_FILE
-        else: entry.kind <- Entry::KIND_OTHER
-
-        if entry.kind = Entry::KIND_FILE or entry.kind = Entry::KIND_DIRECTORY
-            // setup metadata
-            entry.aMetadata <- @BSys::memAlloc(blob<Entry::Metadata::Fat>.size)
-            // cluster
-            entry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster <- (aFatEntry + FAT_ENTRY_CLUSTER_OFFSET).ptr<u16>.val
-
-            // entrySize
-            entry.fileSize <- (aFatEntry + FAT_ENTRY_SIZE_OFFSET).ptr<u32>.val
-
-            // name
-            name data<u8, 13> // 8 + '.' + 3 + \0
-
-            targetIndex u32
-            sourceIndex u32
-            // file name
-            rep sourceIndex < 8, sourceIndex <- sourceIndex + 1
-                if pFatEntry.val[sourceIndex] != ' '
-                    name[targetIndex] <- pFatEntry.val[sourceIndex]
-                    targetIndex <- targetIndex + 1
-                ;
-            ;
-            // dot
-            if entry.kind = Entry::KIND_FILE
-                name[targetIndex] <- '.'
-                targetIndex <- targetIndex + 1
-            ;
-            // extension
-            rep sourceIndex < 11, sourceIndex <- sourceIndex + 1
-                if pFatEntry.val[sourceIndex] != ' '
-                    name[targetIndex] <- pFatEntry.val[sourceIndex]
-                    targetIndex <- targetIndex + 1
-                ;
-            ;
-            name[targetIndex] <- 0
-
-            entry.name <- @B::String(name)
-        ;
-
-        ret entry
-    ;
-
-    deleteEntry fun: entry blob<Entry>
+    deleteEntry fun: entry ptr<blob<Entry>>
+    /*
         pMetadata ptr<blob<Entry::Metadata::Fat>> <- entry.aMetadata.ptr<blob<Entry::Metadata::Fat>>
         dirEntrySector u32
         dirEntrySectorOffset u32 <- pMetadata.val.dirEntryOffset % it.fatBytesPerSector
@@ -528,5 +455,97 @@ FAT_FILE_FREE u8 <- 0xe5
 
         @Term::printNumber(written, @Term::FOREGROUND_RED)
         @Term::printNewLine()
+    */
+    ;
+
+    nextCluster fun: cluster u32 -> u32
+        if it.kind = FS_KIND_FAT12
+            // Check if we're aleady at the last cluster
+            if cluster >= FAT12_EOF: ret cluster
+
+            // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
+            clusterIndex u32 <- cluster * 3 / 2
+            // calculate next cluster depending on wethere cluster index is odd or even
+            pCluster ptr<u16> <- {it.pFat.vadr + clusterIndex}
+
+            if cluster & 0x01 = 0
+                cluster <- pCluster.val & 0x0fff
+            else
+                cluster <- (pCluster.val & 0xfff0) >> 4
+            ;
+        else if it.kind = FS_KIND_FAT16
+            // Check if we're aleady at the last cluster
+            if cluster >= FAT16_EOF: ret cluster
+
+            clusterIndex u32 <- cluster * 2
+            pCluster ptr<u16> <- {it.pFat.vadr + clusterIndex}
+            cluster <- pCluster.val
+        ;
+
+        ret cluster
+    ;
+
+    sectorForCluster fun: cluster u32 -> u32
+        ret (cluster - 2) * it.fatSectorsPerCluster + it.fatFirstDataSector
+    ;
+
+    entryForFatEntry fun: aFatEntry a -> ptr<blob<Entry>>
+        pEntry ptr<blob<Entry>>
+
+        pFatEntry ptr<data<u8>> <- aFatEntry.ptr<data<u8>>
+        isEmpty bool <- pFatEntry.val[0] = 0x00
+        isDeleted bool <- pFatEntry.val[0] = 0xe5
+        attribute u8 <- pFatEntry.val[FAT_ENTRY_ATTRIB_OFFSET]
+        isLongFileName bool <- attribute &? FAT_ATTRIB_LONG_FILE_NAME
+        isVolumeId bool <- attribute &? FAT_ATTRIB_VOLUME_ID and not isLongFileName
+        isHidden bool <- attribute &? FAT_ATTRIB_HIDDEN
+        isNavigationDirectory bool <- (pFatEntry.val[0] = '.' and pFatEntry.val[1] = ' ') or (pFatEntry.val[0] = '.' and pFatEntry.val[1] = '.' and pFatEntry.val[2] = ' ') 
+        isDirectory bool <- attribute &? FAT_ATTRIB_DIR and not isNavigationDirectory
+        isFile bool <- not isLongFileName and not isVolumeId and not isNavigationDirectory and not isDirectory and not isEmpty and not isDeleted
+
+        if isFile or isDirectory
+            pEntry <- @BSys::memAlloc(blob<Entry>.size).ptr<blob<Entry>>
+
+            pEntry.val.kind <- if isFile: Entry::KIND_FILE else: Entry::KIND_DIRECTORY
+            pEntry.val.fileSize <- (aFatEntry + FAT_ENTRY_SIZE_OFFSET).ptr<u32>.val
+
+            // name
+            name data<u8, 13> // 8 + '.' + 3 + \0
+
+            targetIndex u32
+            sourceIndex u32
+            // file name
+            rep sourceIndex < 8, sourceIndex <- sourceIndex + 1
+                if pFatEntry.val[sourceIndex] != ' '
+                    name[targetIndex] <- pFatEntry.val[sourceIndex]
+                    targetIndex <- targetIndex + 1
+                ;
+            ;
+            // dot
+            if isFile
+                name[targetIndex] <- '.'
+                targetIndex <- targetIndex + 1
+            ;
+            // extension
+            rep sourceIndex < 11, sourceIndex <- sourceIndex + 1
+                if pFatEntry.val[sourceIndex] != ' '
+                    name[targetIndex] <- pFatEntry.val[sourceIndex]
+                    targetIndex <- targetIndex + 1
+                ;
+            ;
+            name[targetIndex] <- 0
+
+            pEntry.val.name <- @B::String(name)
+
+            // metadata
+            pEntry.val.aMetadata <- @BSys::memAlloc(blob<Entry::Metadata::Fat>.size)
+            pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster <- (aFatEntry + FAT_ENTRY_CLUSTER_OFFSET).ptr<u16>.val
+        else if not isEmpty
+            pEntry <- @BSys::memAlloc(blob<Entry>.size).ptr<blob<Entry>>
+            pEntry.val.kind <- Entry::KIND_OTHER
+            pEntry.val.aMetadata <- 0
+        ;
+
+        ret pEntry
     ;
 ;

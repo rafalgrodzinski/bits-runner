@@ -96,11 +96,13 @@ Syscall::Audio::STOP u32 <- 0x501
         else if eax = Syscall::Storage::GET_ENTRY_INFO
             pEntryInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
             pPath ptr<blob<@B::String>> <- ecx.a.ptr<blob<@B::String>>
-            entry blob<@Storage::Entry> <- @Storage::instance.bootFilesystem.getEntry(pPath.val)
-            pEntryInfo.val[0] <- entry.kind
-            pEntryInfo.val[1] <- if entry.kind = @Storage::Entry::KIND_FILE: entry.fileSize
+            pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.getEntry(pPath.val)
+            pEntryInfo.val[0] <- pEntry.val.kind
+            /*pEntryInfo.val[1] <- if entry.kind = @Storage::Entry::KIND_FILE: entry.fileSize
                                  else if entry.kind = @Storage::Entry::KIND_DIRECTORY: entry.getChildrenCount()
-                                 else: 0
+                                 else: 0*/
+            //entry.delete()
+            @BSys::memFree(pEntry.vadr)
         // Input
         else if eax = Syscall::Input::KEYBOARD_GET_ASCII
             ascii u32 <- deviceKeyboard.getAscii()
