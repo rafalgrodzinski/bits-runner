@@ -2,6 +2,15 @@
 
 @import B
 
+syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: /*$1*/syscallNumber u32, /*$2*/arg0 u32, /*$3*/arg1 u32, /*s4*/arg2 u32 -> /*$0*/u32
+    mov eax, $1
+    mov ebx, $2
+    mov ecx, $3
+    mov edx, $4
+    int 0x30
+    mov $0, eax
+;
+
 // System
 System::REBOOT u32 <- 0x00
 System::GET_TIMESTAMP u32 <- 0x10
@@ -48,9 +57,13 @@ Process::GET_INFO u32 <- 0x22
 ;
 
 // Storage
-Storage::GET_INFO_FS_ENTRY u32 <- 0x200
+Storage::GET_ENTRY_INFO u32 <- 0x600
 
-@export InfoFsEntry blob
+@export Storage::ENTRY_KIND_EMPTY u32 <- 0
+@export Storage::ENTRY_KIND_FILE u32 <- 'f'
+@export Storage::ENTRY_KIND_DIRECTORY u32 <- 'd'
+
+@export Storage::EntryInfo blob
     kind u32
     entrySize u32
 ;
@@ -87,15 +100,6 @@ Video::DRAW_LINE u32 <- 0x322
 // Audio
 Audio::PLAY u32 <- 0x500
 Audio::STOP u32 <- 0x501
-
-syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: syscallNum u32/*$1*/, arg1 u32/*$2*/, arg2 u32/*$3*/, arg3 u32/*s4*/ -> u32/*$0*/
-    mov eax, $1
-    mov ebx, $2
-    mov ecx, $3
-    mov edx, $4
-    int 0x30
-    mov $0, eax
-;
 
 // System
 @export System::reboot fun
@@ -135,10 +139,10 @@ syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: syscallNum u32
 ;
 
 // Storage
-@export Storage::getInfoFsEntry fun: entryPath blob<@B::String> -> blob<InfoFsEntry>
-    info blob<InfoFsEntry>
-    syscallRaw(Storage::GET_INFO_FS_ENTRY, info.adr.u32, entryPath.adr.u32, 0)
-    ret info
+@export Storage::getEntryInfo fun: path blob<@B::String> -> blob<Storage::EntryInfo>
+    entryInfo blob<Storage::EntryInfo>
+    syscallRaw(Storage::GET_ENTRY_INFO, entryInfo.adr.u32, path.adr.u32, 0)
+    ret entryInfo
 ;
 
 // Input

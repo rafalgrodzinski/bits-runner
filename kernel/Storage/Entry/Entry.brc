@@ -1,0 +1,33 @@
+@module Storage
+
+@import B
+
+@export Entry::KIND_EMPTY u32 <- 0
+@export Entry::KIND_DIRECTORY u32 <- 'd'
+@export Entry::KIND_FILE u32 <- 'f'
+@export Entry::KIND_DELETED u32 <- 1
+@export Entry::KIND_OTHER u32 <- 2
+
+@export Entry blob
+    kind u32
+    name blob<@B::String>
+    fileSize u32
+
+    filesystem proto<Filesystem>
+    aMetadata a
+
+    getChildrenCount fun -> u32
+        if it.filesystem.vadr = 0: ret 0
+        ret it.filesystem.getChildEntriesCount(it.adr.ptr<blob<Entry>>)
+    ;
+
+    read fun: startByte u32, bytesCount u32, targetAddress a -> u32
+        if it.filesystem.vadr = 0: ret 0
+        ret it.filesystem.readEntry(it.adr.ptr<blob<Entry>>, startByte, bytesCount, targetAddress)
+    ;
+
+    delete fun
+        if it.filesystem.vadr = 0: ret
+        it.filesystem.deleteEntry(it.adr.ptr<blob<Entry>>)
+    ;
+;

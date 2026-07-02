@@ -1,0 +1,22 @@
+@module Storage
+
+@export Area blob
+    device proto<Device>
+    partitionNumber u32
+    firstSector u32
+    sectorsCount u32
+
+    init fun: device proto<Device>, partitionNumber u32, firstSector u32, sectorsCount u32
+        it.device <- device
+        it.partitionNumber <- partitionNumber
+        it.sectorsCount <- sectorsCount
+    ;
+
+    readSectors fun: firstSector u32, sectorsCount u32, targetAddress a -> u32
+        ret it.device.readSectors(it.firstSector + firstSector, sectorsCount, targetAddress)
+    ;
+
+    writeSectors fun: firstSector u32, sectorsCount u32, sourceAddress a -> u32
+        ret it.device.writeSectors(it.firstSector + firstSector, sectorsCount, sourceAddress)
+    ;
+;

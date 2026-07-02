@@ -5,11 +5,9 @@ CMD_REBOOT blob<@B::String>
 CMD_TIME blob<@B::String>
 CMD_M_INFO blob<@B::String>
 CMD_P_INFO blob<@B::String>
-CMD_F_INFO blob<@B::String>
 CMD_INFO blob<@B::String>
 CMD_YIELD blob<@B::String>
 CMD_SLEEP blob<@B::String>
-CMD_PLAY blob<@B::String>
 
 @export start fun
     @B::String("shell.bin >").println()
@@ -18,11 +16,9 @@ CMD_PLAY blob<@B::String>
     CMD_TIME <- @B::String("time")
     CMD_M_INFO <- @B::String("minfo")
     CMD_P_INFO <- @B::String("pinfo")
-    CMD_F_INFO <- @B::String("finfo")
     CMD_INFO <- @B::String("info")
     CMD_YIELD <- @B::String("yield")
     CMD_SLEEP <- @B::String("sleep")
-    CMD_PLAY <- @B::String("play")
 
     character u8 <- 0
     input blob<@B::String> <- @B::String("")
@@ -123,19 +119,6 @@ CMD_PLAY blob<@B::String>
                 @B::String(" ").print()
                 @B::StringHexForU32(info.devices[i].subclass).println()
             ;
-        else if cmd.isEqual(CMD_F_INFO)
-            info blob<@Syscall::InfoFsEntry> <- @Syscall::Storage::getInfoFsEntry(arg)
-            text blob<@B::String>
-
-            text <- @B::String("Kind: ")
-            text.print()
-            text <- @B::StringForU32(info.kind)
-            text.println()
-
-            text <- @B::String("Size: ")
-            text.print()
-            text <- @B::StringForU32(info.entrySize)
-            text.println()
         else if cmd.isEqual(CMD_INFO)
             info blob<@Syscall::InfoProcess> <- @Syscall::Process::getInfo()
             @B::String("Allocated pages: ").print()
@@ -145,76 +128,12 @@ CMD_PLAY blob<@B::String>
         else if cmd.isEqual(CMD_SLEEP)
             @Syscall::Process::sleep(2_000)
             @B::String("After").println()
-        else if cmd.isEqual(CMD_PLAY)
-            // Twin
-            @B::String("Twin").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(262, 400)
-            @Syscall::Process::sleep(450)
-
-            // kle
-            @B::String("kle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(262, 400)
-            @Syscall::Process::sleep(450)
-
-            // twin
-            @B::String(" twin").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(392, 400)
-            @Syscall::Process::sleep(450)
-
-            // kle
-            @B::String("kle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(392, 400)
-            @Syscall::Process::sleep(450)
-
-            // lit
-            @B::String(" lit").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(440, 400)
-            @Syscall::Process::sleep(450)
-
-            // tle
-            @B::String("tle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(440, 400)
-            @Syscall::Process::sleep(450)
-
-            // star
-            @B::String(" star").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(392, 800)
-            @Syscall::Process::sleep(850)
-
-            // how
-            @B::String(" how").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(349, 400)
-            @Syscall::Process::sleep(450)
-
-            // I
-            @B::String(" I").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(349, 400)
-            @Syscall::Process::sleep(450)
-
-            // won
-            @B::String(" won").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(330, 400)
-            @Syscall::Process::sleep(450)
-
-            // der
-            @B::String("der").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(330, 400)
-            @Syscall::Process::sleep(450)
-
-            // what
-            @B::String(" what").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(294, 400)
-            @Syscall::Process::sleep(450)
-
-            // you
-            @B::String(" you").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(294, 400)
-            @Syscall::Process::sleep(450)
-
-            // are
-            @B::String(" are").printlnColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(262, 800)
-            @Syscall::Process::sleep(850)
+        // Storage
+        else if cmd.isEqual(@B::String("ls"))
+            cmd_ls(arg)
+        // Other
+        else if cmd.isEqual(@B::String("play"))
+            cmd_play()
         else
             @B::String("Dunno").printlnColor(@B::String::FOREGROUND_RED)
         ;
@@ -222,4 +141,88 @@ CMD_PLAY blob<@B::String>
         character <- '\0'
         input.clear()
     ;
+;
+
+// Storage
+cmd_ls fun: path blob<@B::String>
+    entryInfo blob<@Syscall::Storage::EntryInfo> <- @Syscall::Storage::getEntryInfo(path)
+
+    @B::String("Kind: ").print()
+    @B::StringForU32(entryInfo.kind).println()
+
+    @B::String("Size: ").print()
+    @B::StringForU32(entryInfo.entrySize).println()
+;
+
+// Other
+cmd_play fun
+    // Twin
+    @B::String("Twin").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(262, 400)
+    @Syscall::Process::sleep(450)
+
+    // kle
+    @B::String("kle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(262, 400)
+    @Syscall::Process::sleep(450)
+
+    // twin
+    @B::String(" twin").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(392, 400)
+    @Syscall::Process::sleep(450)
+
+    // kle
+    @B::String("kle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(392, 400)
+    @Syscall::Process::sleep(450)
+
+    // lit
+    @B::String(" lit").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(440, 400)
+    @Syscall::Process::sleep(450)
+
+    // tle
+    @B::String("tle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(440, 400)
+    @Syscall::Process::sleep(450)
+
+    // star
+    @B::String(" star").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(392, 800)
+    @Syscall::Process::sleep(850)
+
+    // how
+    @B::String(" how").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(349, 400)
+    @Syscall::Process::sleep(450)
+
+    // I
+    @B::String(" I").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(349, 400)
+    @Syscall::Process::sleep(450)
+
+    // won
+    @B::String(" won").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(330, 400)
+    @Syscall::Process::sleep(450)
+
+    // der
+    @B::String("der").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(330, 400)
+    @Syscall::Process::sleep(450)
+
+    // what
+    @B::String(" what").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(294, 400)
+    @Syscall::Process::sleep(450)
+
+    // you
+    @B::String(" you").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(294, 400)
+    @Syscall::Process::sleep(450)
+
+    // are
+    @B::String(" are").printlnColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(262, 800)
+    @Syscall::Process::sleep(850)
 ;

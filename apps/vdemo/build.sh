@@ -13,7 +13,7 @@ PATH="${PREFIX}/bin:${PREFIX}/build:${PATH}"
 BLIB="${PREFIX}/lib/brc/B"
 LIB="${SCRIPT_DIR}/../lib"
 
-brb --verb=v2 --opt=o2 --triple=i686-unknown-linux-gnu --function-sections --no-zero-initialized-in-bss --reloc=static \
+brb --verb=v2 --opt=o2 --triple=i386-unknown-none --arch=i386 --function-sections --no-zero-initialized-in-bss --reloc=static \
 "${SCRIPT_DIR}/main.brc" \
 "${BLIB}/String.brc" \
 "${LIB}/BSys.brc" \

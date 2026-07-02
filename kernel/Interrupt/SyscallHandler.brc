@@ -23,7 +23,7 @@ Syscall::Process::SLEEP u32 <- 0x201
 Syscall::Process::GET_INFO u32 <- 0x22
 
 // Storage
-Syscall::Storage::GET_INFO_FS_ENTRY u32 <- 0x200
+Syscall::Storage::GET_ENTRY_INFO u32 <- 0x600
 
 // Input
 Syscall::Input::KEYBOARD_GET_ASCII u32 <- 0x101
@@ -46,12 +46,6 @@ Syscall::Audio::STOP u32 <- 0x501
 @export SyscallHandler::instance blob<SyscallHandler>
 
 @export SyscallHandler blob
-    storageFs blob<@Storage::StorageFs>
-
-    init fun: storageFs blob<@Storage::StorageFs>
-        it.storageFs <- storageFs
-    ;
-
     handle fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         // System
         if eax = Syscall::System::REBOOT
@@ -93,12 +87,15 @@ Syscall::Audio::STOP u32 <- 0x501
             currentProcessIndex u32 <- @Dispatch::Dispatcher::instance.currentProcessIndex
             pInfo.val[0] <- @Dispatch::Dispatcher::instance.currentProcessPagesCount()
         // Storage
-        else if eax = Syscall::Storage::GET_INFO_FS_ENTRY
-            pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
-            pEntryPath ptr<blob<@B::String>> <- ecx.a.ptr<blob<@B::String>>
-            entry blob<@Storage::StorageFsEntry> <- it.storageFs.entryForPath.val({it.storageFs.adr}, pEntryPath.val)
-            pInfo.val[0] <- entry.kind
-            pInfo.val[1] <- entry.entrySize
+        else if eax = Syscall::Storage::GET_ENTRY_INFO
+            pEntryInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
+            pPath ptr<blob<@B::String>> <- ecx.a.ptr<blob<@B::String>>
+            pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.getEntry(pPath.val)
+            pEntryInfo.val[0] <- pEntry.val.kind
+            pEntryInfo.val[1] <- if pEntry.val.kind = @Storage::Entry::KIND_FILE: pEntry.val.fileSize
+                                 else if pEntry.val.kind = @Storage::Entry::KIND_DIRECTORY: pEntry.val.getChildrenCount()
+                                 else: 0
+            @BSys::memFree(pEntry.vadr)
         // Input
         else if eax = Syscall::Input::KEYBOARD_GET_ASCII
             ascii u32 <- deviceKeyboard.getAscii()

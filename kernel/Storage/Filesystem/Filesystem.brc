@@ -1,0 +1,14 @@
+@module Storage
+
+@import B
+
+@export Filesystem proto
+    kind u32
+    area blob<Area>
+
+    //getChildEntries fun: parentEntry blob<Entry> -> data<blob<Entry>, 32>
+    getEntry fun: path blob<@B::String> -> ptr<blob<Entry>>
+    getChildEntriesCount fun: parentEntry ptr<blob<Entry>> -> u32
+    readEntry fun: pEntry ptr<blob<Entry>>, startByte u32, bytesCount u32, targetAddress a -> u32
+    deleteEntry fun: entry ptr<blob<Entry>>
+;

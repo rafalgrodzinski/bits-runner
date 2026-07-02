@@ -1,0 +1,9 @@
+@module Storage
+
+@export Device proto
+    biosDriveNumber u32
+    sectorsCount u32
+
+    readSectors fun: firstSector u32, sectorsCount u32, targetAddress a -> u32
+    writeSectors fun: firstSector u32, sectorsCount u32, sourceAddress a -> u32
+;
