@@ -311,12 +311,11 @@ FAT_FILE_FREE u8 <- 0xe5
     ;
 
     getChildEntriesCount fun: pParentEntry ptr<blob<Entry>> -> u32
-        /*
-        if parentEntry.kind != Entry::KIND_DIRECTORY: ret 0
+        if pParentEntry.val.kind != Entry::KIND_DIRECTORY: ret 0
 
         entriesCount u32
     
-        isRoot bool <- parentEntry.name.isEqual(@B::String("/"))
+        isRoot bool <- pParentEntry.val.name.isEqual(@B::String("/"))
         aBuffer a
         entriesPerRead u32
         maxEntriesCount u32
@@ -324,7 +323,7 @@ FAT_FILE_FREE u8 <- 0xe5
         cluster u32
         isFinished bool
 
-        // Root directory needs a separate path as it doesn't use clusters
+        // Root directory needs separate logic as it doesn't use clusters
         if isRoot
             aBuffer <- @BSys::memAlloc(it.fatBytesPerSector)
             entriesPerRead <- it.fatBytesPerSector / FAT_BYTES_PER_ENTRY
@@ -335,7 +334,7 @@ FAT_FILE_FREE u8 <- 0xe5
             aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
             entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FAT_BYTES_PER_ENTRY
             maxEntriesCount <- 65_536
-            cluster <- parentEntry.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
+            cluster <- pParentEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
         ;
 
         rep i u32, i < maxEntriesCount and not isFinished, i <- i + entriesPerRead
@@ -352,15 +351,13 @@ FAT_FILE_FREE u8 <- 0xe5
 
             // Iterate over buffered entries
             rep i u32, i < entriesPerRead and not isFinished, i <- i + 1
-                entry blob<Entry> <- it.entryForFatEntry(aBuffer + i * FAT_BYTES_PER_ENTRY)
-                if entry.kind = Entry::KIND_EMPTY: isFinished <- true
-                else if entry.kind = Entry::KIND_FILE or entry.kind = Entry::KIND_DIRECTORY: entriesCount <- entriesCount + 1
+                pEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FAT_BYTES_PER_ENTRY)
+                if pEntry.vadr = 0: isFinished <- true
+                else if pEntry.val.kind = Entry::KIND_FILE or pEntry.val.kind = Entry::KIND_DIRECTORY: entriesCount <- entriesCount + 1
             ;
         ;
 
         ret entriesCount
-        */
-        ret 0
     ;
 
     readEntry fun: pEntry ptr<blob<Entry>>, startByte u32, bytesCount u32, targetAddress a -> u32

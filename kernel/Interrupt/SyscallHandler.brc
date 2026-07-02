@@ -46,12 +46,6 @@ Syscall::Audio::STOP u32 <- 0x501
 @export SyscallHandler::instance blob<SyscallHandler>
 
 @export SyscallHandler blob
-    //storageFs blob<@Storage::StorageFs>
-
-    /*init fun: storageFs blob<@Storage::StorageFs>
-        it.storageFs <- storageFs
-    ;*/
-
     handle fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
         // System
         if eax = Syscall::System::REBOOT
@@ -98,10 +92,9 @@ Syscall::Audio::STOP u32 <- 0x501
             pPath ptr<blob<@B::String>> <- ecx.a.ptr<blob<@B::String>>
             pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.getEntry(pPath.val)
             pEntryInfo.val[0] <- pEntry.val.kind
-            /*pEntryInfo.val[1] <- if entry.kind = @Storage::Entry::KIND_FILE: entry.fileSize
-                                 else if entry.kind = @Storage::Entry::KIND_DIRECTORY: entry.getChildrenCount()
-                                 else: 0*/
-            pEntry.val.delete()
+            pEntryInfo.val[1] <- if pEntry.val.kind = @Storage::Entry::KIND_FILE: pEntry.val.fileSize
+                                 else if pEntry.val.kind = @Storage::Entry::KIND_DIRECTORY: pEntry.val.getChildrenCount()
+                                 else: 0
             @BSys::memFree(pEntry.vadr)
         // Input
         else if eax = Syscall::Input::KEYBOARD_GET_ASCII
