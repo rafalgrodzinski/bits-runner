@@ -1,12 +1,12 @@
 # Paging
-CR3 -> Page Tables Directory -> Pages Table -> Page
+CR3 -> Page Tables Directory -> Pages Table -> Page Entry
 
 - cr3: Hold a physical address of page tables directory. Must be page aligned (multiples of 0x1000)
 - Page Tables Directory: 1024 32-bit values (so an entire page). Each value is a physical address of a pages table. Also paged aligned. Covers 4GiB.
 - Pages Table: 1024 32-bit values (so also an entire page). Each value is a physical address to which the corresponding linear (virtual) address will be matched. Covers 4MiB.
-- Page: An entry in pages table. Covers 4KiB
+- Page Entry: An entry in pages table. Covers 4KiB
 
-Linear address = table_index * 0x40_0000 + page_index * 0x1000
+Linear address = table_index * 0x40_0000 + page_entry_index * 0x1000
 
 ## Enabling paging
 Set bit 0 - PME (Protected mode enabled) in `cr0`.
