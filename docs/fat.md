@@ -53,3 +53,9 @@ End of chain:
 FAT 12: `0xff8 - 0xffff`
 FAT 16: `0xfff8 - 0xffff`
 FAT 32: `0xffff_fff8 - 0xffff_ffff`
+
+## Resources
+- "FAT Filesystem" - Detailed description of the format and structures:
+[https://elm-chan.org/docs/fat_e.html](https://elm-chan.org/docs/fat_e.html)
+- "Microsoft's Original DOS File System" - Also contains some historical and evolutionary notes:
+[https://mirror.math.princeton.edu/pub/oldlinux/Linux.old/distributions/cnix/FAT.pdf](https://mirror.math.princeton.edu/pub/oldlinux/Linux.old/distributions/cnix/FAT.pdf)
