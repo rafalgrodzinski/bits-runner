@@ -109,6 +109,12 @@ PagingManager::PAGE_TABLES_DIRECTORY_ADR a <- 0xffff_f000
             ;
         ;
 
+        if pageTag = PagingManager::PAGE_KERNEL
+            it.kernelPagesCount <- it.kernelPagesCount + requestedPagesCount
+        else if pageTag = PagingManager::PAGE_KERNEL_STACK
+            it.kernelStackPagesCount <- it.kernelStackPagesCount + requestedPagesCount
+        ;
+
         it.freePagesCount <- it.freePagesCount - requestedPagesCount
         ret requestedPagesCount * it.pMemoryLayout.val.pageSize
     ;
@@ -201,22 +207,6 @@ PagingManager::PAGE_TABLES_DIRECTORY_ADR a <- 0xffff_f000
 
     getInfoKernelStackPages fun -> u32
         ret it.kernelStackPagesCount
-    ;
-
-
-    getInfoHeapStart fun -> a
-        //ret it.heapLayout.pHeapStart.vadr
-        ret 0.a
-    ;
-
-    getInfoHeapSize fun -> u32
-        //ret it.heapLayout.heapSize
-        ret 0
-    ;
-
-    getInfoAllocatedBytes fun -> u32
-        //ret it.heapLayout.allocatedBytes
-        ret 0
     ;
 ;
 

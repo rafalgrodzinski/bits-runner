@@ -26,14 +26,14 @@ busPci blob<@Bus::BusPci>
     @Memory::PagingManager::instance.init()
     @Memory::HeapManager::instance.init()
     @Interrupt::Handler::instance.init()
-    @Term::init(@Term::MODE_80x50)
+    @Term::init(@Term::MODE_80x25)
 
     @B::String("Initializing Bits Runner...").println()
     @Devices::Timer::Pit::instance.init()
     //busPci.scan()
     @Storage::instance.init(biosBootDriveNumber, bootPartitionFirstSector)
     
-    @B::String("All ready, welcome to Bits Runner!").printlnColor(@B::String::FOREGROUND_GREEN)
+    @B::String("All ready, welcome to Bits Runner!\n").printlnColor(@B::String::FOREGROUND_GREEN)
 
     // Load apps
     pEntry ptr<blob<@Storage::Entry>>

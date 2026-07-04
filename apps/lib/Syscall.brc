@@ -40,21 +40,19 @@ Memory::GET_INFO u32 <- 0x20
     totalPages u32
     unavailablePages u32
     freePages u32
+
     kernelPages u32
     kernelStackPages u32
-    heapStart u32
-    heapSize u32
-    allocateBytes u32
+    userPages u32
+
+    kernelHeapStart u32
+    kernelHeapSize u32
+    kernelAllocateBytes u32
 ;
 
 // Process
 Process::YIELD u32 <- 0x400
 Process::SLEEP u32 <- 0x201
-Process::GET_INFO u32 <- 0x22
-
-@export InfoProcess blob
-    pagesCount u32
-;
 
 // Storage
 Storage::GET_ENTRY_INFO u32 <- 0x600
@@ -130,12 +128,6 @@ Audio::STOP u32 <- 0x501
 
 @export Process::sleep fun: milliseconds u32
     syscallRaw(Process::SLEEP, milliseconds, 0, 0)
-;
-
-@export Process::getInfo fun -> blob<InfoProcess>
-    info blob<InfoProcess>
-    syscallRaw(Process::GET_INFO, info.adr.u32, 0, 0)
-    ret info
 ;
 
 // Storage

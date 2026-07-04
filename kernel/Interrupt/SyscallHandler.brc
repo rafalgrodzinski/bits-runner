@@ -20,7 +20,6 @@ Syscall::Memory::GET_INFO u32 <- 0x20
 // Process
 Syscall::Process::YIELD u32 <- 0x400
 Syscall::Process::SLEEP u32 <- 0x201
-Syscall::Process::GET_INFO u32 <- 0x22
 
 // Storage
 Syscall::Storage::GET_ENTRY_INFO u32 <- 0x600
@@ -74,18 +73,17 @@ Syscall::Audio::STOP u32 <- 0x501
             pInfoMem.val[3] <- @Memory::PagingManager::instance.getInfoFreePages()
             pInfoMem.val[4] <- @Memory::PagingManager::instance.getInfoKernelPages()
             pInfoMem.val[5] <- @Memory::PagingManager::instance.getInfoKernelStackPages()
-            pInfoMem.val[6] <- @Memory::PagingManager::instance.getInfoHeapStart().u32
-            pInfoMem.val[7] <- @Memory::PagingManager::instance.getInfoHeapSize()
-            pInfoMem.val[8] <- @Memory::PagingManager::instance.getInfoAllocatedBytes()
+            pInfoMem.val[7] <- @Memory::HeapManager::instance.getInfoHeapStart()
+            pInfoMem.val[8] <- @Memory::HeapManager::instance.getInfoHeapSize()
+            pInfoMem.val[9] <- @Memory::HeapManager::instance.getInfoAllocatedBytes()
+
+            currentProcessIndex u32 <- @Dispatch::Dispatcher::instance.currentProcessIndex
+            pInfoMem.val[6] <- @Dispatch::Dispatcher::instance.currentProcessPagesCount()
         // Process
         else if eax = Syscall::Process::YIELD
             @Dispatch::Dispatcher::instance.yield()
         else if eax = Syscall::Process::SLEEP
             @Dispatch::Dispatcher::instance.sleep(ebx)
-        else if eax = Syscall::Process::GET_INFO
-            pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
-            currentProcessIndex u32 <- @Dispatch::Dispatcher::instance.currentProcessIndex
-            pInfo.val[0] <- @Dispatch::Dispatcher::instance.currentProcessPagesCount()
         // Storage
         else if eax = Syscall::Storage::GET_ENTRY_INFO
             pEntryInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
