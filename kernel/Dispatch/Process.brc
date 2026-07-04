@@ -48,7 +48,7 @@ Process::State::SLEEPING u32 <- 2
     pProcess ptr<blob<Process>> <- @BSys::memAlignedAlloc(blob<Process>.size, 0x1000).ptr<blob<Process>>
     pProcess.val.state <- Process::STATE_NOT_STARTED
 
-    pProcess.val.cr3 <- @Memory::PagingManager::lAdrToPAdr(pProcess.val.pageTablesDirectory.adr).u32
+    pProcess.val.cr3 <- @Memory::PagingManager::lAdrToPAdr(pProcess.val.pageTablesDirectory.adr).u32 | @Memory::PagingManager::FLAGS_RWP
     pProcess.val.esp <- USER_STACK_END_ADR - 5 * u32.size // 5 slots for iret frame
     pProcess.val.esp0 <- KERNEL_STACK_END_ADR
 
@@ -64,7 +64,7 @@ Process::State::SLEEPING u32 <- 2
     rep i u32 <- 512, i < 1023, i <- i + 1: pProcess.val.pageTablesDirectory[i] <- pCurrentPageTablesDirectory.val[i]
 
     // self-refence pages directory
-    pProcess.val.pageTablesDirectory[1023] <- pProcess.val.cr3 | 0x17 // PCD & RW & P
+    pProcess.val.pageTablesDirectory[1023] <- pProcess.val.cr3
 
     // allocate user memory pages
     @Memory::PagingManager::instance.allocateUserPages(
