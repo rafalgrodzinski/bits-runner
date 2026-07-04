@@ -33,16 +33,16 @@ Process::State::SLEEPING u32 <- 2
 ;
 
 @export Process::new fun: imageSourceAddress a, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
-    pCurrentPageDirectory ptr<data<u32>>
+    pCurrentPagesDirectory ptr<data<u32>>
     oldCr3 u32
 
     if pCurrentProcess.vadr != 0
         oldCr3 <- pCurrentProcess.val.cr3
-        pCurrentPageDirectory <- {pCurrentProcess.val.pageDirectory.adr}
+        pCurrentPagesDirectory <- {pCurrentProcess.val.pageDirectory.adr}
     else
         oldCr3 <- @BSys::getCr3()
-        linearAdr u32 <- (oldCr3 & 0x0f_ffff) + KERNEL_ADR
-        pCurrentPageDirectory <- {linearAdr}
+        linearAdr u32 <- (oldCr3 & 0x000f_f000) + KERNEL_ADR
+        pCurrentPagesDirectory <- {linearAdr}
     ;
 
     pProcess ptr<blob<Process>> <- @BSys::memAlignedAlloc(blob<Process>.size, 0x1000).ptr<blob<Process>>
@@ -55,21 +55,21 @@ Process::State::SLEEPING u32 <- 2
     // Setup new page directory
 
     // copy first identity page directory
-    pProcess.val.pageDirectory[0] <- pCurrentPageDirectory.val[0]
-
-    // copy kernel page directories
-    rep i u32 <- 512, i < 1023, i <- i + 1: pProcess.val.pageDirectory[i] <- pCurrentPageDirectory.val[i]
+    pProcess.val.pageDirectory[0] <- pCurrentPagesDirectory.val[0]
 
     // clear user page tables
     rep i u32 <- 1, i < 512, i <- i + 1: pProcess.val.pageDirectory[i] <-  0
 
+    // copy kernel page directories
+    rep i u32 <- 512, i < 1023, i <- i + 1: pProcess.val.pageDirectory[i] <- pCurrentPagesDirectory.val[i]
+
     // self-refence pages directory
-    pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x13 // PCD & RW & P
+    pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x17 // PCD & RW & P
 
     // allocate user memory pages
     @Memory::PagingManager::instance.allocateUserPages(
         pProcess,
-        pCurrentPageDirectory,
+        pCurrentPagesDirectory,
         @Memory::PagingManager::PAGE_USER,
         imageSize,
         USER_ADR
@@ -78,7 +78,7 @@ Process::State::SLEEPING u32 <- 2
     // allocate user stack memory pages
     @Memory::PagingManager::instance.allocateUserPages(
         pProcess,
-        pCurrentPageDirectory,
+        pCurrentPagesDirectory,
         @Memory::PagingManager::PAGE_USER_STACK,
         USER_STACK_SIZE,
         USER_STACK_END_ADR - USER_STACK_SIZE
@@ -105,13 +105,13 @@ Process::State::SLEEPING u32 <- 2
 
     // reuse the existing stack if it's the first process
     if isFirst
-        pProcess.val.pageDirectory[1022] <- pCurrentPageDirectory.val[1022]
+        pProcess.val.pageDirectory[1022] <- pCurrentPagesDirectory.val[1022]
     // or allocate kernel stack memory pages
     else
         // allocate new kernel stack just bellow the desired 1022 slot, so we can use the existing stack for the allocation process
         @Memory::PagingManager::instance.allocateUserPages(
             pProcess,
-            pCurrentPageDirectory,
+            pCurrentPagesDirectory,
             @Memory::PagingManager::PAGE_KERNEL_STACK,
             KERNEL_STACK_SIZE,
             KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE - 0x40_0000
