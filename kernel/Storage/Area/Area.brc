@@ -9,6 +9,7 @@
     init fun: device proto<Device>, partitionNumber u32, firstSector u32, sectorsCount u32
         it.device <- device
         it.partitionNumber <- partitionNumber
+        it.firstSector <- firstSector
         it.sectorsCount <- sectorsCount
     ;
 
