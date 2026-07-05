@@ -1,10 +1,18 @@
 @module Dispatch
 
+@import BSys
 @import Memory
 
 Process::STATE_NOT_STARTED u32 <- 0
 Process::STATE_RUNNING u32 <- 1
 Process::State::SLEEPING u32 <- 2
+
+resId u32
+
+@export Resource blob
+    id u32
+    aResource a
+;
 
 @export Process blob
     pageTablesDirectory data<u32, 1024>
@@ -14,6 +22,7 @@ Process::State::SLEEPING u32 <- 2
     state u32
 
     pages blob<@B::Array, u32>
+    resources blob<@B::Array, ptr<blob<Resource>>>
     sleepTimeout u32
 
     run fun
@@ -29,6 +38,22 @@ Process::State::SLEEPING u32 <- 2
 
     registerPage fun: page u32
         it.pages.push(page)
+    ;
+
+    registerResource fun: category u32, aResource a -> u32
+        resId <- resId + 1
+        pResource ptr<blob<Resource>> <- @BSys::memAlloc(blob<Resource>.size).ptr<blob<Resource>>
+        pResource.val.id <- resId
+        pResource.val.aResource <- aResource
+        it.resources.push(pResource)
+        ret resId
+    ;
+
+    resourceForResourceId fun: resourceId u32 -> a
+        rep i u32, i < it.resources.count, i <- i + 1
+            if it.resources.at(i).ptr<blob<Resource>>.val.id = resourceId: ret it.resources.at(i).ptr<blob<Resource>>.val.aResource
+        ;
+        ret 0
     ;
 ;
 

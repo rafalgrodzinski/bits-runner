@@ -41,6 +41,8 @@
         // Storage
         else if cmd.isEqual(@B::String("ls"))
             cmd_ls(arg)
+        else if cmd.isEqual(@B::String("rm"))
+            cmd_rm(arg)
         // Other
         else if cmd.isEqual(@B::String("play"))
             cmd_play()
@@ -103,13 +105,21 @@ cmd_mem fun
 
 // Storage
 cmd_ls fun: path blob<@B::String>
-    entryInfo blob<@Syscall::Storage::EntryInfo> <- @Syscall::Storage::getEntryInfo(path)
+    resourceId u32 <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::STORAGE_ENTRY, path.adr.u32, 0)
+    @B::StringForU32(resourceId).println()
+    entryInfo blob<@Syscall::Storage::EntryInfo> <- @Syscall::Storage::getEntryInfo(resourceId)
 
     @B::String("Kind: ").print()
     @B::StringForU32(entryInfo.kind).println()
 
     @B::String("Size: ").print()
     @B::StringForU32(entryInfo.entrySize).println()
+;
+
+cmd_rm fun: path blob<@B::String>
+    resourceId u32 <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::STORAGE_ENTRY, path.adr.u32, 0)
+    @B::StringForU32(resourceId).println()
+    @Syscall::Storage::deleteEntry(resourceId)
 ;
 
 // Other
@@ -189,6 +199,7 @@ cmd_help fun
     @B::String("reboot: Reboots the system").println()
     @B::String("time: Shows current timestamp").println()
     @B::String("ls <PATH>: Shows file/dir info").println()
+    @B::String("rm <PATH>: Delete file/dir").println()
     @B::String("mem: Show memory info").println()
     @B::String("play: Plays a tune").println()
     @B::String("help: This thing").println()

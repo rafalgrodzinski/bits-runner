@@ -13,6 +13,10 @@
 Syscall::System::REBOOT u32 <- 0x000
 Syscall::System::GET_TIMESTAMP u32 <- 0x010
 Syscall::System::GET_INFO_PCI u32 <- 0x021
+Syscall::System::GRAB_RESOURCE u32 <- 0x030
+Syscall::System::RELEASE_RESOURCE u32 <- 0x031
+
+Syscall::System::ResourceCategory::STORAGE_ENTRY u32 <- 0x01
 
 // Memory
 Syscall::Memory::GET_INFO u32 <- 0x100
@@ -23,6 +27,7 @@ Syscall::Process::SLEEP u32 <- 0x201
 
 // Storage
 Syscall::Storage::GET_ENTRY_INFO u32 <- 0x300
+Syscall::Storage::DELETE_ENTRY u32 <- 0x301
 
 // Input
 Syscall::Input::KEYBOARD_GET_ASCII u32 <- 0x401
@@ -64,6 +69,23 @@ Syscall::Audio::STOP u32 <- 0x701
                 pInfo.val[i * 7 + 6] <- @Bus::devicesPci[i].class.u32
                 pInfo.val[i * 7 + 7] <- @Bus::devicesPci[i].subclass.u32
             ;
+        else if eax = Syscall::System::GRAB_RESOURCE
+            category u32 <- ebx
+            arg0 u32 <- ecx
+            arg1 u32 <- edx
+
+            if category = Syscall::System::ResourceCategory::STORAGE_ENTRY
+                pPath ptr<blob<@B::String>> <- arg0.a.ptr<blob<@B::String>>
+                pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.getEntry(pPath.val)
+                pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+                if pEntry.vadr != 0 and pCurrentProcess.vadr != 0
+                    ret pCurrentProcess.val.registerResource(category, pEntry.vadr)
+                else
+                    ret 0
+                ;
+            ;
+        else if eax = Syscall::System::RELEASE_RESOURCE
+            // TODO
         // Memory
         else if eax = Syscall::Memory::GET_INFO
             pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
@@ -77,8 +99,8 @@ Syscall::Audio::STOP u32 <- 0x701
             pInfoMem.val[8] <- @Memory::HeapManager::instance.getInfoHeapSize()
             pInfoMem.val[9] <- @Memory::HeapManager::instance.getInfoAllocatedBytes()
 
-            currentProcessIndex u32 <- @Dispatch::Dispatcher::instance.currentProcessIndex
-            pInfoMem.val[6] <- @Dispatch::Dispatcher::instance.currentProcessPagesCount()
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            pInfoMem.val[6] <- if pCurrentProcess.vadr != 0: pCurrentProcess.val.pages.count else: 0
         // Process
         else if eax = Syscall::Process::YIELD
             @Dispatch::Dispatcher::instance.yield()
@@ -86,14 +108,24 @@ Syscall::Audio::STOP u32 <- 0x701
             @Dispatch::Dispatcher::instance.sleep(ebx)
         // Storage
         else if eax = Syscall::Storage::GET_ENTRY_INFO
-            pEntryInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
-            pPath ptr<blob<@B::String>> <- ecx.a.ptr<blob<@B::String>>
-            pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.getEntry(pPath.val)
-            pEntryInfo.val[0] <- pEntry.val.kind
-            pEntryInfo.val[1] <- if pEntry.val.kind = @Storage::Entry::KIND_FILE: pEntry.val.fileSize
-                                 else if pEntry.val.kind = @Storage::Entry::KIND_DIRECTORY: pEntry.val.getChildrenCount()
-                                 else: 0
-            @BSys::memFree(pEntry.vadr)
+            resourceId u32 <- ebx
+            pEntryInfo ptr<data<u32>> <- ecx.a.ptr<data<u32>>
+
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            pEntry ptr<blob<@Storage::Entry>> <- pCurrentProcess.val.resourceForResourceId(resourceId).ptr<blob<@Storage::Entry>>
+            if pEntry.vadr != 0
+                pEntryInfo.val[0] <- pEntry.val.kind
+                pEntryInfo.val[1] <- if pEntry.val.kind = @Storage::Entry::KIND_FILE: pEntry.val.fileSize
+                                    else if pEntry.val.kind = @Storage::Entry::KIND_DIRECTORY: pEntry.val.getChildrenCount()
+                                    else: 0
+            ;
+        else if eax = Syscall::Storage::DELETE_ENTRY
+            resourceId u32 <- ebx
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            pEntry ptr<blob<@Storage::Entry>> <- pCurrentProcess.val.resourceForResourceId(resourceId).ptr<blob<@Storage::Entry>>
+            if pEntry.vadr != 0
+                pEntry.val.delete()
+            ;
         // Input
         else if eax = Syscall::Input::KEYBOARD_GET_ASCII
             ascii u32 <- deviceKeyboard.getAscii()

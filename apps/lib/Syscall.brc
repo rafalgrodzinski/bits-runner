@@ -15,6 +15,10 @@ syscallRaw raw<"=r, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}">: /*$1*/syscallN
 System::REBOOT u32 <- 0x000
 System::GET_TIMESTAMP u32 <- 0x010
 System::GET_INFO_PCI u32 <- 0x021
+System::GRAB_RESOURCE u32 <- 0x030
+System::RELEASE_RESOURCE u32 <- 0x031
+
+@export System::ResourceCategory::STORAGE_ENTRY u32 <- 0x01
 
 @export InfoPciDevice blob
         busNum u32
@@ -44,6 +48,14 @@ System::GET_INFO_PCI u32 <- 0x021
     info blob<InfoPci>
     syscallRaw(System::GET_INFO_PCI, info.adr.u32, 0, 0)
     ret info
+;
+
+@export System::grabResource fun: category u32, arg0 u32, arg1 u32 -> u32
+    ret syscallRaw(System::GRAB_RESOURCE, category, arg0, arg1)
+;
+
+@export System::releaseResource fun: resourceId u32
+    syscallRaw(System::RELEASE_RESOURCE, resourceId, 0, 0)
 ;
 
 // Memory
@@ -84,6 +96,7 @@ Process::SLEEP u32 <- 0x201
 
 // Storage
 Storage::GET_ENTRY_INFO u32 <- 0x300
+Storage::DELETE_ENTRY u32 <- 0x301
 
 @export Storage::ENTRY_KIND_EMPTY u32 <- 0
 @export Storage::ENTRY_KIND_FILE u32 <- 'f'
@@ -94,10 +107,14 @@ Storage::GET_ENTRY_INFO u32 <- 0x300
     entrySize u32
 ;
 
-@export Storage::getEntryInfo fun: path blob<@B::String> -> blob<Storage::EntryInfo>
+@export Storage::getEntryInfo fun: resourceId u32 -> blob<Storage::EntryInfo>
     entryInfo blob<Storage::EntryInfo>
-    syscallRaw(Storage::GET_ENTRY_INFO, entryInfo.adr.u32, path.adr.u32, 0)
+    syscallRaw(Storage::GET_ENTRY_INFO, resourceId, entryInfo.adr.u32, 0)
     ret entryInfo
+;
+
+@export Storage::deleteEntry fun: resourceId u32
+    syscallRaw(Storage::DELETE_ENTRY, resourceId, 0, 0)
 ;
 
 // Input
