@@ -10,37 +10,37 @@
 @import Term
 
 // System
-Syscall::System::REBOOT u32 <- 0x00
-Syscall::System::GET_TIMESTAMP u32 <- 0x10
+Syscall::System::REBOOT u32 <- 0x000
+Syscall::System::GET_TIMESTAMP u32 <- 0x010
 Syscall::System::GET_INFO_PCI u32 <- 0x021
 
 // Memory
-Syscall::Memory::GET_INFO u32 <- 0x20
+Syscall::Memory::GET_INFO u32 <- 0x100
 
 // Process
-Syscall::Process::YIELD u32 <- 0x400
+Syscall::Process::YIELD u32 <- 0x200
 Syscall::Process::SLEEP u32 <- 0x201
 
 // Storage
-Syscall::Storage::GET_ENTRY_INFO u32 <- 0x600
+Syscall::Storage::GET_ENTRY_INFO u32 <- 0x300
 
 // Input
-Syscall::Input::KEYBOARD_GET_ASCII u32 <- 0x101
-Syscall::Input::MOUSE_GET_STATE u32 <- 0x110
+Syscall::Input::KEYBOARD_GET_ASCII u32 <- 0x401
+Syscall::Input::MOUSE_GET_STATE u32 <- 0x410
 
 // Terminal
-Syscall::Terminal::PRINT_CHARACTER u32 <- 0x01
+Syscall::Terminal::PRINT_CHARACTER u32 <- 0x501
 
 // Video
-Syscall::Video::SET_MODE u32 <- 0x300
-Syscall::Video::COMMIT_DRAWING u32 <- 0x310
-Syscall::Video::CLEAR_SCREEN u32 <- 0x320
-Syscall::Video::DRAW_PIXEL u32 <- 0x321
-Syscall::Video::DRAW_LINE u32 <- 0x322
+Syscall::Video::SET_MODE u32 <- 0x600
+Syscall::Video::COMMIT_DRAWING u32 <- 0x610
+Syscall::Video::CLEAR_SCREEN u32 <- 0x620
+Syscall::Video::DRAW_PIXEL u32 <- 0x621
+Syscall::Video::DRAW_LINE u32 <- 0x622
 
 // Audio
-Syscall::Audio::PLAY u32 <- 0x500
-Syscall::Audio::STOP u32 <- 0x501
+Syscall::Audio::PLAY u32 <- 0x700
+Syscall::Audio::STOP u32 <- 0x701
 
 @export SyscallHandler::instance blob<SyscallHandler>
 
