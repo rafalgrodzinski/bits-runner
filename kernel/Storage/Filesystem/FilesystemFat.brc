@@ -197,7 +197,80 @@ FAT_FILE_FREE u8 <- 0xe5
         ret pCurrentEntry
     ;
 
-    createEntry fun: path blob<@B::String> -> ptr<blob<Entry>>
+    createEntry fun: path blob<@B::String>, kind u32 -> ptr<blob<Entry>>
+        // path must start with a slash
+        if path.string[0] != '/': ret {0}
+
+        separatorIndex u32 <- path.findLast(@B::String("/"))
+        parentPath blob<@B::String> <- path.subStringTo(separatorIndex + 1)
+        entryName blob<@B::String> <- path.subStringFrom(separatorIndex + 1)
+        pParentEntry ptr<blob<Entry>> <- it.getEntry(parentPath)
+        if pParentEntry.vadr = 0: ret {0}
+
+        terminalCluster u32 <- if it.kind = FS_KIND_FAT12: FAT12_EOF else: FAT16_EOF
+        isRoot bool <- parentPath.isEqual(@B::String("/"))
+        aBuffer a
+        entriesPerRead u32
+        maxEntriesCount u32
+        sector u32
+        previousCluster u32
+        cluster u32
+        foundSlot bool
+
+        // Root directory needs a separate logic as it doesn't use clusters
+        if isRoot
+            aBuffer <- @BSys::memAlloc(it.fatBytesPerSector)
+            entriesPerRead <- it.fatBytesPerSector / FAT_BYTES_PER_ENTRY
+            maxEntriesCount <- it.fatRootDirEntriesCount
+            sector <- it.fatRootDirFirstSector
+        // Sub directories use clusters
+        else
+            aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
+            entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FAT_BYTES_PER_ENTRY
+            maxEntriesCount <- 65_536
+            cluster <- pParentEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
+        ;
+
+        rep dirEntryIndex u32, dirEntryIndex < maxEntriesCount, dirEntryIndex <- dirEntryIndex + entriesPerRead
+            if isRoot
+                // Root dir is scanned sctor by sector
+                it.area.readSectors(sector, 1, aBuffer)
+                sector <- sector + 1
+            else
+                // allocate clusters
+                if cluster >= terminalCluster
+                    cluster <- it.allocateClusters(previousCluster, 1, true)
+                ;
+
+                // Sub dirs are scanned cluster by cluster
+                sector <- it.sectorForCluster(cluster)
+                it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
+                previousCluster <- cluster
+                cluster <- it.nextCluster(cluster)
+            ;
+
+            // Iterate over buffered entries
+            rep i u32, i < entriesPerRead, i <- i + 1
+                pFoundEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FAT_BYTES_PER_ENTRY)
+
+                if pFoundEntry.vadr = 0
+                    foundSlot <- true
+                else if pFoundEntry.val.kind = Entry::KIND_DELETED
+                    foundSlot <- true
+                else if pFoundEntry.val.kind = Entry::KIND_FILE or pFoundEntry.val.kind = Entry::KIND_DIRECTORY
+                    // If such entry already exists, return null
+                    if pFoundEntry.val.name.isEqual(entryName)
+                        @BSys::memFree(pFoundEntry.vadr)
+                        ret {0}
+                    ;
+                ;
+
+                if foundSlot
+                    ret it.createDirEntry(cluster, dirEntryIndex + i, entryName, kind)
+                ;
+            ;
+        ;
+
         ret {0}
     ;
 
@@ -464,6 +537,10 @@ FAT_FILE_FREE u8 <- 0xe5
             // metadata
             pEntry.val.aMetadata <- @BSys::memAlloc(blob<Entry::Metadata::Fat>.size)
             pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster <- (aFatEntry + FAT_ENTRY_CLUSTER_OFFSET).ptr<u16>.val
+        else if isDeleted
+            pEntry <- @BSys::memAlloc(blob<Entry>.size).ptr<blob<Entry>>
+            pEntry.val.kind <- Entry::KIND_DELETED
+            pEntry.val.aMetadata <- 0
         else if not isEmpty
             pEntry <- @BSys::memAlloc(blob<Entry>.size).ptr<blob<Entry>>
             pEntry.val.kind <- Entry::KIND_OTHER
@@ -471,5 +548,34 @@ FAT_FILE_FREE u8 <- 0xe5
         ;
 
         ret pEntry
+    ;
+
+    allocateClusters fun: firstCluster u32, clustersCount u32, shouldZero bool -> u32
+        @Term::printString("Allocating ", @Term::FOREGROUND_GRAY)
+        @Term::printNumber(clustersCount, @Term::FOREGROUND_GRAY)
+
+        @Term::printString(" clusters at ", @Term::FOREGROUND_GRAY)
+        @Term::printNumber(firstCluster, @Term::FOREGROUND_GRAY)
+
+        @Term::printString(", zero: ", @Term::FOREGROUND_GRAY)
+        if shouldZero: @Term::printString("Y\n", @Term::FOREGROUND_GRAY) else: @Term::printString("N\n", @Term::FOREGROUND_GRAY)
+        ret 0
+    ;
+
+    createDirEntry fun: dirCluster u32, dirEntryOffset u32, name blob<@B::String>, kind u32 -> ptr<blob<Entry>>
+        @Term::printString("Creating entry ", @Term::FOREGROUND_GRAY)
+        @Term::printString(name.string, @Term::FOREGROUND_GRAY)
+
+        @Term::printString(", at dirCluster: ", @Term::FOREGROUND_GRAY)
+        @Term::printNumber(dirCluster, @Term::FOREGROUND_GRAY)
+
+        @Term::printString(", dirEntryOffset: ", @Term::FOREGROUND_GRAY)
+        @Term::printNumber(dirEntryOffset, @Term::FOREGROUND_GRAY)
+
+        @Term::printString(", kind: ", @Term::FOREGROUND_GRAY)
+        @Term::printNumber(dirEntryOffset, @Term::FOREGROUND_GRAY)
+        @Term::printNewLine()
+
+        ret {0}
     ;
 ;
