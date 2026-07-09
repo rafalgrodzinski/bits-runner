@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build & Create Images",
+            "type": "shell",
+            "command": "${workspaceFolder}/create_images.sh",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Stop in VirtualBox",
+            "type": "shell",
+            "command": "VBoxManage controlvm \"Bits Runner\" poweroff"
+        }
+    ]
+}
