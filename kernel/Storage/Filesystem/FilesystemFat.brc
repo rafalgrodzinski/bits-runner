@@ -222,7 +222,7 @@ FAT_FILE_FREE u8 <- 0xe5
             aBuffer <- @BSys::memAlloc(it.fatBytesPerSector)
             entriesPerRead <- it.fatBytesPerSector / FAT_BYTES_PER_ENTRY
             maxEntriesCount <- it.fatRootDirEntriesCount
-            sector <- it.fatRootDirFirstSector
+            sector <- it.fatRootDirFirstSector - 1
         // Sub directories use clusters
         else
             aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
@@ -234,8 +234,8 @@ FAT_FILE_FREE u8 <- 0xe5
         rep dirEntryIndex u32, dirEntryIndex < maxEntriesCount, dirEntryIndex <- dirEntryIndex + entriesPerRead
             if isRoot
                 // Root dir is scanned sctor by sector
-                it.area.readSectors(sector, 1, aBuffer)
                 sector <- sector + 1
+                it.area.readSectors(sector, 1, aBuffer)
             else
                 // allocate clusters
                 if cluster >= terminalCluster
@@ -266,7 +266,7 @@ FAT_FILE_FREE u8 <- 0xe5
                 ;
 
                 if foundSlot
-                    ret it.createDirEntry(cluster, dirEntryIndex + i, entryName, kind)
+                    ret it.createDirEntry(aBuffer, sector, i * FAT_BYTES_PER_ENTRY, entryName, kind)
                 ;
             ;
         ;
@@ -562,20 +562,54 @@ FAT_FILE_FREE u8 <- 0xe5
         ret 0
     ;
 
-    createDirEntry fun: dirCluster u32, dirEntryOffset u32, name blob<@B::String>, kind u32 -> ptr<blob<Entry>>
+    createDirEntry fun: aDirEntriesBuffer a, dirEntriesBufferSector u32, dirEntriesBufferOffset u32, name blob<@B::String>, kind u32 -> ptr<blob<Entry>>
         @Term::printString("Creating entry ", @Term::FOREGROUND_GRAY)
         @Term::printString(name.string, @Term::FOREGROUND_GRAY)
 
-        @Term::printString(", at dirCluster: ", @Term::FOREGROUND_GRAY)
-        @Term::printNumber(dirCluster, @Term::FOREGROUND_GRAY)
+        @Term::printString(", at dirEntriesBufferSector: ", @Term::FOREGROUND_GRAY)
+        @Term::printNumber(dirEntriesBufferSector, @Term::FOREGROUND_GRAY)
 
-        @Term::printString(", dirEntryOffset: ", @Term::FOREGROUND_GRAY)
-        @Term::printNumber(dirEntryOffset, @Term::FOREGROUND_GRAY)
+        @Term::printString(", dirEntriesBufferOffset: ", @Term::FOREGROUND_GRAY)
+        @Term::printNumber(dirEntriesBufferOffset, @Term::FOREGROUND_GRAY)
 
         @Term::printString(", kind: ", @Term::FOREGROUND_GRAY)
-        @Term::printNumber(dirEntryOffset, @Term::FOREGROUND_GRAY)
+        @Term::printNumber(kind, @Term::FOREGROUND_GRAY)
         @Term::printNewLine()
 
-        ret {0}
+        terminalCluster u32 <- if it.kind = FS_KIND_FAT12: FAT12_EOF else: FAT16_EOF
+
+        // Name
+        dotIndex u32 <- name.find(@B::String("."))
+        if dotIndex = 0: dotIndex <- name.length()
+
+        // name
+        rep i u32, i < 8, i <- i + 1
+            pChar ptr<u8> <- {aDirEntriesBuffer + dirEntriesBufferOffset + i}.ptr<u8>
+            if i < dotIndex: pChar.val <- name.string[i]
+            else: pChar.val <- ' '
+        ;
+
+        // extension
+        rep i u32, i < 3, i <- i + 1
+            pChar ptr<u8> <- {aDirEntriesBuffer + dirEntriesBufferOffset + 8 + i}.ptr<u8>
+            if dotIndex + 1 + i < name.length(): pChar.val <- name.string[dotIndex + 1 + i]
+            else: pChar.val <- ' '
+        ;
+
+        // Attribute
+        pAttribute ptr<u8> <- {aDirEntriesBuffer + dirEntriesBufferOffset + FAT_ENTRY_ATTRIB_OFFSET}.ptr<u8>
+        pAttribute.val <- if kind = Entry::KIND_FILE: 0x00 else: FAT_ATTRIB_DIR
+
+        // Cluster
+        pCluster ptr<u16> <- {aDirEntriesBuffer + dirEntriesBufferOffset + FAT_ENTRY_CLUSTER_OFFSET}.ptr<u16>
+        pCluster.val <- terminalCluster.u16
+
+        // Write back dir entry sector
+        sectorOffset u32 <- dirEntriesBufferOffset / it.fatBytesPerSector
+        dirEntrySectorOffset u32 <- sectorOffset * it.fatBytesPerSector
+
+        it.area.writeSectors(dirEntriesBufferSector + sectorOffset, 1, aDirEntriesBuffer + dirEntrySectorOffset)
+
+        ret it.entryForFatEntry(aDirEntriesBuffer + dirEntriesBufferOffset)
     ;
 ;
