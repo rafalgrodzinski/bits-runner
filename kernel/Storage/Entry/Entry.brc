@@ -2,9 +2,10 @@
 
 @import B
 
+@export Entry::Kind::FILE u32 <- 'f'
+@export Entry::Kind::DIRECTORY u32 <- 'd'
+
 @export Entry::KIND_EMPTY u32 <- 0
-@export Entry::KIND_DIRECTORY u32 <- 'd'
-@export Entry::KIND_FILE u32 <- 'f'
 @export Entry::KIND_DELETED u32 <- 1
 @export Entry::KIND_OTHER u32 <- 2
 

@@ -35,7 +35,7 @@ busPci blob<@Bus::BusPci>
     
     @B::String("All ready, welcome to Bits Runner!\n").printlnColor(@B::String::FOREGROUND_GREEN)
 
-    pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.createEntry(@B::String("/DUMMY.TXT"), @Storage::Entry::KIND_FILE)
+    pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.createEntry(@B::String("/DUMMY.TXT"), @Storage::Entry::Kind::FILE)
     pEntry.val.name.printlnColor(@B::String::FOREGROUND_CYAN)
     @B::StringForU32(pEntry.val.kind).println()
     @B::StringForU32(pEntry.val.fileSize).println()

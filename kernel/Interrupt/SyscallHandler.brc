@@ -115,8 +115,8 @@ Syscall::Audio::STOP u32 <- 0x701
             pEntry ptr<blob<@Storage::Entry>> <- pCurrentProcess.val.resourceForResourceId(resourceId).ptr<blob<@Storage::Entry>>
             if pEntry.vadr != 0
                 pEntryInfo.val[0] <- pEntry.val.kind
-                pEntryInfo.val[1] <- if pEntry.val.kind = @Storage::Entry::KIND_FILE: pEntry.val.fileSize
-                                    else if pEntry.val.kind = @Storage::Entry::KIND_DIRECTORY: pEntry.val.getChildrenCount()
+                pEntryInfo.val[1] <- if pEntry.val.kind = @Storage::Entry::Kind::FILE: pEntry.val.fileSize
+                                    else if pEntry.val.kind = @Storage::Entry::Kind::DIRECTORY: pEntry.val.getChildrenCount()
                                     else: 0
             ;
         else if eax = Syscall::Storage::DELETE_ENTRY

@@ -3,45 +3,41 @@
 @import BSys
 @import Term
 
-// Predefined
-FAT_BYTES_PER_ENTRY u32 <- 0x20
-FAT12_EOF u32 <- 0x0ff8
-FAT16_EOF u32 <- 0xfff8
+Filesystem::Kind::FAT_12 u32 <- 12
+Filesystem::Kind::FAT_16 u32 <- 16
 
-FS_KIND_FAT12 u32 <- 12
-FS_KIND_FAT16 u32 <- 16
-
-STORAGE_FS_ENTRY_KIND_FILE u32 <- 'f'
-STORAGE_FS_ENTRY_KIND_DIR u32 <- 'd'
+FilesystemFat::BYTES_PER_DIR_ENTRY u32 <- 0x20
+FilesystemFat::FAT_12_EOF u32 <- 0x0ff8
+FilesystemFat::FAT_16_EOF u32 <- 0xfff8
 
 // FAT header offsets
-FAT_BYTES_PER_SECTOR_OFFSET u32 <- 0x0b // 2 bytes
-FAT_SECTORS_PER_CLUSTER_OFFSET u32 <- 0x0d // 1 byte
-FAT_RESERVED_SECTORS_COUNT_OFFSET u32 <- 0x0e // 1 byte
-FAT_FATS_COUNT_OFFSET u32 <- 0x10 // 1 byte
-FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET u32 <- 0x11 // 2 bytes
-FAT_SECTORS_PER_FAT_OFFSET u32 <- 0x16 // 2 bytes
-FAT_FS_ID_OFFSET u32 <- 0x36 // 8 bytes
+FilesystemFat::OFFSET_BYTES_PER_SECTOR u32 <- 0x0b // 2 bytes
+FilesystemFat::OFFSET_SECTORS_PER_CLUSTER u32 <- 0x0d // 1 byte
+FilesystemFat::OFFSET_RESERVED_SECTORS_COUNT u32 <- 0x0e // 1 byte
+FilesystemFat::OFFSET_FATS_COUNT u32 <- 0x10 // 1 byte
+FilesystemFat::OFFSET_ROOT_DIR_ENTRIES_COUNT u32 <- 0x11 // 2 bytes
+FilesystemFat::OFFSET_SECTORS_PER_FAT u32 <- 0x16 // 2 bytes
+FilesystemFat::OFFSET_FS_ID u32 <- 0x36 // 8 bytes
 
 // FAT Entry
-FAT_ENTRY_ATTRIB_OFFSET u32 <- 0x0b // 1 byte
-FAT_ENTRY_CLUSTER_OFFSET u32 <- 0x1a // 2 bytes
-FAT_ENTRY_SIZE_OFFSET u32 <- 0x1c // 4 bytes
+FilesystemFat::Entry::OFFSET_ATTRIB u32 <- 0x0b // 1 byte
+FilesystemFat::Entry::OFFSET_CLUSTER u32 <- 0x1a // 2 bytes
+FilesystemFat::Entry::OFFSET_SIZE u32 <- 0x1c // 4 bytes
 
-FAT_ATTRIB_HIDDEN u8 <- 0x02
-FAT_ATTRIB_VOLUME_ID u8 <- 0x08
-FAT_ATTRIB_LONG_FILE_NAME u8 <- 0x0f
-FAT_ATTRIB_DIR u8 <- 0x10
+FilesystemFat::Entry::ATTRIB_HIDDEN u8 <- 0x02
+FilesystemFat::Entry::ATTRIB_VOLUME_ID u8 <- 0x08
+FilesystemFat::Entry::ATTRIB_LONG_FILE_NAME u8 <- 0x0f
+FilesystemFat::Entry::ATTRIB_DIR u8 <- 0x10
 
-FAT_FILE_FREE u8 <- 0xe5
+FilesystemFat::Entry::DELETED u8 <- 0xe5
 
 @export FilesystemFat blob: Filesystem
     kind u32
     area blob<Area>
 
     // FAT specific
-    name data<u8, 16>
     aFat a
+    name data<u8, 16>
     fatBytesPerSector u32
     fatRootDirEntriesCount u32
     fatSectorsPerCluster u32
@@ -52,6 +48,10 @@ FAT_FILE_FREE u8 <- 0xe5
     sectorsPerFat u32
     fatsCount u32
 
+    // Calculated
+    bytesPerCluster u32
+    terminalCluster u32
+
     init fun: area blob<Area>
         it.area <- area
 
@@ -61,26 +61,26 @@ FAT_FILE_FREE u8 <- 0xe5
 
         pInfo ptr<u32>
 
-        // read values
-        pInfo <- {aFatBuffer + FAT_BYTES_PER_SECTOR_OFFSET}
+        // From header
+        pInfo <- {aFatBuffer + FilesystemFat::OFFSET_BYTES_PER_SECTOR}
         bytesPerSector u32 <- pInfo.val & 0xffff
         it.fatBytesPerSector <- bytesPerSector
 
-        pInfo <- {aFatBuffer + FAT_SECTORS_PER_CLUSTER_OFFSET}
+        pInfo <- {aFatBuffer + FilesystemFat::OFFSET_SECTORS_PER_CLUSTER}
         sectorsPerCluster u32 <- pInfo.val & 0xff
         it.fatSectorsPerCluster <- sectorsPerCluster
 
-        pInfo <- {aFatBuffer + FAT_RESERVED_SECTORS_COUNT_OFFSET}
+        pInfo <- {aFatBuffer + FilesystemFat::OFFSET_RESERVED_SECTORS_COUNT}
         reservedSectorsCount u32 <- pInfo.val & 0xff
 
-        pInfo <- {aFatBuffer + FAT_FATS_COUNT_OFFSET}
+        pInfo <- {aFatBuffer + FilesystemFat::OFFSET_FATS_COUNT}
         it.fatsCount <- pInfo.val & 0xff
 
-        pInfo <- {aFatBuffer + FAT_ROOT_DIR_ENTRIES_COUNT_OFFSET}
+        pInfo <- {aFatBuffer + FilesystemFat::OFFSET_ROOT_DIR_ENTRIES_COUNT}
         rootDirEntriesCount u32 <- pInfo.val & 0xffff
         it.fatRootDirEntriesCount <- rootDirEntriesCount
 
-        pInfo <- {aFatBuffer + FAT_SECTORS_PER_FAT_OFFSET}
+        pInfo <- {aFatBuffer + FilesystemFat::OFFSET_SECTORS_PER_FAT}
         it.sectorsPerFat <- pInfo.val & 0xffff
 
         // calculated values
@@ -88,18 +88,22 @@ FAT_FILE_FREE u8 <- 0xe5
 
         it.fatRootDirFirstSector <- it.fatFirstSector + it.sectorsPerFat * it.fatsCount
 
-        it.fatRootDirSectorsCount <- (rootDirEntriesCount * FAT_BYTES_PER_ENTRY) / bytesPerSector
+        it.fatRootDirSectorsCount <- (rootDirEntriesCount * FilesystemFat::BYTES_PER_DIR_ENTRY) / bytesPerSector
 
         it.fatFirstDataSector <- it.fatRootDirFirstSector + it.fatRootDirSectorsCount
 
         // FAT type
-        pInfo <- {aFatBuffer + FAT_FS_ID_OFFSET + 4}
-        if pInfo.val & 0xff = '2': it.kind <- FS_KIND_FAT12
-        else if pInfo.val & 0xff = '6': it.kind <- FS_KIND_FAT16
+        pInfo <- {aFatBuffer + FilesystemFat::OFFSET_FS_ID + 4}
+        if pInfo.val & 0xff = '2': it.kind <- Filesystem::Kind::FAT_12
+        else if pInfo.val & 0xff = '6': it.kind <- Filesystem::Kind::FAT_16
 
-        // load fat
+        // Load fat
         it.aFat <- @BSys::memAlloc(it.sectorsPerFat * bytesPerSector)
         it.area.readSectors(it.fatFirstSector, it.sectorsPerFat, it.aFat)
+
+        // Calculated
+        it.bytesPerCluster <- it.fatBytesPerSector * it.fatSectorsPerCluster
+        it.terminalCluster <- if it.kind = Filesystem::Kind::FAT_12: FilesystemFat::FAT_12_EOF else: FilesystemFat::FAT_16_EOF
     ;
 
     //
@@ -141,13 +145,13 @@ FAT_FILE_FREE u8 <- 0xe5
             // Root directory needs a separate logic as it doesn't use clusters
             if isRoot
                 aBuffer <- @BSys::memAlloc(it.fatBytesPerSector)
-                entriesPerRead <- it.fatBytesPerSector / FAT_BYTES_PER_ENTRY
+                entriesPerRead <- it.fatBytesPerSector / FilesystemFat::BYTES_PER_DIR_ENTRY
                 maxEntriesCount <- it.fatRootDirEntriesCount
                 sector <- it.fatRootDirFirstSector
             // Sub directories use clusters
             else
                 aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
-                entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FAT_BYTES_PER_ENTRY
+                entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FilesystemFat::BYTES_PER_DIR_ENTRY
                 maxEntriesCount <- 65_536
                 cluster <- pCurrentEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
             ;
@@ -166,17 +170,17 @@ FAT_FILE_FREE u8 <- 0xe5
 
                 // Iterate over buffered entries
                 rep i u32, i < entriesPerRead and not isFinished, i <- i + 1
-                    pFoundEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FAT_BYTES_PER_ENTRY)
+                    pFoundEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FilesystemFat::BYTES_PER_DIR_ENTRY)
 
                     if pFoundEntry.vadr = 0
                         isFinished <- true
-                    else if pFoundEntry.val.kind = Entry::KIND_FILE or pFoundEntry.val.kind = Entry::KIND_DIRECTORY
+                    else if pFoundEntry.val.kind = Entry::Kind::FILE or pFoundEntry.val.kind = Entry::Kind::DIRECTORY
                         if pFoundEntry.val.name.isEqual(nextEntryName)
                             isFinished <- true
                             // Make sure that only the last path component is a file
-                            if not isLookingForDir or pFoundEntry.val.kind = Entry::KIND_DIRECTORY
+                            if not isLookingForDir or pFoundEntry.val.kind = Entry::Kind::DIRECTORY
                                 pFoundEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirCluster <- pCurrentEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
-                                pFoundEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirEntryOffset <- (dirEntryIndex + i) * FAT_BYTES_PER_ENTRY
+                                pFoundEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirEntryOffset <- (dirEntryIndex + i) * FilesystemFat::BYTES_PER_DIR_ENTRY
 
                                 pCurrentEntry <- pFoundEntry
                                 isNextEntryFound <- true
@@ -207,7 +211,6 @@ FAT_FILE_FREE u8 <- 0xe5
         pParentEntry ptr<blob<Entry>> <- it.getEntry(parentPath)
         if pParentEntry.vadr = 0: ret {0}
 
-        terminalCluster u32 <- if it.kind = FS_KIND_FAT12: FAT12_EOF else: FAT16_EOF
         isRoot bool <- parentPath.isEqual(@B::String("/"))
         aBuffer a
         entriesPerRead u32
@@ -220,13 +223,13 @@ FAT_FILE_FREE u8 <- 0xe5
         // Root directory needs a separate logic as it doesn't use clusters
         if isRoot
             aBuffer <- @BSys::memAlloc(it.fatBytesPerSector)
-            entriesPerRead <- it.fatBytesPerSector / FAT_BYTES_PER_ENTRY
+            entriesPerRead <- it.fatBytesPerSector / FilesystemFat::BYTES_PER_DIR_ENTRY
             maxEntriesCount <- it.fatRootDirEntriesCount
             sector <- it.fatRootDirFirstSector - 1
         // Sub directories use clusters
         else
             aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
-            entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FAT_BYTES_PER_ENTRY
+            entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FilesystemFat::BYTES_PER_DIR_ENTRY
             maxEntriesCount <- 65_536
             cluster <- pParentEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
         ;
@@ -238,7 +241,7 @@ FAT_FILE_FREE u8 <- 0xe5
                 it.area.readSectors(sector, 1, aBuffer)
             else
                 // allocate clusters
-                if cluster >= terminalCluster
+                if cluster >= it.terminalCluster
                     cluster <- it.allocateClusters(previousCluster, 1, true)
                 ;
 
@@ -251,13 +254,13 @@ FAT_FILE_FREE u8 <- 0xe5
 
             // Iterate over buffered entries
             rep i u32, i < entriesPerRead, i <- i + 1
-                pFoundEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FAT_BYTES_PER_ENTRY)
+                pFoundEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FilesystemFat::BYTES_PER_DIR_ENTRY)
 
                 if pFoundEntry.vadr = 0
                     foundSlot <- true
                 else if pFoundEntry.val.kind = Entry::KIND_DELETED
                     foundSlot <- true
-                else if pFoundEntry.val.kind = Entry::KIND_FILE or pFoundEntry.val.kind = Entry::KIND_DIRECTORY
+                else if pFoundEntry.val.kind = Entry::Kind::FILE or pFoundEntry.val.kind = Entry::Kind::DIRECTORY
                     // If such entry already exists, return null
                     if pFoundEntry.val.name.isEqual(entryName)
                         @BSys::memFree(pFoundEntry.vadr)
@@ -266,7 +269,7 @@ FAT_FILE_FREE u8 <- 0xe5
                 ;
 
                 if foundSlot
-                    ret it.createDirEntry(aBuffer, sector, i * FAT_BYTES_PER_ENTRY, entryName, kind)
+                    ret it.createDirEntry(aBuffer, sector, i * FilesystemFat::BYTES_PER_DIR_ENTRY, entryName, kind)
                 ;
             ;
         ;
@@ -281,11 +284,10 @@ FAT_FILE_FREE u8 <- 0xe5
 
         // Remove clusters chain
         cluster u32 <- pMetadata.val.cluster
-        terminalCluster u32 <- if it.kind = FS_KIND_FAT12: FAT12_EOF else: FAT16_EOF
-        rep cluster < terminalCluster
+        rep cluster < it.terminalCluster
             currentCluster u32 <- cluster
             cluster <- it.nextCluster(cluster)
-            if it.kind = FS_KIND_FAT12
+            if it.kind = Filesystem::Kind::FAT_12
                 // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
                 pCurrentCluster ptr<u16> <- {it.aFat + currentCluster * 3 / 2}
 
@@ -295,7 +297,7 @@ FAT_FILE_FREE u8 <- 0xe5
                 else
                     pCurrentCluster.val <- pCurrentCluster.val & 0xf000
                 ;
-            else if it.kind = FS_KIND_FAT16
+            else
                 //{it.aFat + cluster * 2}.ptr<u16>.val <- 0
                 pCurrentCluster ptr<u16> <- {it.aFat + currentCluster * 2}.ptr<u16>
                 pCurrentCluster.val <- 0
@@ -313,26 +315,24 @@ FAT_FILE_FREE u8 <- 0xe5
             dirEntrySector <- it.fatRootDirFirstSector + pMetadata.val.dirEntryOffset / it.fatBytesPerSector
         // Is in sub directory
         else
-            bytesPerCluster u32 <- it.fatBytesPerSector * it.fatSectorsPerCluster
             // figure out cluster for the entry
-            entryClusterIndex u32 <- pMetadata.val.dirEntryOffset / bytesPerCluster
+            entryClusterIndex u32 <- pMetadata.val.dirEntryOffset / it.bytesPerCluster
             dirEntryCluster u32 <- pMetadata.val.dirCluster
             rep i u32, i < entryClusterIndex, i <- i + 1: dirEntryCluster <- it.nextCluster(dirEntryCluster)
             // and then the sector
-            dirEntrySector <- it.sectorForCluster(dirEntryCluster) + ((pMetadata.val.dirEntryOffset % bytesPerCluster) / it.fatBytesPerSector)
+            dirEntrySector <- it.sectorForCluster(dirEntryCluster) + ((pMetadata.val.dirEntryOffset % it.bytesPerCluster) / it.fatBytesPerSector)
         ;
 
         aBuffer a <- @BSys::memAlloc(it.fatBytesPerSector)
         it.area.readSectors(dirEntrySector, 1, aBuffer)
         //{aBuffer + dirEntrySectorOffset}.ptr<u8>.val <- 0xe5 
         pDirEntry ptr<data<u8>> <- {aBuffer + dirEntrySectorOffset}.ptr<data<u8>>
-        pDirEntry.val[0] <- 0xe5
+        pDirEntry.val[0] <- FilesystemFat::Entry::DELETED
         written u32 <- it.area.writeSectors(dirEntrySector, 1, aBuffer)
     ;
 
     readEntry fun: pEntry ptr<blob<Entry>>, startByte u32, bytesCount u32, targetAddress a -> u32
         cluster u32 <- pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
-        bytesPerCluster u32 <- it.fatSectorsPerCluster * it.fatBytesPerSector
 
         bytesCopied u32
         // Make sure we don't copy more than the size of the file
@@ -340,13 +340,13 @@ FAT_FILE_FREE u8 <- 0xe5
         bytesCount <- if startByte + bytesCount < pEntry.val.fileSize: bytesCount else: pEntry.val.fileSize - startByte
 
         // Start at the correct cluster
-        startClusterIndex u32 <- startByte / bytesPerCluster
+        startClusterIndex u32 <- startByte / it.bytesPerCluster
         rep i u32, i < startClusterIndex, i <- i + 1
             cluster <- it.nextCluster(cluster)
         ;
-        firstClusterBytesOffset u32 <- startByte % bytesPerCluster
-        firstClusterBytesCount u32 <- bytesPerCluster - firstClusterBytesOffset
-        lastClusterBytesCount u32 <- (bytesCount - firstClusterBytesCount) % bytesPerCluster
+        firstClusterBytesOffset u32 <- startByte % it.bytesPerCluster
+        firstClusterBytesCount u32 <- it.bytesPerCluster - firstClusterBytesOffset
+        lastClusterBytesCount u32 <- (bytesCount - firstClusterBytesCount) % it.bytesPerCluster
 
         rep bytesCopied < bytesCount
             sector u32 <- it.sectorForCluster(cluster)
@@ -354,7 +354,7 @@ FAT_FILE_FREE u8 <- 0xe5
 
             // Handle copying from the offset of the first cluster
             if bytesCopied = 0 and firstClusterBytesOffset > 0
-                aBuffer a <- @BSys::memAlloc(bytesPerCluster)
+                aBuffer a <- @BSys::memAlloc(it.bytesPerCluster)
                 it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
                 // copy just the required bytes
                 rep i u32, i < firstClusterBytesCount, i <- i + 1
@@ -363,8 +363,8 @@ FAT_FILE_FREE u8 <- 0xe5
                 @BSys::memFree(aBuffer)
                 bytesCopied <- firstClusterBytesCount
             // Handle copying remainder of less than a cluster size
-            else if bytesCount - bytesCopied < bytesPerCluster
-                aBuffer a <- @BSys::memAlloc(bytesPerCluster)
+            else if bytesCount - bytesCopied < it.bytesPerCluster
+                aBuffer a <- @BSys::memAlloc(it.bytesPerCluster)
                 it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
                 // copy just the required bytes
                 rep i u32, i < lastClusterBytesCount, i <- i + 1
@@ -375,7 +375,7 @@ FAT_FILE_FREE u8 <- 0xe5
             // Copy a full cluster
             else
                 it.area.readSectors(sector, it.fatSectorsPerCluster, targetAddress + bytesCopied)
-                bytesCopied <- bytesCopied + bytesPerCluster
+                bytesCopied <- bytesCopied + it.bytesPerCluster
             ;
         ;
 
@@ -387,7 +387,7 @@ FAT_FILE_FREE u8 <- 0xe5
     ;
 
     getChildEntriesCount fun: pParentEntry ptr<blob<Entry>> -> u32
-        if pParentEntry.val.kind != Entry::KIND_DIRECTORY: ret 0
+        if pParentEntry.val.kind != Entry::Kind::DIRECTORY: ret 0
 
         entriesCount u32
     
@@ -402,13 +402,13 @@ FAT_FILE_FREE u8 <- 0xe5
         // Root directory needs separate logic as it doesn't use clusters
         if isRoot
             aBuffer <- @BSys::memAlloc(it.fatBytesPerSector)
-            entriesPerRead <- it.fatBytesPerSector / FAT_BYTES_PER_ENTRY
+            entriesPerRead <- it.fatBytesPerSector / FilesystemFat::BYTES_PER_DIR_ENTRY
             maxEntriesCount <- it.fatRootDirEntriesCount
             sector <- it.fatRootDirFirstSector
         // Sub directories use clusters
         else
             aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
-            entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FAT_BYTES_PER_ENTRY
+            entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FilesystemFat::BYTES_PER_DIR_ENTRY
             maxEntriesCount <- 65_536
             cluster <- pParentEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
         ;
@@ -427,9 +427,9 @@ FAT_FILE_FREE u8 <- 0xe5
 
             // Iterate over buffered entries
             rep i u32, i < entriesPerRead and not isFinished, i <- i + 1
-                pEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FAT_BYTES_PER_ENTRY)
+                pEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FilesystemFat::BYTES_PER_DIR_ENTRY)
                 if pEntry.vadr = 0: isFinished <- true
-                else if pEntry.val.kind = Entry::KIND_FILE or pEntry.val.kind = Entry::KIND_DIRECTORY: entriesCount <- entriesCount + 1
+                else if pEntry.val.kind = Entry::Kind::FILE or pEntry.val.kind = Entry::Kind::DIRECTORY: entriesCount <- entriesCount + 1
             ;
         ;
 
@@ -443,7 +443,7 @@ FAT_FILE_FREE u8 <- 0xe5
     getRootEntry fun -> ptr<blob<Entry>>
         pEntry ptr<blob<Entry>> <- @BSys::memAlloc(blob<Entry>.size).ptr<blob<Entry>>
 
-        pEntry.val.kind <- STORAGE_FS_ENTRY_KIND_DIR
+        pEntry.val.kind <- Entry::Kind::DIRECTORY
         pEntry.val.name <- @B::String("/")
         pEntry.val.fileSize <- 0
 
@@ -458,10 +458,10 @@ FAT_FILE_FREE u8 <- 0xe5
     ;
 
     nextCluster fun: cluster u32 -> u32
-        if it.kind = FS_KIND_FAT12
-            // Check if we're aleady at the last cluster
-            if cluster >= FAT12_EOF: ret cluster
+        // Check if we're aleady at the last cluster
+        if cluster >= it.terminalCluster: ret cluster
 
+        if it.kind = Filesystem::Kind::FAT_12
             // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
             pCluster ptr<u16> <- {it.aFat + cluster * 3 / 2}
 
@@ -471,10 +471,7 @@ FAT_FILE_FREE u8 <- 0xe5
             else
                 cluster <- pCluster.val & 0x0fff
             ;
-        else if it.kind = FS_KIND_FAT16
-            // Check if we're aleady at the last cluster
-            if cluster >= FAT16_EOF: ret cluster
-
+        else
             pCluster ptr<u16> <- {it.aFat + cluster * 2}
             cluster <- pCluster.val
         ;
@@ -491,20 +488,20 @@ FAT_FILE_FREE u8 <- 0xe5
 
         pFatEntry ptr<data<u8>> <- aFatEntry.ptr<data<u8>>
         isEmpty bool <- pFatEntry.val[0] = 0x00
-        isDeleted bool <- pFatEntry.val[0] = 0xe5
-        attribute u8 <- pFatEntry.val[FAT_ENTRY_ATTRIB_OFFSET]
-        isLongFileName bool <- attribute &? FAT_ATTRIB_LONG_FILE_NAME
-        isVolumeId bool <- attribute &? FAT_ATTRIB_VOLUME_ID and not isLongFileName
-        isHidden bool <- attribute &? FAT_ATTRIB_HIDDEN
+        isDeleted bool <- pFatEntry.val[0] = FilesystemFat::Entry::DELETED
+        attribute u8 <- pFatEntry.val[FilesystemFat::Entry::OFFSET_ATTRIB]
+        isLongFileName bool <- attribute &? FilesystemFat::Entry::ATTRIB_LONG_FILE_NAME
+        isVolumeId bool <- attribute &? FilesystemFat::Entry::ATTRIB_VOLUME_ID and not isLongFileName
+        isHidden bool <- attribute &? FilesystemFat::Entry::ATTRIB_HIDDEN
         isNavigationDirectory bool <- (pFatEntry.val[0] = '.' and pFatEntry.val[1] = ' ') or (pFatEntry.val[0] = '.' and pFatEntry.val[1] = '.' and pFatEntry.val[2] = ' ') 
-        isDirectory bool <- attribute &? FAT_ATTRIB_DIR and not isNavigationDirectory
+        isDirectory bool <- attribute &? FilesystemFat::Entry::ATTRIB_DIR and not isNavigationDirectory
         isFile bool <- not isLongFileName and not isVolumeId and not isNavigationDirectory and not isDirectory and not isEmpty and not isDeleted
 
         if isFile or isDirectory
             pEntry <- @BSys::memAlloc(blob<Entry>.size).ptr<blob<Entry>>
 
-            pEntry.val.kind <- if isFile: Entry::KIND_FILE else: Entry::KIND_DIRECTORY
-            pEntry.val.fileSize <- (aFatEntry + FAT_ENTRY_SIZE_OFFSET).ptr<u32>.val
+            pEntry.val.kind <- if isFile: Entry::Kind::FILE else: Entry::Kind::DIRECTORY
+            pEntry.val.fileSize <- (aFatEntry + FilesystemFat::Entry::OFFSET_SIZE).ptr<u32>.val
 
             // name
             name data<u8, 13> // 8 + '.' + 3 + \0
@@ -536,7 +533,7 @@ FAT_FILE_FREE u8 <- 0xe5
 
             // metadata
             pEntry.val.aMetadata <- @BSys::memAlloc(blob<Entry::Metadata::Fat>.size)
-            pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster <- (aFatEntry + FAT_ENTRY_CLUSTER_OFFSET).ptr<u16>.val
+            pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster <- (aFatEntry + FilesystemFat::Entry::OFFSET_CLUSTER).ptr<u16>.val
         else if isDeleted
             pEntry <- @BSys::memAlloc(blob<Entry>.size).ptr<blob<Entry>>
             pEntry.val.kind <- Entry::KIND_DELETED
@@ -576,8 +573,6 @@ FAT_FILE_FREE u8 <- 0xe5
         @Term::printNumber(kind, @Term::FOREGROUND_GRAY)
         @Term::printNewLine()
 
-        terminalCluster u32 <- if it.kind = FS_KIND_FAT12: FAT12_EOF else: FAT16_EOF
-
         // Name
         dotIndex u32 <- name.find(@B::String("."))
         if dotIndex = 0: dotIndex <- name.length()
@@ -597,12 +592,12 @@ FAT_FILE_FREE u8 <- 0xe5
         ;
 
         // Attribute
-        pAttribute ptr<u8> <- {aDirEntriesBuffer + dirEntriesBufferOffset + FAT_ENTRY_ATTRIB_OFFSET}.ptr<u8>
-        pAttribute.val <- if kind = Entry::KIND_FILE: 0x00 else: FAT_ATTRIB_DIR
+        pAttribute ptr<u8> <- {aDirEntriesBuffer + dirEntriesBufferOffset + FilesystemFat::Entry::OFFSET_ATTRIB}.ptr<u8>
+        pAttribute.val <- if kind = Entry::Kind::FILE: 0x00 else: FilesystemFat::Entry::ATTRIB_DIR
 
         // Cluster
-        pCluster ptr<u16> <- {aDirEntriesBuffer + dirEntriesBufferOffset + FAT_ENTRY_CLUSTER_OFFSET}.ptr<u16>
-        pCluster.val <- terminalCluster.u16
+        pCluster ptr<u16> <- {aDirEntriesBuffer + dirEntriesBufferOffset + FilesystemFat::Entry::OFFSET_CLUSTER}.ptr<u16>
+        pCluster.val <- it.terminalCluster.u16
 
         // Write back dir entry sector
         sectorOffset u32 <- dirEntriesBufferOffset / it.fatBytesPerSector
