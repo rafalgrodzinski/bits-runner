@@ -197,7 +197,6 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
             ;
         ;
 
-        pCurrentEntry.val.filesystem <- {it.adr.ptr<blob<FilesystemFat>>}
         ret pCurrentEntry
     ;
 
@@ -544,6 +543,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
             pEntry.val.aMetadata <- 0
         ;
 
+        if pEntry.vadr != 0: pEntry.val.filesystem <- {it.adr.ptr<blob<FilesystemFat>>}
         ret pEntry
     ;
 
