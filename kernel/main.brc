@@ -35,7 +35,7 @@ busPci blob<@Bus::BusPci>
     
     @B::String("All ready, welcome to Bits Runner!\n").printlnColor(@B::String::FOREGROUND_GREEN)
 
-    pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.createEntry(@B::String("/DUMMY.TXT"), @Storage::Entry::Kind::FILE)
+    pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.createEntry(@B::String("/APPS/DUMMY.TXT"), @Storage::Entry::Kind::FILE)
     pEntryData ptr<data<u8>> <- @BSys::memAlloc(1024).ptr<data<u8>>
     pEntryData.val[0] <- 'H'
     pEntryData.val[1] <- 'e'
@@ -66,9 +66,8 @@ busPci blob<@Bus::BusPci>
     pEntryData.val[1023] <- 'a'
     pEntry.val.write(10, 1024, pEntryData.vadr)
 
-    /*
     // Load apps
-    pEntry ptr<blob<@Storage::Entry>>
+    //pEntry ptr<blob<@Storage::Entry>>
     aFileBuffer a
 
     // Load shell
@@ -77,7 +76,6 @@ busPci blob<@Bus::BusPci>
     pEntry.val.read(0, pEntry.val.fileSize, aFileBuffer)
     @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, pEntry.val.fileSize)
     @BSys::memFree(pEntry.vadr)
-    */
 
     @Dispatch::Dispatcher::instance.start()
 ;

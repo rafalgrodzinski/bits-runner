@@ -160,21 +160,22 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
 
             rep dirEntryIndex u32, dirEntryIndex < maxEntriesCount and not isFinished, dirEntryIndex <- dirEntryIndex + entriesPerRead
                 // For sub directories, we need to read the next cluster if we have exhausted the current one
-                if not isRoot
-                    if sectorIndex >= it.fatSectorsPerCluster
-                        cluster <- it.getClusterValue(cluster)
-                        sector <- it.sectorForCluster(cluster)
-                        sectorIndex <- 0
-                    ;
+                if not isRoot and sectorIndex >= it.fatSectorsPerCluster
+                    cluster <- it.getClusterValue(cluster)
+                    sector <- it.sectorForCluster(cluster)
+                    sectorIndex <- 0
                 ;
 
-                // Read a single cluster with directory entries
+                // Read a single sector with directory entries
                 it.area.readSectors(sector + sectorIndex, 1, aBuffer)
-                sectorIndex <- sectorIndex + 1
 
                 // Iterate over buffered entries
                 rep i u32, i < entriesPerRead and not isFinished, i <- i + 1
-                    pFoundEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FilesystemFat::BYTES_PER_DIR_ENTRY, sector, i * FilesystemFat::BYTES_PER_DIR_ENTRY)
+                    pFoundEntry ptr<blob<Entry>> <- it.entryForFatEntry(
+                        aBuffer + i * FilesystemFat::BYTES_PER_DIR_ENTRY,
+                        sector + sectorIndex,
+                        i * FilesystemFat::BYTES_PER_DIR_ENTRY
+                    )
 
                     if pFoundEntry.vadr = 0
                         isFinished <- true
@@ -192,6 +193,9 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                         ;
                     ;
                 ;
+
+                // try reading next sector either in root directory or in a a cluster
+                sectorIndex <- sectorIndex + 1
             ;
 
             // required entry in the path not found
@@ -218,49 +222,49 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
         if pParentEntry.vadr = 0: ret {0}
 
         isRoot bool <- parentPath.isEqual(@B::String("/"))
-        aBuffer a
-        entriesPerRead u32
+        aBuffer a <- @BSys::memAlloc(it.fatBytesPerSector)
+        entriesPerRead u32 <- it.fatBytesPerSector / FilesystemFat::BYTES_PER_DIR_ENTRY
         maxEntriesCount u32
         sector u32
-        previousCluster u32
+        sectorIndex u32
         cluster u32
         foundSlot bool
 
         // Root directory needs a separate logic as it doesn't use clusters
         if isRoot
-            aBuffer <- @BSys::memAlloc(it.fatBytesPerSector)
-            entriesPerRead <- it.fatBytesPerSector / FilesystemFat::BYTES_PER_DIR_ENTRY
             maxEntriesCount <- it.fatRootDirEntriesCount
-            sector <- it.fatRootDirFirstSector - 1
+            sector <- it.fatRootDirFirstSector
         // Sub directories use clusters
         else
-            aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
-            entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FilesystemFat::BYTES_PER_DIR_ENTRY
             maxEntriesCount <- 65_536
             cluster <- pParentEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
+            sector <- it.sectorForCluster(cluster)
         ;
 
         rep dirEntryIndex u32, dirEntryIndex < maxEntriesCount, dirEntryIndex <- dirEntryIndex + entriesPerRead
-            if isRoot
-                // Root dir is scanned sctor by sector
-                sector <- sector + 1
-                it.area.readSectors(sector, 1, aBuffer)
-            else
-                // allocate clusters
+            // In case of a sub directory
+            if not isRoot and sectorIndex >= it.fatSectorsPerCluster
+                // try getting the next cluster in chain
+                previousCluster u32 <- cluster
+                cluster <- it.getClusterValue(cluster)
+                // and allocate a new one if we have run out
                 if cluster >= it.terminalCluster
                     cluster <- it.allocateCluster(previousCluster, true)
                 ;
-
-                // Sub dirs are scanned cluster by cluster
+                // get the current sector and reset the count of sectors in cluster
                 sector <- it.sectorForCluster(cluster)
-                it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
-                previousCluster <- cluster
-                cluster <- it.getClusterValue(cluster)
+                sectorIndex <- 0
             ;
+
+            it.area.readSectors(sector + sectorIndex, 1, aBuffer)
 
             // Iterate over buffered entries
             rep i u32, i < entriesPerRead, i <- i + 1
-                pFoundEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FilesystemFat::BYTES_PER_DIR_ENTRY, sector, i * FilesystemFat::BYTES_PER_DIR_ENTRY)
+                pFoundEntry ptr<blob<Entry>> <- it.entryForFatEntry(
+                    aBuffer + i * FilesystemFat::BYTES_PER_DIR_ENTRY,
+                    sector + sectorIndex,
+                    i * FilesystemFat::BYTES_PER_DIR_ENTRY
+                )
 
                 if pFoundEntry.vadr = 0
                     foundSlot <- true
@@ -275,9 +279,12 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                 ;
 
                 if foundSlot
-                    ret it.createDirEntry(aBuffer, sector, i * FilesystemFat::BYTES_PER_DIR_ENTRY, entryName, kind)
+                    ret it.createDirEntry(aBuffer, sector + sectorIndex, i * FilesystemFat::BYTES_PER_DIR_ENTRY, entryName, kind)
                 ;
             ;
+
+            // try reading next sector either in root directory or in a a cluster
+            sectorIndex <- sectorIndex + 1
         ;
 
         ret {0}
