@@ -28,6 +28,8 @@ Syscall::Process::SLEEP u32 <- 0x201
 // Storage
 Syscall::Storage::GET_ENTRY_INFO u32 <- 0x300
 Syscall::Storage::DELETE_ENTRY u32 <- 0x301
+Syscall::Storage::READ_ENTRY u32 <- 0x302
+Syscall::Storage::WRITE_ENTRY u32 <- 0x303
 
 // Input
 Syscall::Input::KEYBOARD_GET_ASCII u32 <- 0x401
@@ -50,7 +52,7 @@ Syscall::Audio::STOP u32 <- 0x701
 @export SyscallHandler::instance blob<SyscallHandler>
 
 @export SyscallHandler blob
-    handle fun: eax u32, ebx u32, ecx u32, edx u32 -> u32
+    handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32 -> u32
         // System
         if eax = Syscall::System::REBOOT
             @BiosService::reboot()
@@ -126,6 +128,26 @@ Syscall::Audio::STOP u32 <- 0x701
             if pEntry.vadr != 0
                 pEntry.val.delete()
             ;
+        else if eax = Syscall::Storage::READ_ENTRY
+            resourceId u32 <- ebx
+            startByte u32 <- ecx
+            bytesCount u32 <- edx
+            targetAddress a <- esi.a
+
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            pEntry ptr<blob<@Storage::Entry>> <- pCurrentProcess.val.resourceForResourceId(resourceId).ptr<blob<@Storage::Entry>>
+            if pEntry.vadr != 0: ret pEntry.val.read(startByte, bytesCount, targetAddress)
+            ret 0
+        else if eax = Syscall::Storage::WRITE_ENTRY
+            resourceId u32 <- ebx
+            startByte u32 <- ecx
+            bytesCount u32 <- edx
+            sourceAddress a <- esi.a
+
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            pEntry ptr<blob<@Storage::Entry>> <- pCurrentProcess.val.resourceForResourceId(resourceId).ptr<blob<@Storage::Entry>>
+            if pEntry.vadr != 0: ret pEntry.val.write(startByte, bytesCount, sourceAddress)
+            ret 0
         // Input
         else if eax = Syscall::Input::KEYBOARD_GET_ASCII
             ascii u32 <- deviceKeyboard.getAscii()
