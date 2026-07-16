@@ -142,9 +142,9 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
 
             isRoot bool <- pCurrentEntry.val.name.isEqual(@B::String("/"))
             maxEntriesCount u32
+            cluster u32
             sector u32
             sectorIndex u32
-            cluster u32
             isFinished bool
 
             // Root directory needs a separate logic as it doesn't use clusters
@@ -307,13 +307,12 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
             it.area.writeSectors(targetSector, it.sectorsPerFat, it.aFat)
         ;
     
-        // Mark dir entry as deleted
+        // Mark directory entry as deleted
         pMetadata.val.cluster <- 0
         pEntry.val.fileSize <- 0
         pEntry.val.name.string[0] <- FilesystemFat::Entry::DELETED
         pEntry.val.name.string[1] <- 0
         it.updateDirEntry(pEntry)
-
     ;
 
     readEntry fun: pEntry ptr<blob<Entry>>, startByte u32, bytesCount u32, targetAddress a -> u32
@@ -493,45 +492,49 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
         entriesCount u32
     
         isRoot bool <- pParentEntry.val.name.isEqual(@B::String("/"))
-        aBuffer a
-        entriesPerRead u32
+        aBuffer a <- @BSys::memAlloc(it.fatBytesPerSector)
+        entriesPerRead u32 <- it.fatBytesPerSector / FilesystemFat::BYTES_PER_DIR_ENTRY
         maxEntriesCount u32
-        sector u32
         cluster u32
+        sector u32
+        sectorIndex u32
         isFinished bool
 
         // Root directory needs separate logic as it doesn't use clusters
         if isRoot
-            aBuffer <- @BSys::memAlloc(it.fatBytesPerSector)
-            entriesPerRead <- it.fatBytesPerSector / FilesystemFat::BYTES_PER_DIR_ENTRY
             maxEntriesCount <- it.fatRootDirEntriesCount
             sector <- it.fatRootDirFirstSector
         // Sub directories use clusters
         else
-            aBuffer <- @BSys::memAlloc(it.fatBytesPerSector * it.fatSectorsPerCluster)
-            entriesPerRead <- (it.fatBytesPerSector * it.fatSectorsPerCluster) / FilesystemFat::BYTES_PER_DIR_ENTRY
             maxEntriesCount <- 65_536
             cluster <- pParentEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
+            sector <- it.sectorForCluster(cluster)
         ;
 
         rep i u32, i < maxEntriesCount and not isFinished, i <- i + entriesPerRead
-            if isRoot
-                // Root dir is scanned sctor by sector
-                it.area.readSectors(sector, 1, aBuffer)
-                sector <- sector + 1
-            else
-                // Sub dirs are scanned cluster by cluster
-                sector <- it.sectorForCluster(cluster)
-                it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
+            // For sub directories, we need to read the next cluster if we have exhausted the current one
+            if not isRoot and sectorIndex >= it.fatSectorsPerCluster
                 cluster <- it.getClusterValue(cluster)
+                sector <- it.sectorForCluster(cluster)
+                sectorIndex <- 0
             ;
+
+            // Read a single sector with directory entries
+            it.area.readSectors(sector + sectorIndex, 1, aBuffer)
 
             // Iterate over buffered entries
             rep i u32, i < entriesPerRead and not isFinished, i <- i + 1
-                pEntry ptr<blob<Entry>> <- it.entryForFatEntry(aBuffer + i * FilesystemFat::BYTES_PER_DIR_ENTRY, sector, i * FilesystemFat::BYTES_PER_DIR_ENTRY)
+                pEntry ptr<blob<Entry>> <- it.entryForFatEntry(
+                    aBuffer + i * FilesystemFat::BYTES_PER_DIR_ENTRY,
+                    sector + sectorIndex,
+                    i * FilesystemFat::BYTES_PER_DIR_ENTRY
+                )
                 if pEntry.vadr = 0: isFinished <- true
                 else if pEntry.val.kind = Entry::Kind::FILE or pEntry.val.kind = Entry::Kind::DIRECTORY: entriesCount <- entriesCount + 1
             ;
+
+            // try reading next sector either in root directory or in a a cluster
+            sectorIndex <- sectorIndex + 1
         ;
 
         ret entriesCount
