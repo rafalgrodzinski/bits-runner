@@ -218,6 +218,8 @@ cmd_help fun
     @B::String("time: Shows current timestamp").println()
     @B::String("ls <PATH>: Shows file/dir info").println()
     @B::String("rm <PATH>: Delete file/dir").println()
+    @B::String("read <PATH>: Read first 64 bytes").println()
+    @B::String("write <PATH>: Write text to a file").println()
     @B::String("mem: Show memory info").println()
     @B::String("play: Plays a tune").println()
     @B::String("help: This thing").println()
