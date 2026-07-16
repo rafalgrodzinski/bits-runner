@@ -184,9 +184,6 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                             isFinished <- true
                             // Make sure that only the last path component is a file
                             if not isLookingForDir or pFoundEntry.val.kind = Entry::Kind::DIRECTORY
-                                pFoundEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirCluster <- pCurrentEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
-                                pFoundEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirEntryOffset <- (dirEntryIndex + i) * FilesystemFat::BYTES_PER_DIR_ENTRY
-
                                 pCurrentEntry <- pFoundEntry
                                 isNextEntryFound <- true
                             ;
@@ -553,8 +550,6 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
 
         pEntry.val.aMetadata <- @BSys::memAlloc(blob<Entry::Metadata::Fat>.size)
         pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster <- 0
-        pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirCluster <- 0
-        pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.dirEntryOffset <- 0
 
         pEntry.val.filesystem <- {it.adr.ptr<blob<FilesystemFat>>}
 
