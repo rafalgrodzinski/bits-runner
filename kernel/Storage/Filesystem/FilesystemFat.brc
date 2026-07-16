@@ -393,8 +393,11 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
         ;
 
         firstClusterBytesOffset u32 <- startByte % it.bytesPerCluster
-        firstClusterBytesCount u32 <- it.bytesPerCluster - firstClusterBytesOffset
-        if firstClusterBytesCount > bytesCount: firstClusterBytesCount <- bytesCount
+        firstClusterBytesCount u32
+        if firstClusterBytesOffset > 0
+            firstClusterBytesCount <- it.bytesPerCluster - firstClusterBytesOffset
+            if firstClusterBytesCount > bytesCount: firstClusterBytesCount <- bytesCount
+        ;
 
         lastClusterBytesCount u32 <- (bytesCount - firstClusterBytesCount) % it.bytesPerCluster
         lastClusterBytesOffset u32 <- bytesCount - lastClusterBytesCount
@@ -433,7 +436,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
             @Term::printNewLine()
 
             // Handle writing at an offset of the first cluster
-            if bytesWritten = 0 and firstClusterBytesOffset > 0
+            if bytesWritten = 0 and firstClusterBytesCount > 0
                 @Term::printString("Writing first cluster with offset: ", @Term::FOREGROUND_CYAN)
                 @Term::printNumber(firstClusterBytesOffset, @Term::FOREGROUND_CYAN)
                 @Term::printString(", bytes to write: ", @Term::FOREGROUND_CYAN)
@@ -452,7 +455,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
 
                 bytesWritten <- firstClusterBytesCount
             // Handle writing a remainder that is less than a full cluster
-            else if bytesCount - bytesWritten < it. bytesPerCluster
+            else if bytesCount - bytesWritten < it.bytesPerCluster
                 @Term::printString("Writing last cluster with offset: ", @Term::FOREGROUND_CYAN)
                 @Term::printNumber(lastClusterBytesOffset, @Term::FOREGROUND_CYAN)
                 @Term::printString(", bytes to write: ", @Term::FOREGROUND_CYAN)

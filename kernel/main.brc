@@ -35,39 +35,6 @@ busPci blob<@Bus::BusPci>
     
     @B::String("All ready, welcome to Bits Runner!\n").printlnColor(@B::String::FOREGROUND_GREEN)
 
-    /*
-    pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.createEntry(@B::String("/DUMMY.TXT"), @Storage::Entry::Kind::FILE)
-    pEntryData ptr<data<u8>> <- @BSys::memAlloc(1024).ptr<data<u8>>
-    pEntryData.val[0] <- 'H'
-    pEntryData.val[1] <- 'e'
-    pEntryData.val[2] <- 'l'
-    pEntryData.val[3] <- 'l'
-    pEntryData.val[4] <- 'o'
-    pEntryData.val[5] <- ' '
-    pEntryData.val[6] <- 'W'
-    pEntryData.val[7] <- 'o'
-    pEntryData.val[8] <- 'r'
-    pEntryData.val[9] <- 'l'
-    pEntryData.val[10] <- 'd'
-    pEntryData.val[11] <- '!'
-
-    pEntryData.val[590] <- 'e'
-    pEntryData.val[591] <- 'n'
-    pEntryData.val[592] <- 'd'
-    pEntryData.val[593] <- '!'
-
-    pEntryData.val[594] <- 'e'
-    pEntryData.val[595] <- 'n'
-    pEntryData.val[596] <- 'd'
-    pEntryData.val[597] <- '!'
-
-    pEntryData.val[598] <- '('
-    pEntryData.val[599] <- ')'
-    pEntryData.val[1022] <- 'p'
-    pEntryData.val[1023] <- 'a'
-    pEntry.val.write(10, 1024, pEntryData.vadr)
-    */
-
     // Load apps
     pEntry ptr<blob<@Storage::Entry>>
     aFileBuffer a

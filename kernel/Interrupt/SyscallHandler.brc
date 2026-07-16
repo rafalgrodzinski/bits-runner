@@ -16,7 +16,8 @@ Syscall::System::GET_INFO_PCI u32 <- 0x021
 Syscall::System::GRAB_RESOURCE u32 <- 0x030
 Syscall::System::RELEASE_RESOURCE u32 <- 0x031
 
-Syscall::System::ResourceCategory::STORAGE_ENTRY u32 <- 0x01
+Syscall::System::ResourceCategory::GET_STORAGE_ENTRY u32 <- 0x01
+Syscall::System::ResourceCategory::CREATE_STORAGE_ENTRY u32 <- 0x02
 
 // Memory
 Syscall::Memory::GET_INFO u32 <- 0x100
@@ -76,9 +77,18 @@ Syscall::Audio::STOP u32 <- 0x701
             arg0 u32 <- ecx
             arg1 u32 <- edx
 
-            if category = Syscall::System::ResourceCategory::STORAGE_ENTRY
+            if category = Syscall::System::ResourceCategory::GET_STORAGE_ENTRY
                 pPath ptr<blob<@B::String>> <- arg0.a.ptr<blob<@B::String>>
                 pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.getEntry(pPath.val)
+                pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+                if pEntry.vadr != 0 and pCurrentProcess.vadr != 0
+                    ret pCurrentProcess.val.registerResource(category, pEntry.vadr)
+                else
+                    ret 0
+                ;
+            else if category = Syscall::System::ResourceCategory::CREATE_STORAGE_ENTRY
+                pPath ptr<blob<@B::String>> <- arg0.a.ptr<blob<@B::String>>
+                pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.createEntry(pPath.val, @Storage::Entry::Kind::FILE)
                 pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
                 if pEntry.vadr != 0 and pCurrentProcess.vadr != 0
                     ret pCurrentProcess.val.registerResource(category, pEntry.vadr)

@@ -19,7 +19,8 @@ System::GET_INFO_PCI u32 <- 0x021
 System::GRAB_RESOURCE u32 <- 0x030
 System::RELEASE_RESOURCE u32 <- 0x031
 
-@export System::ResourceCategory::STORAGE_ENTRY u32 <- 0x01
+@export System::ResourceCategory::GET_STORAGE_ENTRY u32 <- 0x01
+@export System::ResourceCategory::CREATE_STORAGE_ENTRY u32 <- 0x02
 
 @export InfoPciDevice blob
         busNum u32
