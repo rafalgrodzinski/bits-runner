@@ -292,29 +292,13 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
 
     deleteEntry fun: pEntry ptr<blob<Entry>>
         pMetadata ptr<blob<Entry::Metadata::Fat>> <- pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>
-        dirEntrySector u32
-        dirEntrySectorOffset u32 <- pMetadata.val.dirEntryOffset % it.fatBytesPerSector
 
         // Remove clusters chain
         cluster u32 <- pMetadata.val.cluster
         rep cluster < it.terminalCluster
             currentCluster u32 <- cluster
             cluster <- it.getClusterValue(cluster)
-            if it.kind = Filesystem::Kind::FAT_12
-                // we multiply by 1.5 because FAT12 uses 1.5 bytes cluster entry
-                pCurrentCluster ptr<u16> <- {it.aFat + currentCluster * 3 / 2}
-
-                // zero cluster depending on wethere cluster is odd or even
-                if currentCluster &? 0x01
-                    pCurrentCluster.val <- pCurrentCluster.val & 0x000f
-                else
-                    pCurrentCluster.val <- pCurrentCluster.val & 0xf000
-                ;
-            else
-                //{it.aFat + cluster * 2}.ptr<u16>.val <- 0
-                pCurrentCluster ptr<u16> <- {it.aFat + currentCluster * 2}.ptr<u16>
-                pCurrentCluster.val <- 0
-            ;
+            it.setClusterValue(currentCluster, 0)
         ;
 
         // Write back updated fat tables
@@ -322,26 +306,14 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
             targetSector u32 <- it.fatFirstSector + it.sectorsPerFat * i
             it.area.writeSectors(targetSector, it.sectorsPerFat, it.aFat)
         ;
+    
+        // Mark dir entry as deleted
+        pMetadata.val.cluster <- 0
+        pEntry.val.fileSize <- 0
+        pEntry.val.name.string[0] <- FilesystemFat::Entry::DELETED
+        pEntry.val.name.string[1] <- 0
+        it.updateDirEntry(pEntry)
 
-        // Is in root directory?
-        if pMetadata.val.dirCluster = 0
-            dirEntrySector <- it.fatRootDirFirstSector + pMetadata.val.dirEntryOffset / it.fatBytesPerSector
-        // Is in sub directory
-        else
-            // figure out cluster for the entry
-            entryClusterIndex u32 <- pMetadata.val.dirEntryOffset / it.bytesPerCluster
-            dirEntryCluster u32 <- pMetadata.val.dirCluster
-            rep i u32, i < entryClusterIndex, i <- i + 1: dirEntryCluster <- it.getClusterValue(dirEntryCluster)
-            // and then the sector
-            dirEntrySector <- it.sectorForCluster(dirEntryCluster) + ((pMetadata.val.dirEntryOffset % it.bytesPerCluster) / it.fatBytesPerSector)
-        ;
-
-        aBuffer a <- @BSys::memAlloc(it.fatBytesPerSector)
-        it.area.readSectors(dirEntrySector, 1, aBuffer)
-        //{aBuffer + dirEntrySectorOffset}.ptr<u8>.val <- 0xe5 
-        pDirEntry ptr<data<u8>> <- {aBuffer + dirEntrySectorOffset}.ptr<data<u8>>
-        pDirEntry.val[0] <- FilesystemFat::Entry::DELETED
-        written u32 <- it.area.writeSectors(dirEntrySector, 1, aBuffer)
     ;
 
     readEntry fun: pEntry ptr<blob<Entry>>, startByte u32, bytesCount u32, targetAddress a -> u32
@@ -810,11 +782,33 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
         it.area.readSectors(pMetadata.val.dirEntrySector, 1, aBuffer)
 
         // Update the entry
+
+        // cluster
         pCluster ptr<u16> <- {aBuffer + pMetadata.val.dirEntryOffsetInSector + FilesystemFat::Entry::OFFSET_CLUSTER}.ptr<u16>
         pCluster.val <- pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster.u16
 
+        // file size
         pFileSize ptr<u32> <- {aBuffer + pMetadata.val.dirEntryOffsetInSector + FilesystemFat::Entry::OFFSET_SIZE}.ptr<u32>
         pFileSize.val <- pEntry.val.fileSize
+
+        // name
+        pName ptr<data<u8>> <- {aBuffer + pMetadata.val.dirEntryOffsetInSector}
+        nameLength u32 <- pEntry.val.name.length()
+        dotIndex u32 <- pEntry.val.name.find(@B::String("."))
+
+        // base
+        rep i u32, i < 8, i <- i + 1
+            character u8 <- ' '
+            if i < dotIndex or (dotIndex = 0 and i < nameLength): character <- pEntry.val.name.string[i]
+            pName.val[i] <- character
+        ;
+
+        // extension
+        rep i u32, i < 3, i <- i + 1
+            character u8 <- ' '
+            if dotIndex > 0 and dotIndex + 1 + i < nameLength: character <- pEntry.val.name.string[dotIndex + 1 + i]
+            pName.val[i + 8] <- character
+        ;
 
         // Write back updated dir entry sector
         it.area.writeSectors(pMetadata.val.dirEntrySector, 1, aBuffer)
