@@ -4,7 +4,7 @@
 @import B
 @import Dispatch
 
-MemoryLayout blob
+@export MemoryLayout blob
     kernelImageSize u32
     pageSize u32
     pagesCount u32
