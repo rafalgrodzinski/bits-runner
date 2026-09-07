@@ -30,7 +30,7 @@ deviceVideo proto<@DeviceVideo::DeviceVideo>
         deviceVideo <- @DeviceVideo::getPrimary()
     ;
 
-    handle fun: eax u32, ebx u32, ecx u32, edx u32, interrupt u32, errorCode u32 -> u32
+    handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, interrupt u32, errorCode u32 -> u32
         // Page fault
         if interrupt = INT_PAGE_FAULT
             @Term::printString("Page fault accessing memory at: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
@@ -48,7 +48,7 @@ deviceVideo proto<@DeviceVideo::DeviceVideo>
             deviceMouse.handleInterrupt()
         // Syscall
         else if interrupt = INT_SYSCALL
-            ret SyscallHandler::instance.handle(eax, ebx, ecx, edx)
+            ret SyscallHandler::instance.handle(eax, ebx, ecx, edx, esi)
         // Other
         else
             @Term::printString("Unhandled interrupt: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
@@ -63,6 +63,6 @@ deviceVideo proto<@DeviceVideo::DeviceVideo>
     ;
 ;
 
-@export handleInterrupt fun: eax u32, ebx u32, ecx u32, edx u32, interrupt u32, errorCode u32 -> u32
-    ret Handler::instance.handle(eax, ebx, ecx, edx, interrupt, errorCode)
+@export handleInterrupt fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, interrupt u32, errorCode u32 -> u32
+    ret Handler::instance.handle(eax, ebx, ecx, edx, esi, interrupt, errorCode)
 ;

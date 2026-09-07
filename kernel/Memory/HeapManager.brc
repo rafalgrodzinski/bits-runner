@@ -54,4 +54,16 @@
 
     free fun: address a
     ;
+
+    getInfoHeapStart fun -> u32
+        ret it.heapLayout.pHeapStart.vadr.u32
+    ;
+
+    getInfoHeapSize fun -> u32
+        ret it.heapLayout.heapSize
+    ;
+
+    getInfoAllocatedBytes fun -> u32
+        ret it.heapLayout.allocatedBytes
+    ;
 ;

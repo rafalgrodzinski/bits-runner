@@ -8,12 +8,6 @@
 - The Art of Assembly Language:
 [https://flint.cs.yale.edu/cs422/doc/art-of-asm/pdf/](https://flint.cs.yale.edu/cs422/doc/art-of-asm/pdf/)
 
-## FAT Filesystem
-- FAT Filesystem:
-[https://elm-chan.org/docs/fat_e.html](https://elm-chan.org/docs/fat_e.html)
-- Microsoft's Original DOS File System:
-[https://mirror.math.princeton.edu/pub/oldlinux/Linux.old/distributions/cnix/FAT.pdf](https://mirror.math.princeton.edu/pub/oldlinux/Linux.old/distributions/cnix/FAT.pdf)
-
 ## Multitasking
 - Brendan's Multi-tasking Tutorial:
 [https://wiki.osdev.org/Brendan%27s_Multi-tasking_Tutorial](https://wiki.osdev.org/Brendan%27s_Multi-tasking_Tutorial)
@@ -23,9 +17,6 @@
 
 - Getting to Ring 3:
 [https://wiki.osdev.org/Getting_to_Ring_3](https://wiki.osdev.org/Getting_to_Ring_3)
-
-## Paging
-- Paging: [https://wiki.osdev.org/Paging](https://wiki.osdev.org/Paging)
 
 ## Other
 - Low-Level Date Algorithms

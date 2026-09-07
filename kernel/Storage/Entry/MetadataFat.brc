@@ -1,0 +1,7 @@
+@module Storage
+
+Entry::Metadata::Fat blob
+    cluster u32
+    dirEntrySector u32
+    dirEntryOffsetInSector u32
+;

@@ -1,19 +1,28 @@
 @module Dispatch
 
+@import BSys
 @import Memory
 
 Process::STATE_NOT_STARTED u32 <- 0
 Process::STATE_RUNNING u32 <- 1
 Process::State::SLEEPING u32 <- 2
 
+resId u32
+
+@export Resource blob
+    id u32
+    aResource a
+;
+
 @export Process blob
-    pageDirectory data<u32, 1024>
+    pageTablesDirectory data<u32, 1024>
     cr3 u32
     esp u32
     esp0 u32
     state u32
 
     pages blob<@B::Array, u32>
+    resources blob<@B::Array, ptr<blob<Resource>>>
     sleepTimeout u32
 
     run fun
@@ -30,46 +39,62 @@ Process::State::SLEEPING u32 <- 2
     registerPage fun: page u32
         it.pages.push(page)
     ;
+
+    registerResource fun: category u32, aResource a -> u32
+        resId <- resId + 1
+        pResource ptr<blob<Resource>> <- @BSys::memAlloc(blob<Resource>.size).ptr<blob<Resource>>
+        pResource.val.id <- resId
+        pResource.val.aResource <- aResource
+        it.resources.push(pResource)
+        ret resId
+    ;
+
+    resourceForResourceId fun: resourceId u32 -> a
+        rep i u32, i < it.resources.count, i <- i + 1
+            if it.resources.at(i).ptr<blob<Resource>>.val.id = resourceId: ret it.resources.at(i).ptr<blob<Resource>>.val.aResource
+        ;
+        ret 0
+    ;
 ;
 
-@export Process::new fun: imageSourceAddress ptr<data<u8>>, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
-    pCurrentPageDirectory ptr<data<u32>>
+@export Process::new fun: imageSourceAddress a, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
+    pCurrentPageTablesDirectory ptr<data<u32>>
     oldCr3 u32
 
     if pCurrentProcess.vadr != 0
         oldCr3 <- pCurrentProcess.val.cr3
-        pCurrentPageDirectory <- {pCurrentProcess.val.pageDirectory.adr}
+        pCurrentPageTablesDirectory <- {pCurrentProcess.val.pageTablesDirectory.adr}
     else
         oldCr3 <- @BSys::getCr3()
-        linearAdr u32 <- (oldCr3 & 0x0f_ffff) + KERNEL_ADR
-        pCurrentPageDirectory <- {linearAdr}
+        linearAdr u32 <- (oldCr3 & 0x000f_f000) + KERNEL_ADR
+        pCurrentPageTablesDirectory <- {linearAdr}
     ;
 
     pProcess ptr<blob<Process>> <- @BSys::memAlignedAlloc(blob<Process>.size, 0x1000).ptr<blob<Process>>
     pProcess.val.state <- Process::STATE_NOT_STARTED
 
-    pProcess.val.cr3 <- @Memory::PagingManager::lAdrToPAdr(pProcess.val.pageDirectory.adr).u32
+    pProcess.val.cr3 <- @Memory::PagingManager::lAdrToPAdr(pProcess.val.pageTablesDirectory.adr).u32 | @Memory::PagingManager::FLAGS_RWP
     pProcess.val.esp <- USER_STACK_END_ADR - 5 * u32.size // 5 slots for iret frame
     pProcess.val.esp0 <- KERNEL_STACK_END_ADR
 
-    // Setup new page directory
+    // Setup new page tables directory
 
-    // copy first identity page directory
-    pProcess.val.pageDirectory[0] <- pCurrentPageDirectory.val[0]
-
-    // copy kernel page directories
-    rep i u32 <- 512, i < 1023, i <- i + 1: pProcess.val.pageDirectory[i] <- pCurrentPageDirectory.val[i]
+    // copy first identity pages table
+    pProcess.val.pageTablesDirectory[0] <- pCurrentPageTablesDirectory.val[0]
 
     // clear user page tables
-    rep i u32 <- 1, i < 512, i <- i + 1: pProcess.val.pageDirectory[i] <-  0
+    rep i u32 <- 1, i < 512, i <- i + 1: pProcess.val.pageTablesDirectory[i] <-  0
+
+    // copy kernel page tables
+    rep i u32 <- 512, i < 1023, i <- i + 1: pProcess.val.pageTablesDirectory[i] <- pCurrentPageTablesDirectory.val[i]
 
     // self-refence pages directory
-    pProcess.val.pageDirectory[1023] <- pProcess.val.cr3 | 0x13 // PCD & RW & P
+    pProcess.val.pageTablesDirectory[1023] <- pProcess.val.cr3
 
     // allocate user memory pages
     @Memory::PagingManager::instance.allocateUserPages(
         pProcess,
-        pCurrentPageDirectory,
+        pCurrentPageTablesDirectory,
         @Memory::PagingManager::PAGE_USER,
         imageSize,
         USER_ADR
@@ -78,7 +103,7 @@ Process::State::SLEEPING u32 <- 2
     // allocate user stack memory pages
     @Memory::PagingManager::instance.allocateUserPages(
         pProcess,
-        pCurrentPageDirectory,
+        pCurrentPageTablesDirectory,
         @Memory::PagingManager::PAGE_USER_STACK,
         USER_STACK_SIZE,
         USER_STACK_END_ADR - USER_STACK_SIZE
@@ -98,27 +123,27 @@ Process::State::SLEEPING u32 <- 2
     imageTargetAddrss ptr<data<u8>> <- {USER_ADR}
 
     rep i u32 <- 0, i < imageSize, i <- i + 1
-        imageTargetAddrss.val[i] <- imageSourceAddress.val[i]
+        imageTargetAddrss.val[i] <- imageSourceAddress.ptr<data<u8>>.val[i]
     ;
 
     @BSys::setCr3(oldCr3)
 
     // reuse the existing stack if it's the first process
     if isFirst
-        pProcess.val.pageDirectory[1022] <- pCurrentPageDirectory.val[1022]
+        pProcess.val.pageTablesDirectory[1022] <- pCurrentPageTablesDirectory.val[1022]
     // or allocate kernel stack memory pages
     else
         // allocate new kernel stack just bellow the desired 1022 slot, so we can use the existing stack for the allocation process
         @Memory::PagingManager::instance.allocateUserPages(
             pProcess,
-            pCurrentPageDirectory,
+            pCurrentPageTablesDirectory,
             @Memory::PagingManager::PAGE_KERNEL_STACK,
             KERNEL_STACK_SIZE,
             KERNEL_STACK_END_ADR - KERNEL_STACK_SIZE - 0x40_0000
         )
         // and them put it in the right location
-        pProcess.val.pageDirectory[1022] <- pProcess.val.pageDirectory[1021]
-        pProcess.val.pageDirectory[1021] <- 0
+        pProcess.val.pageTablesDirectory[1022] <- pProcess.val.pageTablesDirectory[1021]
+        pProcess.val.pageTablesDirectory[1021] <- 0
     ;
 
     ret pProcess

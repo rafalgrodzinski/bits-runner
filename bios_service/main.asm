@@ -1,6 +1,8 @@
 [org 0x2000]
 [cpu 386]
 
+%define U32_SIZE 4
+
 %define RAM_MIN 0x1000000 ; 16MiB
 %define STACK_END_ADR 0x2000 ; @ 8 KiB
 

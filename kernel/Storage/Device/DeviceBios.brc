@@ -1,0 +1,21 @@
+@module Storage
+
+@import BiosService
+
+@export DeviceBios blob: Device
+    biosDriveNumber u32
+    sectorsCount u32
+
+    init fun: biosDriveNumber u32
+        it.biosDriveNumber <- biosDriveNumber
+        it.sectorsCount <- @BiosService::bootStorageGetSectorsCount()
+    ;
+
+    readSectors fun: firstSector u32, sectorsCount u32, targetAddress a -> u32
+        ret @BiosService::bootStorageReadSectors(firstSector, sectorsCount, targetAddress)
+    ;
+
+    writeSectors fun: firstSector u32, sectorsCount u32, sourceAddress a -> u32
+        ret @BiosService::bootStorageWriteSectors(firstSector, sectorsCount, sourceAddress)
+    ;
+;

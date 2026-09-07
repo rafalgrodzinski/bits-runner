@@ -1,35 +1,15 @@
 @import B
 @import Syscall
 
-CMD_REBOOT blob<@B::String>
-CMD_TIME blob<@B::String>
-CMD_M_INFO blob<@B::String>
-CMD_P_INFO blob<@B::String>
-CMD_F_INFO blob<@B::String>
-CMD_INFO blob<@B::String>
-CMD_YIELD blob<@B::String>
-CMD_SLEEP blob<@B::String>
-CMD_PLAY blob<@B::String>
-
 @export start fun
-    @B::String("shell.bin >").println()
-
-    CMD_REBOOT <- @B::String("reboot")
-    CMD_TIME <- @B::String("time")
-    CMD_M_INFO <- @B::String("minfo")
-    CMD_P_INFO <- @B::String("pinfo")
-    CMD_F_INFO <- @B::String("finfo")
-    CMD_INFO <- @B::String("info")
-    CMD_YIELD <- @B::String("yield")
-    CMD_SLEEP <- @B::String("sleep")
-    CMD_PLAY <- @B::String("play")
-
     character u8 <- 0
     input blob<@B::String> <- @B::String("")
     cmd blob<@B::String> <- @B::String("")
     arg blob<@B::String> <- @B::String("")
 
     rep
+        @B::String("> ").printColor(@B::String::FOREGROUND_GREEN | @B::String::ATTRIB_BRIGHT)
+
         rep character != '\n'
             character <- @Syscall::Input::getAscii().u8
             if character = '\b': input.removeLast()
@@ -50,171 +30,28 @@ CMD_PLAY blob<@B::String>
             cmd <- input
         ;
 
-        if cmd.isEqual(CMD_REBOOT)
-            message blob<@B::String> <- @B::String("Rebooting...")
-            message.println()
-            @Syscall::System::reboot()
-        else if cmd.isEqual(CMD_TIME)
-            timestamp u32 <- @Syscall::System::getTimestamp()
-            message blob<@B::String> <- @B::StringForU32(timestamp)
-            message.println()
-        else if cmd.isEqual(CMD_M_INFO)
-            info blob<@Syscall::InfoMem> <- @Syscall::Memory::getInfo()
-            text blob<@B::String>
-
-            text <- @B::String("Total size: ")
-            text.print()
-            text <- @B::StringForU32(info.totalSize)
-            text.println()
-
-            text <- @B::String("Total pages: ")
-            text.print()
-            text <- @B::StringForU32(info.totalPages)
-            text.println()
-
-            text <- @B::String("Unavailable pages: ")
-            text.print()
-            text <- @B::StringForU32(info.unavailablePages)
-            text.println()
-
-            text <- @B::String("Free pages: ")
-            text.print()
-            text <- @B::StringForU32(info.freePages)
-            text.println()
-
-            text <- @B::String("Kernel pages: ")
-            text.print()
-            text <- @B::StringForU32(info.kernelPages)
-            text.println()
-
-            text <- @B::String("Kernel stack pages: ")
-            text.print()
-            text <- @B::StringForU32(info.kernelStackPages)
-            text.println()
-
-            text <- @B::String("Heap start: ")
-            text.print()
-            text <- @B::StringForU32(info.heapStart)
-            text.println()
-
-            text <- @B::String("Heap size: ")
-            text.print()
-            text <- @B::StringForU32(info.heapSize)
-            text.println()
-
-            text <- @B::String("Allocated bytes: ")
-            text.print()
-            text <- @B::StringForU32(info.allocateBytes)
-            text.println()
-        else if cmd.isEqual(CMD_P_INFO)
-            info blob<@Syscall::InfoPci> <- @Syscall::System::getInfoPci()
-            rep i u32, i < info.devicesCount, i <- i + 1
-                @B::StringHexForU32(info.devices[i].busNum).print()
-                @B::String(" ").print()
-                @B::StringHexForU32(info.devices[i].deviceNum).print()
-                @B::String(" ").print()
-                @B::StringHexForU32(info.devices[i].funNum).println()
-
-                @B::StringHexForU32(info.devices[i].vendorId).print()
-                @B::String(" ").print()
-                @B::StringHexForU32(info.devices[i].deviceId).print()
-                @B::String(" ").print()
-                @B::StringHexForU32(info.devices[i].class).print()
-                @B::String(" ").print()
-                @B::StringHexForU32(info.devices[i].subclass).println()
-            ;
-        else if cmd.isEqual(CMD_F_INFO)
-            info blob<@Syscall::InfoFsEntry> <- @Syscall::Storage::getInfoFsEntry(arg)
-            text blob<@B::String>
-
-            text <- @B::String("Kind: ")
-            text.print()
-            text <- @B::StringForU32(info.kind)
-            text.println()
-
-            text <- @B::String("Size: ")
-            text.print()
-            text <- @B::StringForU32(info.entrySize)
-            text.println()
-        else if cmd.isEqual(CMD_INFO)
-            info blob<@Syscall::InfoProcess> <- @Syscall::Process::getInfo()
-            @B::String("Allocated pages: ").print()
-            @B::StringForU32(info.pagesCount).println()
-        else if cmd.isEqual(CMD_YIELD)
-            @Syscall::Process::yield()
-        else if cmd.isEqual(CMD_SLEEP)
-            @Syscall::Process::sleep(2_000)
-            @B::String("After").println()
-        else if cmd.isEqual(CMD_PLAY)
-            // Twin
-            @B::String("Twin").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(262, 400)
-            @Syscall::Process::sleep(450)
-
-            // kle
-            @B::String("kle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(262, 400)
-            @Syscall::Process::sleep(450)
-
-            // twin
-            @B::String(" twin").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(392, 400)
-            @Syscall::Process::sleep(450)
-
-            // kle
-            @B::String("kle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(392, 400)
-            @Syscall::Process::sleep(450)
-
-            // lit
-            @B::String(" lit").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(440, 400)
-            @Syscall::Process::sleep(450)
-
-            // tle
-            @B::String("tle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(440, 400)
-            @Syscall::Process::sleep(450)
-
-            // star
-            @B::String(" star").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(392, 800)
-            @Syscall::Process::sleep(850)
-
-            // how
-            @B::String(" how").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(349, 400)
-            @Syscall::Process::sleep(450)
-
-            // I
-            @B::String(" I").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(349, 400)
-            @Syscall::Process::sleep(450)
-
-            // won
-            @B::String(" won").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(330, 400)
-            @Syscall::Process::sleep(450)
-
-            // der
-            @B::String("der").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(330, 400)
-            @Syscall::Process::sleep(450)
-
-            // what
-            @B::String(" what").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(294, 400)
-            @Syscall::Process::sleep(450)
-
-            // you
-            @B::String(" you").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(294, 400)
-            @Syscall::Process::sleep(450)
-
-            // are
-            @B::String(" are").printlnColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
-            @Syscall::Audio::play(262, 800)
-            @Syscall::Process::sleep(850)
+        // System
+        if cmd.isEqual(@B::String("reboot"))
+            cmd_reboot()
+        else if cmd.isEqual(@B::String("time"))
+            cmd_time()
+        // Mem
+        else if cmd.isEqual(@B::String("mem"))
+            cmd_mem()
+        // Storage
+        else if cmd.isEqual(@B::String("ls"))
+            cmd_ls(arg)
+        else if cmd.isEqual(@B::String("rm"))
+            cmd_rm(arg)
+        else if cmd.isEqual(@B::String("read"))
+            cmd_read(arg)
+        else if cmd.isEqual(@B::String("write"))
+            cmd_write(arg)
+        // Other
+        else if cmd.isEqual(@B::String("play"))
+            cmd_play()
+        else if cmd.isEqual(@B::String("help"))
+            cmd_help()
         else
             @B::String("Dunno").printlnColor(@B::String::FOREGROUND_RED)
         ;
@@ -222,4 +59,168 @@ CMD_PLAY blob<@B::String>
         character <- '\0'
         input.clear()
     ;
+;
+
+// System
+cmd_reboot fun
+    @B::String("Rebooting...").println()
+    @Syscall::System::reboot()
+;
+
+cmd_time fun
+    timestamp u32 <- @Syscall::System::getTimestamp()
+    @B::StringForU32(timestamp).println()
+;
+
+// Memory
+cmd_mem fun
+    info blob<@Syscall::InfoMem> <- @Syscall::Memory::getInfo()
+
+    @B::String("Total size: ").print()
+    @B::StringForU32(info.totalSize).println()
+
+    @B::String("Total pages: ").print()
+    @B::StringForU32(info.totalPages).println()
+
+    @B::String("Unavailable pages: ").print()
+    @B::StringForU32(info.unavailablePages).println()
+
+    @B::String("Free pages: ").print()
+    @B::StringForU32(info.freePages).println()
+
+    @B::String("Kernel pages: ").print()
+    @B::StringForU32(info.kernelPages).println()
+
+    @B::String("Kernel stack pages: ").print()
+    @B::StringForU32(info.kernelStackPages).println()
+
+    @B::String("User pages: ").print()
+    @B::StringForU32(info.userPages).println()
+
+    @B::String("Heap start: ").print()
+    @B::StringForU32(info.kernelHeapStart).println()
+
+    @B::String("Heap size: ").print()
+    @B::StringForU32(info.kernelHeapSize).println()
+
+    @B::String("Allocated bytes: ").print()
+    @B::StringForU32(info.kernelAllocateBytes).println()
+;
+
+// Storage
+cmd_ls fun: path blob<@B::String>
+    resourceId u32 <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::GET_STORAGE_ENTRY, path.adr.u32, 0)
+    @B::StringForU32(resourceId).println()
+    entryInfo blob<@Syscall::Storage::EntryInfo> <- @Syscall::Storage::getEntryInfo(resourceId)
+
+    @B::String("Kind: ").print()
+    @B::StringForU32(entryInfo.kind).println()
+
+    @B::String("Size: ").print()
+    @B::StringForU32(entryInfo.entrySize).println()
+;
+
+cmd_rm fun: path blob<@B::String>
+    resourceId u32 <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::GET_STORAGE_ENTRY, path.adr.u32, 0)
+    @B::StringForU32(resourceId).println()
+    @Syscall::Storage::deleteEntry(resourceId)
+;
+
+cmd_read fun: path blob<@B::String>
+    stringData blob<@B::String>
+    resourceId u32 <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::GET_STORAGE_ENTRY, path.adr.u32, 0)
+    @Syscall::Storage::readEntry(resourceId, 0, 64, stringData.string.adr)
+    stringData.println()
+;
+
+cmd_write fun: path blob<@B::String>
+    stringData blob<@B::String> <- @B::String("Bits runner test!\nWriting to a file.\n")
+    resourceId u32 <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::CREATE_STORAGE_ENTRY, path.adr.u32, 0)
+    if resourceId = 0: ret
+    @Syscall::Storage::writeEntry(resourceId, 0, 64, stringData.string.adr)
+;
+
+// Other
+cmd_play fun
+    // Twin
+    @B::String("Twin").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(262, 400)
+    @Syscall::Process::sleep(450)
+
+    // kle
+    @B::String("kle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(262, 400)
+    @Syscall::Process::sleep(450)
+
+    // twin
+    @B::String(" twin").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(392, 400)
+    @Syscall::Process::sleep(450)
+
+    // kle
+    @B::String("kle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(392, 400)
+    @Syscall::Process::sleep(450)
+
+    // lit
+    @B::String(" lit").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(440, 400)
+    @Syscall::Process::sleep(450)
+
+    // tle
+    @B::String("tle").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(440, 400)
+    @Syscall::Process::sleep(450)
+
+    // star
+    @B::String(" star").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(392, 800)
+    @Syscall::Process::sleep(850)
+
+    // how
+    @B::String(" how").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(349, 400)
+    @Syscall::Process::sleep(450)
+
+    // I
+    @B::String(" I").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(349, 400)
+    @Syscall::Process::sleep(450)
+
+    // won
+    @B::String(" won").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(330, 400)
+    @Syscall::Process::sleep(450)
+
+    // der
+    @B::String("der").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(330, 400)
+    @Syscall::Process::sleep(450)
+
+    // what
+    @B::String(" what").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(294, 400)
+    @Syscall::Process::sleep(450)
+
+    // you
+    @B::String(" you").printColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(294, 400)
+    @Syscall::Process::sleep(450)
+
+    // are
+    @B::String(" are").printlnColor(@B::String::FOREGROUND_BROWN | @B::String::ATTRIB_BRIGHT)
+    @Syscall::Audio::play(262, 800)
+    @Syscall::Process::sleep(850)
+;
+
+cmd_help fun
+    @B::String("reboot: Reboots the system").println()
+    @B::String("time: Shows current timestamp").println()
+    @B::String("ls <PATH>: Shows file/dir info").println()
+    @B::String("rm <PATH>: Delete file/dir").println()
+    @B::String("read <PATH>: Read first 64 bytes").println()
+    @B::String("write <PATH>: Write text to a file").println()
+    @B::String("mem: Show memory info").println()
+    @B::String("play: Plays a tune").println()
+    @B::String("help: This thing").println()
 ;
