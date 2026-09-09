@@ -166,7 +166,7 @@ boot_storage_read_sectors_32:
 %undef .args_count
 
 ;
-; Read singe sector from the boot storage device
+; Read a singe sector from the boot storage device using CHS
 ; in
 ;  sector
 ;  target_adr (within the first memory segment)
@@ -250,13 +250,13 @@ boot_storage_read_sector_lba_32:
 	mov ah, 0x42
 	int 0x13
 	jnc .read_successful
+
 	; read failed
 	mov eax, 0
 	jmp .end
 
 .read_successful:
 	mov eax, 1
-	jmp .end
 
 .end:
 	call switch_to_protected_mode_16
@@ -272,7 +272,75 @@ boot_storage_read_sector_lba_32:
 %undef .args_count
 
 ;
-; Write single sector to the boot storage device
+; Write sectors to the boot storage device
+; in
+;  first_sector
+;  sectors_count
+;  source_adr
+;  buffer_adr
+; out
+;  eax: written sectors count or 0 on error
+%define .args_count 4
+%define .first_sector [ebp + 8]
+%define .sectors_count [ebp + 12]
+%define .source_adr [ebp + 16]
+%define .buffer_adr [ebp + 20]
+[bits 32]
+boot_storage_write_sectors_32:
+	push ebp
+	mov ebp, esp
+
+	;xchg bx, bx
+
+	mov ecx, .sectors_count
+.sectors_loop:
+	push ecx
+
+	; copy data from source address into buffer
+	cld
+	mov ecx, [boot_storage_fat_bytes_per_sector]
+	mov esi, .source_adr
+	mov edi, .buffer_adr
+	rep movsb
+	mov .source_adr, esi ; point source address to the next area
+
+	; write temp buffer into given sector
+	push dword .buffer_adr
+	push dword .first_sector
+
+	; Floppies use CHS, hard disks use LBA (0x80)
+	test [boot_storage_drive_number], 0x80
+	jz .write_chs
+
+	; Write using LBA
+	call boot_storage_write_sector_lba_32
+	jmp .write_end
+
+	; Write using CHS
+.write_chs:
+	call boot_storage_write_sector_chs_32
+
+.write_end:
+	cmp eax, 0
+	jz .end
+
+	inc dword .first_sector ; move the next target sector
+
+	pop ecx
+	loop .sectors_loop
+
+.end:
+	mov esp, ebp
+	pop ebp
+	ret U32_SIZE * .args_count
+%undef .buffer_adr
+%undef .source_adr
+%undef .sectors_count
+%undef .first_sector
+%undef .args_count
+
+;
+; Write a single sector to the boot storage device using CHS
 ; in
 ;  sector
 ;  source_adr (within the first memory segment)
@@ -282,7 +350,7 @@ boot_storage_read_sector_lba_32:
 %define .sector [ebp + 8]
 %define .source_adr [ebp + 12]
 [bits 32]
-boot_storage_write_sector_32:
+boot_storage_write_sector_chs_32:
 	push ebp
 	mov ebp, esp
 
@@ -325,56 +393,56 @@ boot_storage_write_sector_32:
 %undef .args_count
 
 ;
-; Write sectors to the boot storage device
+; Write a single sector to the boot storage device using LBA
 ; in
-;  first_sector
-;  sectors_count
-;  source_adr
-;  buffer_adr
+;  sector
+;  source_adr (within the first memory segment)
 ; out
-;  eax: written sectors count or 0 on error
-%define .args_count 4
-%define .first_sector [ebp + 8]
-%define .sectors_count [ebp + 12]
-%define .source_adr [ebp + 16]
-%define .buffer_adr [ebp + 20]
+;  eax: written sectors count (1) or 0 on error
+%define .args_count 2
+%define .sector [ebp + 8]
+%define .source_adr [ebp + 12]
 [bits 32]
-boot_storage_write_sectors_32:
+boot_storage_write_sector_lba_32:
 	push ebp
 	mov ebp, esp
 
-	mov ecx, .sectors_count
-.sectors_loop:
-	push ecx
+	; Setup DAP (Disk Address Packet) on stack
+	push dword 0x00 ; LBA sector on disk (high)
+	push dword .sector ; LBA sector on disk (low)
+	push word 0x00 ; Source segment
+	push word .source_adr ; Source offset
+	push word 0x01 ; Sectors count
+	push word 0x10 ; Size of packet (16 bytes)
 
-	; copy data from source address into buffer
-	cld
-	mov ecx, [boot_storage_fat_bytes_per_sector]
-	mov esi, .source_adr
-	mov edi, .buffer_adr
-	rep movsb
-	mov .source_adr, esi ; point source address to the next area
+	call switch_to_v86_mode_32
+[bits 16]
 
-	; write temp buffer into given sector
-	push dword .buffer_adr
-	push dword .first_sector
-	call boot_storage_write_sector_32
-	cmp eax, 0
-	jz .end
+	mov al, 0x00
+	mov esi, esp
+	mov dl, [boot_storage_drive_number]
+	mov ah, 0x43
+	int 0x13
+	jnc .write_successful
 
-	inc dword .first_sector ; move the next target sector
+	; write failed
+	mov eax, 0
+	jmp .end
 
-	pop ecx
-	loop .sectors_loop
+.write_successful:
+	mov eax, 1
 
 .end:
+	call switch_to_protected_mode_16
+[bits 32]
+
+	add esp, 0x10 ; Get rid of DAP
+
 	mov esp, ebp
 	pop ebp
 	ret U32_SIZE * .args_count
-%undef .buffer_adr
 %undef .source_adr
-%undef .sectors_count
-%undef .first_sector
+%undef .sector
 %undef .args_count
 
 ;
