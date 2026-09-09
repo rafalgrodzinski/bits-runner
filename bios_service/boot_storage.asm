@@ -125,7 +125,20 @@ boot_storage_read_sectors_32:
 	; read given sector into a temp buffer
 	push dword .buffer_adr
 	push dword .first_sector
-	call boot_storage_read_sector_32
+
+	; Floppies use CHS, hard disks use LBA (0x80)
+	test [boot_storage_drive_number], 0x80
+	jz .read_chs
+
+	; Read using LBA
+	call boot_storage_read_sector_lba_32
+	jmp .read_end
+
+	; Read using CHS
+.read_chs:
+	call boot_storage_read_sector_chs_32
+
+.read_end:
 	cmp eax, 0
 	jz .end
 
@@ -163,7 +176,7 @@ boot_storage_read_sectors_32:
 %define .sector [ebp + 8]
 %define .target_adr [ebp + 12]
 [bits 32]
-boot_storage_read_sector_32:
+boot_storage_read_sector_chs_32:
 	push ebp
 	mov ebp, esp
 
@@ -197,6 +210,59 @@ boot_storage_read_sector_32:
 .end:
 	call switch_to_protected_mode_16
 [bits 32]
+
+	mov esp, ebp
+	pop ebp
+	ret U32_SIZE * .args_count
+%undef .target_adr
+%undef .sector
+%undef .args_count
+
+;
+; Read a single sector using LBA
+; in
+;  .sector: LBA sector address on disk
+;  .target_adr: address of the buffer withing the first memory sgment
+; out
+;  eax:read sectors count (1) or 0 on error
+[bits 32]
+%define .args_count 2
+%define .sector [ebp + 8]
+%define .target_adr [ebp + 12]
+boot_storage_read_sector_lba_32:
+	push ebp
+	mov ebp, esp
+
+	; Setup DAP (Disk Address Packet) on stack
+	push dword 0x00 ; LBA sector on disk (high)
+	push dword .sector ; LBA sector on disk (low)
+	push word 0x00 ; Target segment
+	push word .target_adr ; Target offset
+	push word 0x01 ; Sectors count
+	push word 0x10 ; Size of packet (16 bytes)
+
+	call switch_to_v86_mode_32
+[bits 16]
+
+	mov al, 0x00
+	mov esi, esp
+	mov dl, [boot_storage_drive_number]
+	mov ah, 0x42
+	int 0x13
+	jnc .read_successful
+	; read failed
+	mov eax, 0
+	jmp .end
+
+.read_successful:
+	mov eax, 1
+	jmp .end
+
+.end:
+	call switch_to_protected_mode_16
+[bits 32]
+
+	add esp, 0x10 ; Get rid of DAP
 
 	mov esp, ebp
 	pop ebp
