@@ -58,4 +58,4 @@ jobs:
         run: |
           gh release create "${{env.TAG}}" "${GITHUB_WORKSPACE}/*.img" \
           --title "${{env.VERSION}}" \
-          --notes-file "${GITHUB_WORKSPACE}/docs/Notes.md"
+          --notes-file "${GITHUB_WORKSPACE}/docs/notes.md"
