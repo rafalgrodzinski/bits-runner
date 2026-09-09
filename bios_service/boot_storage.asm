@@ -166,7 +166,7 @@ boot_storage_read_sectors_32:
 %undef .args_count
 
 ;
-; Read a singe sector from the boot storage device using CHS
+; Read a single sector from the boot storage device using CHS
 ; in
 ;  sector
 ;  target_adr (within the first memory segment)
