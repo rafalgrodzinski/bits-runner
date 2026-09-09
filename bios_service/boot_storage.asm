@@ -290,8 +290,6 @@ boot_storage_write_sectors_32:
 	push ebp
 	mov ebp, esp
 
-	;xchg bx, bx
-
 	mov ecx, .sectors_count
 .sectors_loop:
 	push ecx
