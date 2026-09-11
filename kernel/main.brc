@@ -8,7 +8,6 @@
 @import BSys
 @import Interrupt
 @import Bus
-@import DeviceVideo
 @import Devices
 
 busPci blob<@Bus::BusPci>

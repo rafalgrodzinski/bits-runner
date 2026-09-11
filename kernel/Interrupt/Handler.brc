@@ -5,7 +5,6 @@
 @import Term
 @import DeviceKeyboard
 @import DeviceMouse
-@import DeviceVideo
 @import Devices
 
 @extern interrupt_handler_init fun
@@ -18,7 +17,7 @@ INT_SYSCALL u32 <- 0x30
 
 deviceKeyboard blob<@DeviceKeyboard::DeviceKeyboard>
 deviceMouse blob<@DeviceMouse::DeviceMouse>
-deviceVideo proto<@DeviceVideo::DeviceVideo>
+deviceVideo proto<@Devices::Video>
 
 @export Handler::instance blob<Handler>
 
@@ -27,7 +26,7 @@ deviceVideo proto<@DeviceVideo::DeviceVideo>
         interrupt_handler_init()
         deviceKeyboard.init()
         deviceMouse.init()
-        deviceVideo <- @DeviceVideo::getPrimary()
+        deviceVideo <- @Devices::Video::getPrimary()
     ;
 
     handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, interrupt u32, errorCode u32 -> u32
