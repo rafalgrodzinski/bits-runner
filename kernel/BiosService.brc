@@ -1,10 +1,12 @@
 @module BiosService
 
 Service::REBOOT u32 <- 0x00
-Service::SET_VIDEO_MODE u32 <- 0x01
 Service::BOOT_STORAGE_READ_SECTORS u32 <- 0x02
 Service::BOOT_STORAGE_WRITE_SECTORS u32 <- 0x04
 Service::GET_SECTORS_COUNT u32 <- 0x03
+
+Service::Video::VGA_SET_MODE u32 <- 0x20
+Service::Video::VESA_GET_INFO u32 <- 0x21
 
 @export VIDEO_MODE_TEXT_80x25 u32 <- 0x00
 @export VIDEO_MODE_TEXT_80x50 u32 <- 0x01
@@ -45,6 +47,10 @@ biosServiceCallRaw raw<"=r, m, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{mem
 ;
 
 // Video
-@export setVideoMode fun: videoMode u32
-    biosServiceCallRaw(aBiosService.u32, Service::SET_VIDEO_MODE, videoMode, 0, 0)
+@export Video::vgaSetMode fun: videoMode u32
+    biosServiceCallRaw(aBiosService.u32, Service::Video::VGA_SET_MODE, videoMode, 0, 0)
+;
+
+@export Video::VesaGetInfo fun: aInfoBuffer a
+    biosServiceCallRaw(aBiosService.u32, Service::Video::VESA_GET_INFO, aInfoBuffer.u32, 0, 0)
 ;

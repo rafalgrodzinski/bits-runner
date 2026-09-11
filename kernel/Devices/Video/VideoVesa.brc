@@ -1,0 +1,8 @@
+@module Devices
+
+@import BiosService
+
+@export Video::Vesa blob
+    init fun
+    ;
+;
