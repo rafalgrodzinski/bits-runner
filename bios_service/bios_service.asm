@@ -5,6 +5,8 @@
 
 %define BIOS_SERVICE_VIDEO_VGA_SET_MODE 0x20
 %define BIOS_SERVICE_VIDEO_VESA_GET_INFO 0x21
+%define BIOS_SERVICE_VIDEO_VESA_GET_MODE_INFO 0x22
+%define BIOS_SERVICE_VIDEO_VESA_SET_MODE 0x23
 
 %define BIOS_SERVICE_TEXT_MODE_80x25 0x00
 %define BIOS_SERVICE_TEXT_MODE_80x50 0x01
@@ -75,6 +77,23 @@ bios_service_32:
     call bios_service_video_vesa_get_info_32
     jmp .end
 .not_video_vesa_get_info:
+
+    ; Video VESA Get Mode Info
+    cmp eax, BIOS_SERVICE_VIDEO_VESA_GET_MODE_INFO
+    jne .not_video_vesa_get_mode_info
+    push ecx ; .mode
+    push ebx ; .target_adr
+    call bios_service_video_vesa_get_mode_info_32
+    jmp .end
+.not_video_vesa_get_mode_info:
+
+    ; Video VESA Set Mode
+    cmp eax, BIOS_SERVICE_VIDEO_VESA_SET_MODE
+    jne .not_video_vesa_set_mode
+    push ebx ; .mode
+    call bios_service_video_vesa_set_mode_32
+    jmp .end
+.not_video_vesa_set_mode:
 
 .end:
     cli
@@ -230,7 +249,7 @@ bios_service_video_vga_set_mode_32:
 %undef .args_count
 
 ;
-; Get VESA info
+; VESA Get Info
 ; in
 ;  .target_adr
 %define .args_count 1
@@ -248,9 +267,8 @@ bios_service_video_vesa_get_info_32:
 
     call switch_to_protected_mode_16
 [bits 32]
-
     ; Copy retreived data to the target address
-    mov ecx, 512
+    mov ecx, 0x200
     mov esi, buffer
     mov edi, .target_adr
     rep movsb
@@ -259,4 +277,67 @@ bios_service_video_vesa_get_info_32:
     pop ebp
     ret U32_SIZE * .args_count
 %undef .target_adr
+%undef .args_count
+
+;
+; VESA Get Mode Info
+; in
+;  .target_adr
+;  .mode
+%define .args_count 2
+%define .target_adr [ebp + 8]
+%define .mode [ebp + 12]
+[bits 32]
+bios_service_video_vesa_get_mode_info_32:
+    push ebp
+    mov ebp, esp
+
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f01
+    mov di, buffer
+    mov cx, .mode
+    int 0x10
+
+    call switch_to_protected_mode_16
+[bits 32]
+    ; Copy retreived data to the target address
+    mov ecx, 0x100
+    mov esi, buffer
+    mov edi, .target_adr
+    rep movsb
+
+    mov esp, ebp
+    pop ebp
+    ret U32_SIZE * .args_count
+%undef .mode
+%undef .target_adr
+%undef .args_count
+
+;
+; VESA Set Mode
+; in
+;  .mode
+%define .args_count 1
+%define .mode [ebp + 8]
+[bits 32]
+bios_service_video_vesa_set_mode_32:
+    push ebp
+    mov ebp, esp
+
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f02
+    mov bx, .mode
+    ;and bx, 0x3fff ; Clear two top bits
+    ;or bx, 0x4000 ; Set bit 14 to enable linear frame buffer
+    int 0x10
+
+    call switch_to_protected_mode_16
+[bits 32]
+
+    mov esp, ebp
+    pop ebp
+    ret U32_SIZE * .args_count
+%undef .mode
 %undef .args_count

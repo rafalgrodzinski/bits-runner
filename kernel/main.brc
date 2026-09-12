@@ -11,6 +11,7 @@
 @import Devices
 
 busPci blob<@Bus::BusPci>
+videoVesa blob<@Devices::Video::Vesa>
 
 @export start fun
     // Get boot parameters from BIOS Service
@@ -25,7 +26,7 @@ busPci blob<@Bus::BusPci>
     @Memory::PagingManager::instance.init()
     @Memory::HeapManager::instance.init()
     @Interrupt::Handler::instance.init()
-    @Term::init(@Term::MODE_80x25)
+    @Term::init(@Term::MODE_80x50)
 
     @B::String("Initializing Bits Runner...").println()
     @Devices::Timer::Pit::instance.init()
@@ -38,12 +39,17 @@ busPci blob<@Bus::BusPci>
     pEntry ptr<blob<@Storage::Entry>>
     aFileBuffer a
 
+    /*
     // Load shell
-    pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
+    //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
+    pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/VDEMO.BIN"))
     aFileBuffer <- @BSys::memAlloc(pEntry.val.fileSize)
     pEntry.val.read(0, pEntry.val.fileSize, aFileBuffer)
     @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, pEntry.val.fileSize)
     @BSys::memFree(pEntry.vadr)
+    */
+
+    videoVesa.init()
 
     @Dispatch::Dispatcher::instance.start()
 ;

@@ -7,6 +7,8 @@ Service::GET_SECTORS_COUNT u32 <- 0x03
 
 Service::Video::VGA_SET_MODE u32 <- 0x20
 Service::Video::VESA_GET_INFO u32 <- 0x21
+Service::Video::VESA_GET_MODE_INFO u32 <- 0x22
+Service::Video::VESA_SET_MODE u32 <- 0x23
 
 @export VIDEO_MODE_TEXT_80x25 u32 <- 0x00
 @export VIDEO_MODE_TEXT_80x50 u32 <- 0x01
@@ -51,6 +53,14 @@ biosServiceCallRaw raw<"=r, m, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{mem
     biosServiceCallRaw(aBiosService.u32, Service::Video::VGA_SET_MODE, videoMode, 0, 0)
 ;
 
-@export Video::VesaGetInfo fun: aInfoBuffer a
-    biosServiceCallRaw(aBiosService.u32, Service::Video::VESA_GET_INFO, aInfoBuffer.u32, 0, 0)
+@export Video::vesaGetInfo fun: aInfo a
+    biosServiceCallRaw(aBiosService.u32, Service::Video::VESA_GET_INFO, aInfo.u32, 0, 0)
+;
+
+@export Video::vesaGetModeInfo fun: aModeInfo a, mode u32
+    biosServiceCallRaw(aBiosService.u32, Service::Video::VESA_GET_MODE_INFO, aModeInfo.u32, mode, 0)
+;
+
+@export Video::vesaSetMode fun: mode u32
+    biosServiceCallRaw(aBiosService.u32, Service::Video::VESA_SET_MODE, mode, 0, 0)
 ;

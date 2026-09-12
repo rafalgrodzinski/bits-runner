@@ -21,10 +21,8 @@
 
 deviceVga blob<Video::Vga>
 @export deviceSvga2 blob<Video::Svga2>
-deviceVesa blob<Video::Vesa>
 
 @export Video::getPrimary fun -> proto<Video>
-    deviceVesa.init()
     //pDevice ptr<blob<Svga2>> <- { deviceSvga2.adr }
     pDevice ptr<blob<Video::Vga>> <- { deviceVga.adr }
     ret { pDevice }.proto<Video>
