@@ -51,6 +51,8 @@ VesaModeInfo blob
     reserved_4 data<u8, 206> // 50
 ;
 
+info blob_pack<VesaInfo>
+
 @export Video::Vesa blob
     init fun
         info blob_pack<VesaInfo>
@@ -89,17 +91,18 @@ VesaModeInfo blob
             //;
         ;
 
-        /*@BiosService::Video::vesaSetMode(0x111)
-        @Memory::PagingManager::instance.mapRawMemory(@Dispatch::Dispatcher::instance.getCurrentPageDirectoryPtr(), 0xe000_0000, 640*480*24)
+        @Memory::PagingManager::instance.mapDirectMemory(0xe000_0000, 640*480*24)
+
+        @BiosService::Video::vesaSetMode(0x111)
 
         pFb ptr<data<u8>> <- {0xe000_0000}
-        /*pFb.val[0] <- 0x80
+        pFb.val[0] <- 0x80
 
         pFb.val[101] <- 0x11
-        pFb.val[103] <- 0x33*/
+        pFb.val[103] <- 0x33
 
         rep x u32, x < 300, x <- x + 1
             pFb.val[x * 640 + x] <- 0xff
-        ;*/
+        ;
     ;
 ;
