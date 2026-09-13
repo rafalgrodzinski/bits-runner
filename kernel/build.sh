@@ -33,7 +33,6 @@ OBJS=(
     Bus.o
     DeviceKeyboard.o
     DeviceMouse.o
-    DeviceVideo.o
     DrvCmos.o
     Devices.o
     Interrupt.o

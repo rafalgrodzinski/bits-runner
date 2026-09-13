@@ -1,0 +1,108 @@
+@module Devices
+
+@import BiosService
+@import B
+@import Dispatch
+@import Memory
+
+VesaInfo blob
+    signature data<u8, 4>
+    version u16
+    oemStringPtr data<u16, 2>
+    caps data<u8, 4>
+    videoModePtr data<u16, 2>
+    totalMemory u16
+    reserved data<u8, 492>
+;
+
+VesaModeInfo blob
+    attributes u16 // 0
+    windowA u8 // 2
+    windowB u8 // 3
+    granularity u16 // 4
+    windowSize u16 // 6
+    segmentA u16 // 8
+    segmentB u16 // 10
+    winFunPtr u32 // 12
+    pitch u16 // 16
+    width u16 // 18
+    height u16 // 20
+    xChar u8 // 22
+    yChar u8 // 23
+    planes u8 // 24
+    bpp u8 // 25
+    banks u8 // 26
+    memoryModel u8 // 27
+    bankSize u8 // 28
+    imagePages u8 // 29
+    reserved_0 u8 // 30
+    redMask u8 // 31
+    redPosition u8 // 32
+    greenMask u8 // 33
+    greenPosition u8 // 34
+    blueMask u8 // 35
+    bluePosition u8 // 36
+    reserved_1 u8 // 37
+    reserved_3 u8 // 38
+    directColorAttributes u8 // 39
+    framebufferPtr u32 // 40
+    offScreenMemoryOffset u32 // 44
+    offScreenMemorySize u16 // 48
+    reserved_4 data<u8, 206> // 50
+;
+
+info blob_pack<VesaInfo>
+
+@export Video::Vesa blob
+    init fun
+        info blob_pack<VesaInfo>
+        @BiosService::Video::vesaGetInfo(info.adr)
+        pMode ptr<data<u16>> <- {info.videoModePtr[1] * 0x1_00_00 + info.videoModePtr[0]}
+    
+        // First copy returned mode numbers
+        modes blob<@B::Array, u32>
+        rep i u32, pMode.val[i] < 0xffff, i <- i + 1
+            modes.push(pMode.val[i])
+        ;
+
+        // Then get and filter each one
+        rep i u32, i < modes.count, i <- i + 1
+            modeInfo blob_pack<VesaModeInfo>
+            @BiosService::Video::vesaGetModeInfo(modeInfo.adr, modes.at(i).u32)
+
+            //if modeInfo.attributes &? 0x80 and (modeInfo.bpp = 4 or modeInfo.bpp = 8 or modeInfo.bpp = 16 or modeInfo.bpp = 24 or modeInfo.bpp = 32)
+                @B::StringHexForU32(modes.at(i).u32).print()
+                @B::String(" ").print()
+
+
+                @B::StringHexForU32(modeInfo.attributes & 0x80).print()
+                @B::String(" ").print()
+
+                @B::StringForU32(modeInfo.width).print()
+                @B::String("x").print()
+
+                @B::StringForU32(modeInfo.height).print()
+                @B::String("@").print()
+
+                @B::StringForU32(modeInfo.bpp).print()
+                @B::String(" ").print()
+
+                @B::StringHexForU32(modeInfo.framebufferPtr).println()
+            //;
+        ;
+
+        @Memory::PagingManager::instance.mapDirectMemory(0xe000_0000, 640*480*24)
+
+        @BiosService::Video::vesaSetMode(0x111)
+
+        pFb ptr<data<u8>> <- {0xe000_0000}
+        pFb.val[0] <- 0x80
+
+        pFb.val[101] <- 0x11
+        pFb.val[103] <- 0x33
+
+        rep x u32, x < 300, x <- x + 1
+            pFb.val[x * 640 + x] <- 0xff
+        ;
+    ;
+;

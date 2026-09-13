@@ -1,4 +1,4 @@
-@module DeviceVideo
+@module Devices
 
 @import B
 @import Bus
@@ -34,7 +34,7 @@ SVGA2_REG_FIFO_SIZE u16 <- 0x13
 
 SVGA2_REG_CAPS u16 <- 0x11
 
-@export Svga2 blob: DeviceVideo
+@export Video::Svga2 blob: Video
     portBase u16
     width u32
     height u32
@@ -111,7 +111,7 @@ SVGA2_REG_CAPS u16 <- 0x11
         fbOffset u32 <- it.readReg(SVGA2_REG_FB_OFFSET)
         fbSize u32 <- it.readReg(SVGA2_REG_FB_SIZE)
         it.pFrameBuffer <- {fbStart + fbOffset}
-        @Memory::PagingManager::instance.mapRawMemory(@Dispatch::Dispatcher::instance.getCurrentPageDirectoryPtr(), fbStart, fbSize)
+        @Memory::PagingManager::instance.mapDirectMemory(fbStart, fbSize)
     ;
 
     commitDrawing fun

@@ -19,6 +19,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
 @export PagingManager::PAGE_KERNEL_STACK u8 <- 0x11
 @export PagingManager::PAGE_USER u8 <- 0x20
 @export PagingManager::PAGE_USER_STACK u8 <- 0x21
+@export PagingManager::PAGE_DIRECT_MAPPING u8 <- 0x30
 
 PagingManager::PAGES_TABLE_SIZE u32 <- u32.size * 1024
 PagingManager::PAGE_TABLES_ADR a <- 0xffc0_0000
@@ -120,8 +121,10 @@ PagingManager::PAGE_TABLES_DIRECTORY_ADR a <- 0xffff_f000
     ;
 
     registerPageForLinearAddress fun: pageIndex u32, pageTag u8, linearAddress u32
-        // register in bitmap
-        it.pMemoryLayout.val.memoryPages[pageIndex] <- pageTag
+        // register in bitmap if not directly mapped
+        if pageTag != PagingManager::PAGE_DIRECT_MAPPING
+            it.pMemoryLayout.val.memoryPages[pageIndex] <- pageTag
+        ;
 
         // calculate directory and table index based on the desired linear address
         tableIndex u32 <- (linearAddress & 0xffc0_0000) >> 22
@@ -147,39 +150,19 @@ PagingManager::PAGE_TABLES_DIRECTORY_ADR a <- 0xffff_f000
         PagingManager::flushTlbRaw()
     ;
 
-    mapRawMemory fun: pCurrentPagingDirectory ptr<data<u32>>, memStart u32, memorySize u32
+    mapDirectMemory fun: memStart u32, memSize u32
         memOffset u32 <- memStart % it.pMemoryLayout.val.pageSize
         startPage u32 <- memStart / it.pMemoryLayout.val.pageSize
-        pagesCount u32 <- (memOffset + memorySize + it.pMemoryLayout.val.pageSize - 1) / it.pMemoryLayout.val.pageSize
-
-        pageOffset u32 <- startPage % 0x400
-        startTable u32 <- startPage / 0x400
-        tablesCount u32 <- (pageOffset + pagesCount + 0x400 - 1) / 0x400
-
-        remainingPages u32 <- pagesCount
+        pagesCount u32 <- (memOffset + memSize + it.pMemoryLayout.val.pageSize - 1) / it.pMemoryLayout.val.pageSize
 
         @BSys::disableInterrupts()
 
-        rep iTable u32 <- startTable, iTable < startTable + tablesCount, iTable <- iTable + 1
-            // add a new pages table to directory if necessary
-            if pCurrentPagingDirectory.val[iTable] & 0x01 = 0
-                aPagesTable a <- HeapManager::instance.allocateAligned({0}, PagingManager::PAGES_TABLE_SIZE, 0x1000)
-                rep i u32, i < 1024, i <- i + 1: aPagesTable.ptr<data<u32>>.val[i] <- 0
-                pCurrentPagingDirectory.val[iTable] <- (PagingManager::lAdrToPAdr(aPagesTable).u32 & 0xffff_f000) | 0b10111
-                PagingManager::flushTlbRaw()
-            ;
-
-            // register direct memory mappings
-            rep iPage u32 <- pageOffset, remainingPages > 0 and iPage < 1024, iPage <- iPage + 1
-                // update table entry relative to the last directory entry
-                memAdr u32 <- (iTable * 0x400 + iPage) * it.pMemoryLayout.val.pageSize
-                pPageTables ptr<data<u32>> <- {0xffc0_0000}
-                pPageTables.val[iTable * 0x400 + iPage] <- (memAdr & 0xffff_f000) | 0b10111
-
-                remainingPages <- remainingPages - 1
-            ;
-            // only the first page may have an offset
-            pageOffset <- 0
+        rep pageIndex u32 <- startPage, pageIndex < startPage + pagesCount, pageIndex <- pageIndex + 1
+            it.registerPageForLinearAddress(
+                pageIndex,
+                PagingManager::PAGE_DIRECT_MAPPING,
+                pageIndex * it.pMemoryLayout.val.pageSize
+            )
         ;
 
         @BSys::enableInterrupts()
