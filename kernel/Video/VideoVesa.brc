@@ -1,4 +1,4 @@
-@module Devices
+@module Video
 
 @import BiosService
 @import B
@@ -53,7 +53,7 @@ VesaModeInfo blob
 
 info blob_pack<VesaInfo>
 
-@export Video::Vesa blob
+@export Vesa blob
     init fun
         info blob_pack<VesaInfo>
         @BiosService::Video::vesaGetInfo(info.adr)

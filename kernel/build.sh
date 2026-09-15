@@ -41,6 +41,7 @@ OBJS=(
     Dispatch.o
     Storage.o
     Term.o
+    Video.o
 )
 
 # don't split on spaces, only on new lines

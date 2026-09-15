@@ -1,4 +1,4 @@
-@module Devices
+@module Video
 
 @import BSys
 @import BiosService
@@ -24,7 +24,7 @@ BIT_MASK_REG u8 <- 0x08
 VGA_MODE_640x480x4 u32 <- 0x00
 VGA_MODE_320x240x8 u32 <- 0x01
 
-@export Video::Vga blob: Video
+@export Vga blob: Video
     width u32
     height u32
     vgaMode u32

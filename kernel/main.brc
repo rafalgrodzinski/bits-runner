@@ -9,9 +9,10 @@
 @import Interrupt
 @import Bus
 @import Devices
+@import Video
 
 busPci blob<@Bus::BusPci>
-videoVesa blob<@Devices::Video::Vesa>
+videoVesa blob<@Video::Vesa>
 
 @export start fun
     // Get boot parameters from BIOS Service
