@@ -174,19 +174,19 @@ Syscall::Audio::STOP u32 <- 0x701
             @Term::printCharacter(ebx.u8, ecx.u8)
         // Video
         else if eax = Syscall::Video::SET_MODE
-            deviceVideo.setMode(ebx, ecx)
+            //deviceVideo.setMode(ebx, ecx)
         else if eax = Syscall::Video::COMMIT_DRAWING
-            deviceVideo.commitDrawing()
+            //deviceVideo.commitDrawing()
         else if eax = Syscall::Video::CLEAR_SCREEN
-            deviceVideo.clear(ebx)
+            //deviceVideo.clear(ebx)
         else if eax = Syscall::Video::DRAW_PIXEL
-            deviceVideo.drawPixel(ebx, ecx, edx)
+            //deviceVideo.drawPixel(ebx, ecx, edx)
         else if eax = Syscall::Video::DRAW_LINE
-            x1 u32 <- ebx >> 16
+            /*x1 u32 <- ebx >> 16
             y1 u32 <- ebx & 0xffff
             x2 u32 <- ecx >> 16
             y2 u32 <- ecx & 0xffff
-            deviceVideo.drawLine(x1, y1, x2, y2, edx)
+            deviceVideo.drawLine(x1, y1, x2, y2, edx)*/
         // Audio
         else if eax = Syscall::Audio::PLAY
             @Devices::Audio::Speaker::instance.play(ebx, ecx)

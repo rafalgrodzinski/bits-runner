@@ -12,7 +12,6 @@
 @import Video
 
 busPci blob<@Bus::BusPci>
-videoVesa blob<@Video::Vesa>
 
 @export start fun
     // Get boot parameters from BIOS Service
@@ -33,6 +32,7 @@ videoVesa blob<@Video::Vesa>
     @Devices::Timer::Pit::instance.init()
     //busPci.scan()
     @Storage::instance.init(biosBootDriveNumber, bootPartitionFirstSector)
+    @Video::instance.init()
     
     @B::String("All ready, welcome to Bits Runner!\n").printlnColor(@B::String::FOREGROUND_GREEN)
 
@@ -50,7 +50,7 @@ videoVesa blob<@Video::Vesa>
     @BSys::memFree(pEntry.vadr)
     */
 
-    videoVesa.init()
+    //videoVesa.init()
 
     @Dispatch::Dispatcher::instance.start()
 ;

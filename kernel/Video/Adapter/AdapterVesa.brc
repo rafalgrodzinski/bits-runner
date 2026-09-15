@@ -53,7 +53,7 @@ VesaModeInfo blob
 
 info blob_pack<VesaInfo>
 
-@export Vesa blob
+@export AdapterVesa blob
     init fun
         info blob_pack<VesaInfo>
         @BiosService::Video::vesaGetInfo(info.adr)

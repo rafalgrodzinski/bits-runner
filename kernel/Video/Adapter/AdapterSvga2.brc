@@ -34,7 +34,7 @@ SVGA2_REG_FIFO_SIZE u16 <- 0x13
 
 SVGA2_REG_CAPS u16 <- 0x11
 
-@export Svga2 blob: Video
+@export AdapterSvga2 blob: Adapter
     portBase u16
     width u32
     height u32
