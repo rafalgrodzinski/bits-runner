@@ -92,7 +92,7 @@ VesaModeInfo blob
     getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
         // Setup surface
         pSurface ptr<blob<Surface>> <- @BSys::memAlloc(blob<Surface>.size).ptr<blob<Surface>>
-        pSurface.val.iAdapter <- {it.adr.ptr<blob<AdapterVesa>>}
+        pSurface.val.iAdapter <- {it.ptr}
         pSurface.val.pMode <- pMode
 
         // Setup adapter

@@ -26,7 +26,7 @@ busPci blob<@Bus::BusPci>
     @Memory::PagingManager::instance.init()
     @Memory::HeapManager::instance.init()
     @Interrupt::Handler::instance.init()
-    @Term::init(@Term::MODE_80x50)
+    @Term::init(@Term::MODE_80x25)
 
     @B::String("Initializing Bits Runner...").println()
     @Devices::Timer::Pit::instance.init()

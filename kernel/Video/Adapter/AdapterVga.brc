@@ -60,7 +60,7 @@ VGA_MODE_640x480x4 u32 <- 0x00
     getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
         // Setup surface
         pSurface ptr<blob<Surface>> <- @BSys::memAlloc(blob<Surface>.size).ptr<blob<Surface>>
-        pSurface.val.iAdapter <- {it.adr.ptr<blob<AdapterVga>>}
+        pSurface.val.iAdapter <- {it.ptr}
         pSurface.val.pMode <- pMode
 
         // Setup adapter
