@@ -150,9 +150,9 @@ PagingManager::PAGE_TABLES_DIRECTORY_ADR a <- 0xffff_f000
         PagingManager::flushTlbRaw()
     ;
 
-    mapDirectMemory fun: memStart u32, memSize u32
-        memOffset u32 <- memStart % it.pMemoryLayout.val.pageSize
-        startPage u32 <- memStart / it.pMemoryLayout.val.pageSize
+    mapDirectMemory fun: aMem a, memSize u32
+        memOffset u32 <- aMem.u32 % it.pMemoryLayout.val.pageSize
+        startPage u32 <- aMem.u32 / it.pMemoryLayout.val.pageSize
         pagesCount u32 <- (memOffset + memSize + it.pMemoryLayout.val.pageSize - 1) / it.pMemoryLayout.val.pageSize
 
         @BSys::disableInterrupts()

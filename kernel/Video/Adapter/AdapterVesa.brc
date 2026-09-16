@@ -2,7 +2,6 @@
 
 @import BiosService
 @import B
-@import Dispatch
 @import Memory
 
 VesaInfo blob
@@ -51,84 +50,28 @@ VesaModeInfo blob
     reserved_4 data<u8, 206> // 50
 ;
 
-//info blob_pack<VesaInfo>
-
 @export AdapterVesa blob: Adapter
-    /*init fun
-        info blob_pack<VesaInfo>
-        @BiosService::Video::vesaGetInfo(info.adr)
-        pMode ptr<data<u16>> <- {info.videoModePtr[1] * 0x1_00_00 + info.videoModePtr[0]}
-    
-        // First copy returned mode numbers
-        modes blob<@B::Array, u32>
-        rep i u32, pMode.val[i] < 0xffff, i <- i + 1
-            modes.push(pMode.val[i])
-        ;
-
-        // Then get and filter each one
-        rep i u32, i < modes.count, i <- i + 1
-            modeInfo blob_pack<VesaModeInfo>
-            @BiosService::Video::vesaGetModeInfo(modeInfo.adr, modes.at(i).u32)
-
-            //if modeInfo.attributes &? 0x80 and (modeInfo.bpp = 4 or modeInfo.bpp = 8 or modeInfo.bpp = 16 or modeInfo.bpp = 24 or modeInfo.bpp = 32)
-                @B::StringHexForU32(modes.at(i).u32).print()
-                @B::String(" ").print()
-
-
-                @B::StringHexForU32(modeInfo.attributes & 0x80).print()
-                @B::String(" ").print()
-
-                @B::StringForU32(modeInfo.width).print()
-                @B::String("x").print()
-
-                @B::StringForU32(modeInfo.height).print()
-                @B::String("@").print()
-
-                @B::StringForU32(modeInfo.bpp).print()
-                @B::String(" ").print()
-
-                @B::StringHexForU32(modeInfo.framebufferPtr).println()
-            //;
-        ;
-
-        /*
-        @Memory::PagingManager::instance.mapDirectMemory(0xe000_0000, 640*480*24)
-
-        @BiosService::Video::vesaSetMode(0x111)
-
-        pFb ptr<data<u8>> <- {0xe000_0000}
-        pFb.val[0] <- 0x80
-
-        pFb.val[101] <- 0x11
-        pFb.val[103] <- 0x33
-
-        rep x u32, x < 300, x <- x + 1
-            pFb.val[x * 640 + x] <- 0xff
-        ;
-        */
-    ;*/
-
     //
     // MARK: proto<Adapter>
     //
 
-    getModes fun -> blob<@B::Array, ptr<blob<Adapter::Mode>>>
-        modes blob<@B::Array, ptr<blob<Adapter::Mode>>>
+    getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
+        modes blob<@B::Array, ptr<blob<Mode>>>
 
         // First get and copy the list of modes
         vesaInfo blob_pack<VesaInfo>
         @BiosService::Video::vesaGetInfo(vesaInfo.adr)
         pModeIds ptr<data<u16>> <- {vesaInfo.videoModePtr[1] * 0x1_00_00 + vesaInfo.videoModePtr[0]}
         rep i u32, pModeIds.val[i] < 0xffff, i <- i + 1
-            pMode ptr<blob<Adapter::Mode>>
-            pMode <- @BSys::memAlloc(blob<Adapter::Mode>.size).ptr<blob<Adapter::Mode>>
+            pMode ptr<blob<Mode>>
+            pMode <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
             pMode.val.id <- pModeIds.val[i]
             modes.push(pMode)
         ;
 
         // Then get details for each of the modes
         rep i u32, i < modes.count, i <- i + 1
-            pMode ptr<blob<Adapter::Mode>> <- modes.at(i).ptr<blob<Adapter::Mode>>
+            pMode ptr<blob<Mode>> <- modes.at(i).ptr<blob<Mode>>
 
             vesaModeInfo blob_pack<VesaModeInfo>
             @BiosService::Video::vesaGetModeInfo(vesaModeInfo.adr, pMode.val.id)
@@ -136,12 +79,54 @@ VesaModeInfo blob
             pMode.val.width <- vesaModeInfo.width
             pMode.val.height <- vesaModeInfo.height
             pMode.val.bpp <- vesaModeInfo.bpp
+
+            pMetadata ptr<blob<Mode::Metadata::Vesa>> <- @BSys::memAlloc(blob<Mode::Metadata::Vesa>.size).ptr<blob<Mode::Metadata::Vesa>>
+            pMode.val.aMetadata <- pMetadata.vadr
+            pMetadata.val.aFramebuffer <- vesaModeInfo.framebufferPtr.a
+            pMetadata.val.pitch <- vesaModeInfo.pitch
         ;
 
         ret modes
     ;
 
-    getSurface fun: mode ptr<blob<Adapter::Mode>> -> ptr<blob<Surface>>
-        ret {0}
+    getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
+        // Setup surface
+        pSurface ptr<blob<Surface>> <- @BSys::memAlloc(blob<Surface>.size).ptr<blob<Surface>>
+        pSurface.val.iAdapter <- {it.adr.ptr<blob<AdapterVesa>>}
+        pSurface.val.pMode <- pMode
+
+        // Setup adapter
+        pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
+        @Memory::PagingManager::instance.mapDirectMemory(pMetadata.val.aFramebuffer, pMetadata.val.pitch * pMode.val.height)
+        @BiosService::Video::vesaSetMode(pMode.val.id)
+
+        ret pSurface
+    ;
+
+    commit fun: pMode ptr<blob<Mode>>
+    ;
+
+    clear fun: pMode ptr<blob<Mode>>, color u32
+        rep y u32, y < pMode.val.height, y <- y + 1
+            rep x u32, x < pMode.val.width, x <- x + 1
+                it.drawPixel(pMode, x, y, color)
+            ;
+        ;
+    ;
+
+    drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, color u32
+        pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
+
+        offset u32 <- y * pMetadata.val.pitch + (x * (pMode.val.bpp / 8))
+        pPixel ptr<data<u8>> <- {pMetadata.val.aFramebuffer + offset}
+
+        // byte 0
+        pPixel.val[0] <- (color & 0xff).u8
+        // byte 1
+        if pMode.val.bpp > 8: pPixel.val[1] <- ((color >> 8) & 0xff).u8
+        // byte 2
+        if pMode.val.bpp > 16: pPixel.val[2] <- ((color >> 16) & 0xff).u8
+        // byte 3
+        if pMode.val.bpp > 24: pPixel.val[3] <- (color >> 24).u8
     ;
 ;

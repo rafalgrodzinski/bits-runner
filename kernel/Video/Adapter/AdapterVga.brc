@@ -24,7 +24,7 @@ BIT_MASK_REG u8 <- 0x08
 VGA_MODE_640x480x4 u32 <- 0x00
 VGA_MODE_320x240x8 u32 <- 0x01
 
-@export AdapterVga blob: Adapter
+@export AdapterVga blob//: Adapter
     width u32
     height u32
     vgaMode u32
@@ -36,13 +36,13 @@ VGA_MODE_320x240x8 u32 <- 0x01
     // MARK: proto<Adapter>
     //
 
-    getModes fun -> blob<@B::Array, ptr<blob<Adapter::Mode>>>
-        modes blob<@B::Array, ptr<blob<Adapter::Mode>>>
+    getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
+        modes blob<@B::Array, ptr<blob<Mode>>>
 
-        pMode ptr<blob<Adapter::Mode>>
+        pMode ptr<blob<Mode>>
 
         // 320x240x8
-        pMode <- @BSys::memAlloc(blob<Adapter::Mode>.size).ptr<blob<Adapter::Mode>>
+        pMode <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
         pMode.val.id <- VGA_MODE_320x240x8
         pMode.val.width <- 320
         pMode.val.height <- 240
@@ -50,7 +50,7 @@ VGA_MODE_320x240x8 u32 <- 0x01
         modes.push(pMode)     
 
         // 640x480x4
-        pMode <- @BSys::memAlloc(blob<Adapter::Mode>.size).ptr<blob<Adapter::Mode>>
+        pMode <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
         pMode.val.id <- VGA_MODE_640x480x4
         pMode.val.width <- 640
         pMode.val.height <- 480
@@ -60,7 +60,7 @@ VGA_MODE_320x240x8 u32 <- 0x01
         ret modes
     ;
 
-    getSurface fun: mode ptr<blob<Adapter::Mode>> -> ptr<blob<Surface>>
+    getSurface fun: mode ptr<blob<Mode>> -> ptr<blob<Surface>>
         ret {0}
     ;
 

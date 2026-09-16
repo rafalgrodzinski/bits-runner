@@ -1,9 +1,11 @@
 @module Video
 
-@export Adapter::Mode blob
+@export Mode blob
     id u32
 
     width u32
     height u32
     bpp u32
+
+    aMetadata a
 ;

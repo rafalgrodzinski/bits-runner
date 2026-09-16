@@ -50,11 +50,9 @@ busPci blob<@Bus::BusPci>
     @BSys::memFree(pEntry.vadr)
     */
 
-    //videoVesa.init()
-
-    modes blob<@B::Array, ptr<blob<@Video::Adapter::Mode>>> <- @Video::instance.primaryAdapter.getModes()
+    modes blob<@B::Array, ptr<blob<@Video::Mode>>> <- @Video::instance.primaryAdapter.getModes()
     rep i u32, i < modes.count, i <- i + 1
-        pMode ptr<blob<@Video::Adapter::Mode>> <- modes.at(i).ptr<blob<@Video::Adapter::Mode>>
+        pMode ptr<blob<@Video::Mode>> <- modes.at(i).ptr<blob<@Video::Mode>>
         @B::StringHexForU32(pMode.val.id).print()
         @B::String(" ").print()
 
@@ -64,6 +62,12 @@ busPci blob<@Bus::BusPci>
         @B::String("x").print()
         @B::StringForU32(pMode.val.bpp).println()
     ;
+
+    surface ptr<blob<@Video::Surface>> <- @Video::instance.primaryAdapter.getSurface(modes.at(12).ptr<blob<@Video::Mode>>)
+    rep i u32, i < 300, i <- i + 1
+        surface.val.drawPixel(i, i, 0xff00)
+    ;
+    //surface.val.clear(0xffffffff)
 
     @Dispatch::Dispatcher::instance.start()
 ;

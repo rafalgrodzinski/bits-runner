@@ -1,28 +1,31 @@
 @module Video
 
 @export Surface blob
-    adapter proto<Adapter>
-    aMetadata a
+    iAdapter proto<Adapter>
+    pMode ptr<blob<Mode>>
 
     getWidth fun -> u32
-        if it.adapter.vadr = 0: ret 0
-        ret 0
+        if it.pMode.vadr = 0: ret 0
+        ret it.pMode.val.width
     ;
 
     getHeight fun -> u32
-        if it.adapter.vadr = 0: ret 0
-        ret 0
+        if it.pMode.vadr = 0: ret 0
+        ret it.pMode.val.height
     ;
 
     commit fun
-        if it.adapter.vadr = 0: ret
+        if it.iAdapter.vadr = 0: ret
+        it.iAdapter.commit(it.pMode)
     ;
 
     clear fun: color u32
-        if it.adapter.vadr = 0: ret
+        if it.iAdapter.vadr = 0: ret
+        it.iAdapter.clear(it.pMode, color)
     ;
 
     drawPixel fun: x u32, y u32, color u32
-        if it.adapter.vadr = 0: ret
+        if it.iAdapter.vadr = 0: ret
+        it.iAdapter.drawPixel(it.pMode, x, y, color)
     ;
 ;
