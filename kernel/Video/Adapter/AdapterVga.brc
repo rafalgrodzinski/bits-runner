@@ -21,13 +21,10 @@ MAP_MASK_REG u8 <- 0x02
 MODE_REG u8 <- 0x05
 BIT_MASK_REG u8 <- 0x08
 
-VGA_MODE_640x480x4 u32 <- 0x00
 VGA_MODE_320x240x8 u32 <- 0x01
+VGA_MODE_640x480x4 u32 <- 0x00
 
-@export AdapterVga blob//: Adapter
-    width u32
-    height u32
-    vgaMode u32
+@export AdapterVga blob: Adapter
     pFirstPageBuffer ptr_volatile<data<u8>>
     pSecondPageBuffer ptr_volatile<data<u8>>
     pBackPageBuffer ptr_volatile<data<u8>>
@@ -60,40 +57,15 @@ VGA_MODE_320x240x8 u32 <- 0x01
         ret modes
     ;
 
-    getSurface fun: mode ptr<blob<Mode>> -> ptr<blob<Surface>>
-        ret {0}
-    ;
+    getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
+        // Setup surface
+        pSurface ptr<blob<Surface>> <- @BSys::memAlloc(blob<Surface>.size).ptr<blob<Surface>>
+        pSurface.val.iAdapter <- {it.adr.ptr<blob<AdapterVga>>}
+        pSurface.val.pMode <- pMode
 
-    getWidth fun -> u32
-        ret it.width
-    ;
-
-    getHeight fun -> u32
-        ret it.height
-    ;
-
-    setMode fun: resolution u32, bpp u32
-        it.pFirstPageBuffer <- { 0x0a0000 }
-
-        if resolution = MODE_RES_640x480 and bpp = MODE_BPP_4
-            it.width <- 640
-            it.height <- 480
-            it.vgaMode <- VGA_MODE_640x480x4
-            it.pBackPageBuffer <- it.pFirstPageBuffer
-            @BiosService::Video::vgaSetMode(0x12)
-
-            // switch to mode 0
-            @BSys::out8(GC_INDEX_PORT, MODE_REG)
-            @BSys::out8(GC_DATA_PORT, 0x00)
-
-            // enable set/reset on all planes
-            @BSys::out8(GC_INDEX_PORT, SET_RESET_REG)
-            @BSys::out8(GC_DATA_PORT, 0x0f)
-        else if resolution = MODE_RES_320x240 and bpp = MODE_BPP_8
-            it.width <- 320
-            it.height <- 240
-            it.vgaMode <- VGA_MODE_320x240x8
-            it.pSecondPageBuffer <- {it.pFirstPageBuffer.vadr + it.width * it.height / 4}
+        // Setup adapter
+        if pMode.val.id = VGA_MODE_320x240x8
+            it.pSecondPageBuffer <- {it.pFirstPageBuffer.vadr + pMode.val.width * pMode.val.height / 4}
             it.pBackPageBuffer <- it.pSecondPageBuffer
 
             // first setup it as linear 320x200
@@ -140,19 +112,24 @@ VGA_MODE_320x240x8 u32 <- 0x01
             // turn on byte mode
             @BSys::out8(CRTC_INDEX_PORT, 0x17)
             @BSys::out8(CRTC_DATA_PORT, 0xe3)
+        else if pMode.val.id = VGA_MODE_640x480x4
+            it.pBackPageBuffer <- it.pFirstPageBuffer
+            @BiosService::Video::vgaSetMode(0x12)
+
+            // switch to mode 0
+            @BSys::out8(GC_INDEX_PORT, MODE_REG)
+            @BSys::out8(GC_DATA_PORT, 0x00)
+
+            // enable set/reset on all planes
+            @BSys::out8(GC_INDEX_PORT, SET_RESET_REG)
+            @BSys::out8(GC_DATA_PORT, 0x0f)
         ;
+
+        ret pSurface
     ;
 
-    commitDrawing fun
-        if it.vgaMode = VGA_MODE_640x480x4
-            /*
-            // wait for current vsync to finish
-            rep in8(INPUT_STATUS_1_PORT) &? 0x08:
-            
-            // wait for vsync to start
-            rep not in8(INPUT_STATUS_1_PORT) &? 0x08:
-            */
-        else if it.vgaMode = VGA_MODE_320x240x8
+    commit fun: pMode ptr<blob<Mode>>
+        if pMode.val.id = VGA_MODE_320x240x8
             // wait for current vsync to finish
             rep @BSys::in8(INPUT_STATUS_1_PORT) &? 0x08:
 
@@ -175,11 +152,27 @@ VGA_MODE_320x240x8 u32 <- 0x01
 
             // wait for vsync to start
             rep not @BSys::in8(INPUT_STATUS_1_PORT) &? 0x08:
+        else if pMode.val.id = VGA_MODE_640x480x4
+            /*
+            // wait for current vsync to finish
+            rep in8(INPUT_STATUS_1_PORT) &? 0x08:
+            
+            // wait for vsync to start
+            rep not in8(INPUT_STATUS_1_PORT) &? 0x08:
+            */
         ;
     ;
 
-    clear fun: color u32
-        if it.vgaMode = VGA_MODE_640x480x4
+    clear fun: pMode ptr<blob<Mode>>, color u32
+        if pMode.val.id = VGA_MODE_320x240x8
+            // enable all four planes
+            @BSys::out8(SC_INDEX_PORT, MAP_MASK_REG)
+            @BSys::out8(SC_DATA_PORT, 0x0f)
+
+            rep i u32 <- 0, i < pMode.val.width * pMode.val.height / 4, i <- i + 1
+                it.pBackPageBuffer.val[i] <- color.u8
+            ;
+        else if pMode.val.id = VGA_MODE_640x480x4
             // switch to mode 3
             @BSys::out8(GC_INDEX_PORT, MODE_REG)
             @BSys::out8(GC_DATA_PORT, 0x03)
@@ -196,27 +189,27 @@ VGA_MODE_320x240x8 u32 <- 0x01
             @BSys::out8(GC_INDEX_PORT, 0x08)
             @BSys::out8(GC_DATA_PORT, 0xff)
 
-            rep i u32 <- 0, i < it.width * it.height / 8, i <- i + 1
+            rep i u32 <- 0, i < pMode.val.width * pMode.val.height / 8, i <- i + 1
                 it.pBackPageBuffer.val[i] <- 0xff
             ;
 
             // switch back to mode 0
             @BSys::out8(GC_INDEX_PORT, MODE_REG)
             @BSys::out8(GC_DATA_PORT, 0x00)
-        else if it.vgaMode = VGA_MODE_320x240x8
-            // enable all four planes
-            @BSys::out8(SC_INDEX_PORT, MAP_MASK_REG)
-            @BSys::out8(SC_DATA_PORT, 0x0f)
-
-            rep i u32 <- 0, i < it.width * it.height / 4, i <- i + 1
-                it.pBackPageBuffer.val[i] <- color.u8
-            ;
         ;
     ;
 
-    drawPixel fun: x u32, y u32, color u32
-        if it.vgaMode = VGA_MODE_640x480x4
-            offset u32 <- (y * it.width + x) / 8
+    drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, color u32
+        if pMode.val.id = VGA_MODE_320x240x8
+            offset u32 <- (y * pMode.val.width + x) / 4
+
+            // enable plane 0-3 for the pixel
+            @BSys::out8(SC_INDEX_PORT, MAP_MASK_REG)
+            @BSys::out8(SC_DATA_PORT, 1 << (x % 4))
+
+            it.pBackPageBuffer.val[offset] <- color.u8
+        else if pMode.val.id = VGA_MODE_640x480x4
+            offset u32 <- (y * pMode.val.width + x) / 8
 
             // set set/reset value to the specified color
             @BSys::out8(GC_INDEX_PORT, SET_RESET_VALUE_REG)
@@ -229,18 +222,10 @@ VGA_MODE_320x240x8 u32 <- 0x01
             // first read the value to set latches (use updated values)
             val u8 <- it.pBackPageBuffer.val[offset]
             it.pBackPageBuffer.val[offset] <- val
-        else if it.vgaMode = VGA_MODE_320x240x8
-            offset u32 <- (y * it.width + x) / 4
-
-            // enable plane 0-3 for the pixel
-            @BSys::out8(SC_INDEX_PORT, MAP_MASK_REG)
-            @BSys::out8(SC_DATA_PORT, 1 << (x % 4))
-
-            it.pBackPageBuffer.val[offset] <- color.u8
         ;
     ;
 
-    drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
+    /*drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
         dx s32 <- if x2 >= x1: x2 - x1 else: x1 - x2
         dy s32 <- if y2 >= y1: y2 - y1 else: y1 - y2
 
@@ -291,5 +276,5 @@ VGA_MODE_320x240x8 u32 <- 0x01
                 ;
             ;
         ;
-    ;
+    ;*/
 ;

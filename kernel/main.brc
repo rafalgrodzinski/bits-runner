@@ -63,11 +63,14 @@ busPci blob<@Bus::BusPci>
         @B::StringForU32(pMode.val.bpp).println()
     ;
 
-    surface ptr<blob<@Video::Surface>> <- @Video::instance.primaryAdapter.getSurface(modes.at(12).ptr<blob<@Video::Mode>>)
-    rep i u32, i < 300, i <- i + 1
-        surface.val.drawPixel(i, i, 0xff00)
+    pSurface ptr<blob<@Video::Surface>> <- @Video::instance.primaryAdapter.getSurface(modes.at(12).ptr<blob<@Video::Mode>>)
+    //surface.val.clear(4)
+    rep x u32, x < pSurface.val.getWidth(), x <- x + 1
+        y u32 <- (x * pSurface.val.getHeight()) / pSurface.val.getWidth()
+        color u32 <- 0xff00
+        pSurface.val.drawPixel(x, y, color)
     ;
-    //surface.val.clear(0xffffffff)
+    pSurface.val.commit()
 
     @Dispatch::Dispatcher::instance.start()
 ;
