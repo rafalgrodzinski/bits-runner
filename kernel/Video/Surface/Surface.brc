@@ -1,0 +1,28 @@
+@module Video
+
+@export Surface blob
+    adapter proto<Adapter>
+    aMetadata a
+
+    getWidth fun -> u32
+        if it.adapter.vadr = 0: ret 0
+        ret 0
+    ;
+
+    getHeight fun -> u32
+        if it.adapter.vadr = 0: ret 0
+        ret 0
+    ;
+
+    commit fun
+        if it.adapter.vadr = 0: ret
+    ;
+
+    clear fun: color u32
+        if it.adapter.vadr = 0: ret
+    ;
+
+    drawPixel fun: x u32, y u32, color u32
+        if it.adapter.vadr = 0: ret
+    ;
+;

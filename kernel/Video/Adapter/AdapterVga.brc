@@ -32,7 +32,37 @@ VGA_MODE_320x240x8 u32 <- 0x01
     pSecondPageBuffer ptr_volatile<data<u8>>
     pBackPageBuffer ptr_volatile<data<u8>>
 
-    // MARK: proto<DeviceVideo>
+    //
+    // MARK: proto<Adapter>
+    //
+
+    getModes fun -> blob<@B::Array, ptr<blob<Adapter::Mode>>>
+        modes blob<@B::Array, ptr<blob<Adapter::Mode>>>
+
+        pMode ptr<blob<Adapter::Mode>>
+
+        // 320x240x8
+        pMode <- @BSys::memAlloc(blob<Adapter::Mode>.size).ptr<blob<Adapter::Mode>>
+        pMode.val.id <- VGA_MODE_320x240x8
+        pMode.val.width <- 320
+        pMode.val.height <- 240
+        pMode.val.bpp <- 8
+        modes.push(pMode)     
+
+        // 640x480x4
+        pMode <- @BSys::memAlloc(blob<Adapter::Mode>.size).ptr<blob<Adapter::Mode>>
+        pMode.val.id <- VGA_MODE_640x480x4
+        pMode.val.width <- 640
+        pMode.val.height <- 480
+        pMode.val.bpp <- 4
+        modes.push(pMode)
+
+        ret modes
+    ;
+
+    getSurface fun: mode ptr<blob<Adapter::Mode>> -> ptr<blob<Surface>>
+        ret {0}
+    ;
 
     getWidth fun -> u32
         ret it.width

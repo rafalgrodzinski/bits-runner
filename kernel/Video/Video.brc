@@ -14,8 +14,10 @@
 @export Video blob
     primaryAdapter proto<Adapter>
     adapterVga blob<AdapterVga>
+    adapterVesa blob<AdapterVesa>
 
     init fun
-        it.primaryAdapter <- {it.adapterVga.adr.ptr<blob<AdapterVga>>}
+        //it.primaryAdapter <- {it.adapterVga.adr.ptr<blob<AdapterVga>>}
+        it.primaryAdapter <- {it.adapterVesa.adr.ptr<blob<AdapterVesa>>}
     ;
 ;

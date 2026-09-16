@@ -52,5 +52,18 @@ busPci blob<@Bus::BusPci>
 
     //videoVesa.init()
 
+    modes blob<@B::Array, ptr<blob<@Video::Adapter::Mode>>> <- @Video::instance.primaryAdapter.getModes()
+    rep i u32, i < modes.count, i <- i + 1
+        pMode ptr<blob<@Video::Adapter::Mode>> <- modes.at(i).ptr<blob<@Video::Adapter::Mode>>
+        @B::StringHexForU32(pMode.val.id).print()
+        @B::String(" ").print()
+
+        @B::StringForU32(pMode.val.width).print()
+        @B::String("x").print()
+        @B::StringForU32(pMode.val.height).print()
+        @B::String("x").print()
+        @B::StringForU32(pMode.val.bpp).println()
+    ;
+
     @Dispatch::Dispatcher::instance.start()
 ;

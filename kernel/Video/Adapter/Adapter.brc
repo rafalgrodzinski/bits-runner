@@ -1,11 +1,15 @@
 @module Video
 
+@import B
+
 @export Adapter proto
-    getWidth fun -> u32
-    getHeight fun -> u32
-    setMode fun: resolution u32, bpp u32
-    commitDrawing fun
-    clear fun: color u32
-    drawPixel fun: x u32, y u32, color u32
-    drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
+    getModes fun -> blob<@B::Array, ptr<blob<Adapter::Mode>>>
+    getSurface fun: mode ptr<blob<Adapter::Mode>> -> ptr<blob<Surface>>
+    //getWidth fun -> u32
+    //getHeight fun -> u32
+    //setMode fun: resolution u32, bpp u32
+    //commitDrawing fun
+    //clear fun: color u32
+    //drawPixel fun: x u32, y u32, color u32
+    //drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
 ;

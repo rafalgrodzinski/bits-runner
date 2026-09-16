@@ -51,10 +51,10 @@ VesaModeInfo blob
     reserved_4 data<u8, 206> // 50
 ;
 
-info blob_pack<VesaInfo>
+//info blob_pack<VesaInfo>
 
-@export AdapterVesa blob
-    init fun
+@export AdapterVesa blob: Adapter
+    /*init fun
         info blob_pack<VesaInfo>
         @BiosService::Video::vesaGetInfo(info.adr)
         pMode ptr<data<u16>> <- {info.videoModePtr[1] * 0x1_00_00 + info.videoModePtr[0]}
@@ -91,6 +91,7 @@ info blob_pack<VesaInfo>
             //;
         ;
 
+        /*
         @Memory::PagingManager::instance.mapDirectMemory(0xe000_0000, 640*480*24)
 
         @BiosService::Video::vesaSetMode(0x111)
@@ -104,5 +105,43 @@ info blob_pack<VesaInfo>
         rep x u32, x < 300, x <- x + 1
             pFb.val[x * 640 + x] <- 0xff
         ;
+        */
+    ;*/
+
+    //
+    // MARK: proto<Adapter>
+    //
+
+    getModes fun -> blob<@B::Array, ptr<blob<Adapter::Mode>>>
+        modes blob<@B::Array, ptr<blob<Adapter::Mode>>>
+
+        // First get and copy the list of modes
+        vesaInfo blob_pack<VesaInfo>
+        @BiosService::Video::vesaGetInfo(vesaInfo.adr)
+        pModeIds ptr<data<u16>> <- {vesaInfo.videoModePtr[1] * 0x1_00_00 + vesaInfo.videoModePtr[0]}
+        rep i u32, pModeIds.val[i] < 0xffff, i <- i + 1
+            pMode ptr<blob<Adapter::Mode>>
+            pMode <- @BSys::memAlloc(blob<Adapter::Mode>.size).ptr<blob<Adapter::Mode>>
+            pMode.val.id <- pModeIds.val[i]
+            modes.push(pMode)
+        ;
+
+        // Then get details for each of the modes
+        rep i u32, i < modes.count, i <- i + 1
+            pMode ptr<blob<Adapter::Mode>> <- modes.at(i).ptr<blob<Adapter::Mode>>
+
+            vesaModeInfo blob_pack<VesaModeInfo>
+            @BiosService::Video::vesaGetModeInfo(vesaModeInfo.adr, pMode.val.id)
+
+            pMode.val.width <- vesaModeInfo.width
+            pMode.val.height <- vesaModeInfo.height
+            pMode.val.bpp <- vesaModeInfo.bpp
+        ;
+
+        ret modes
+    ;
+
+    getSurface fun: mode ptr<blob<Adapter::Mode>> -> ptr<blob<Surface>>
+        ret {0}
     ;
 ;
