@@ -17,7 +17,7 @@
     adapterVesa blob<AdapterVesa>
 
     init fun
-        //it.primaryAdapter <- {it.adapterVga.adr.ptr<blob<AdapterVga>>}
-        it.primaryAdapter <- {it.adapterVesa.adr.ptr<blob<AdapterVesa>>}
+        it.primaryAdapter <- {it.adapterVga.adr.ptr<blob<AdapterVga>>}
+        //it.primaryAdapter <- {it.adapterVesa.adr.ptr<blob<AdapterVesa>>}
     ;
 ;

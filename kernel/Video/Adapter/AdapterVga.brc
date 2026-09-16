@@ -64,6 +64,8 @@ VGA_MODE_640x480x4 u32 <- 0x00
         pSurface.val.pMode <- pMode
 
         // Setup adapter
+        it.pFirstPageBuffer <- { 0x0a0000 }
+
         if pMode.val.id = VGA_MODE_320x240x8
             it.pSecondPageBuffer <- {it.pFirstPageBuffer.vadr + pMode.val.width * pMode.val.height / 4}
             it.pBackPageBuffer <- it.pSecondPageBuffer
