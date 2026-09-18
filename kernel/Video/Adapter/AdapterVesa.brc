@@ -62,28 +62,32 @@ VesaModeInfo blob
         vesaInfo blob_pack<VesaInfo>
         @BiosService::Video::vesaGetInfo(vesaInfo.adr)
         pModeIds ptr<data<u16>> <- {vesaInfo.videoModePtr[1] * 0x1_00_00 + vesaInfo.videoModePtr[0]}
+        modeIds blob<@B::Array, u16>
         rep i u32, pModeIds.val[i] < 0xffff, i <- i + 1
-            pMode ptr<blob<Mode>>
-            pMode <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
-            pMode.val.id <- pModeIds.val[i]
-            modes.push(pMode)
+            modeIds.push(pModeIds.val[i])
         ;
 
         // Then get details for each of the modes
-        rep i u32, i < modes.count, i <- i + 1
-            pMode ptr<blob<Mode>> <- modes.at(i).ptr<blob<Mode>>
-
+        rep i u32, i < modeIds.count, i <- i + 1
             vesaModeInfo blob_pack<VesaModeInfo>
-            @BiosService::Video::vesaGetModeInfo(vesaModeInfo.adr, pMode.val.id)
+            @BiosService::Video::vesaGetModeInfo(vesaModeInfo.adr, modeIds.at(i).u16)
 
-            pMode.val.width <- vesaModeInfo.width
-            pMode.val.height <- vesaModeInfo.height
-            pMode.val.bpp <- vesaModeInfo.bpp
+            // Filter out weird color modes
+            if vesaModeInfo.bpp = 8 or vesaModeInfo.bpp = 16 or vesaModeInfo.bpp = 24
+                pMode ptr<blob<Mode>> <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
 
-            pMetadata ptr<blob<Mode::Metadata::Vesa>> <- @BSys::memAlloc(blob<Mode::Metadata::Vesa>.size).ptr<blob<Mode::Metadata::Vesa>>
-            pMode.val.aMetadata <- pMetadata.vadr
-            pMetadata.val.aFramebuffer <- vesaModeInfo.framebufferPtr.a
-            pMetadata.val.pitch <- vesaModeInfo.pitch
+                pMode.val.id <- modeIds.at(i).u16
+                pMode.val.width <- vesaModeInfo.width
+                pMode.val.height <- vesaModeInfo.height
+                pMode.val.bpp <- vesaModeInfo.bpp
+
+                pMetadata ptr<blob<Mode::Metadata::Vesa>> <- @BSys::memAlloc(blob<Mode::Metadata::Vesa>.size).ptr<blob<Mode::Metadata::Vesa>>
+                pMode.val.aMetadata <- pMetadata.vadr
+                pMetadata.val.aFramebuffer <- vesaModeInfo.framebufferPtr.a
+                pMetadata.val.pitch <- vesaModeInfo.pitch
+
+                modes.push(pMode)
+            ;
         ;
 
         ret modes
