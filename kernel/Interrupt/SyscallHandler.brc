@@ -8,6 +8,7 @@
 @import Memory
 @import Storage
 @import Term
+@import Video
 
 // System
 Syscall::System::REBOOT u32 <- 0x000
@@ -18,6 +19,7 @@ Syscall::System::RELEASE_RESOURCE u32 <- 0x031
 
 Syscall::System::ResourceCategory::GET_STORAGE_ENTRY u32 <- 0x01
 Syscall::System::ResourceCategory::CREATE_STORAGE_ENTRY u32 <- 0x02
+Syscall::System::ResourceCategory::VIDEO_GET_SURFACE u32 <- 0x03
 
 // Memory
 Syscall::Memory::GET_INFO u32 <- 0x100
@@ -40,9 +42,12 @@ Syscall::Input::MOUSE_GET_STATE u32 <- 0x410
 Syscall::Terminal::PRINT_CHARACTER u32 <- 0x501
 
 // Video
-Syscall::Video::SET_MODE u32 <- 0x600
-Syscall::Video::COMMIT_DRAWING u32 <- 0x610
-Syscall::Video::CLEAR_SCREEN u32 <- 0x620
+Syscall::Video::GET_MODES_COUNT u32 <- 0x600
+Syscall::Video::GET_MODE_INFO u32 <- 0x601
+
+Syscall::Video::COMMIT u32 <- 0x610
+
+Syscall::Video::CLEAR u32 <- 0x620
 Syscall::Video::DRAW_PIXEL u32 <- 0x621
 Syscall::Video::DRAW_LINE u32 <- 0x622
 
@@ -77,11 +82,13 @@ Syscall::Audio::STOP u32 <- 0x701
             arg0 u32 <- ecx
             arg1 u32 <- edx
 
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            if pCurrentProcess.vadr = 0: ret 0
+
             if category = Syscall::System::ResourceCategory::GET_STORAGE_ENTRY
                 pPath ptr<blob<@B::String>> <- arg0.a.ptr<blob<@B::String>>
                 pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.getEntry(pPath.val)
-                pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
-                if pEntry.vadr != 0 and pCurrentProcess.vadr != 0
+                if pEntry.vadr != 0
                     ret pCurrentProcess.val.registerResource(category, pEntry.vadr)
                 else
                     ret 0
@@ -89,12 +96,24 @@ Syscall::Audio::STOP u32 <- 0x701
             else if category = Syscall::System::ResourceCategory::CREATE_STORAGE_ENTRY
                 pPath ptr<blob<@B::String>> <- arg0.a.ptr<blob<@B::String>>
                 pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.createEntry(pPath.val, @Storage::Entry::Kind::FILE)
-                pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
-                if pEntry.vadr != 0 and pCurrentProcess.vadr != 0
+                if pEntry.vadr != 0
                     ret pCurrentProcess.val.registerResource(category, pEntry.vadr)
                 else
                     ret 0
                 ;
+            else if category = Syscall::System::ResourceCategory::VIDEO_GET_SURFACE
+                modeId u32 <- arg0
+
+                // Try matching request mode id with the available ones
+                modes blob<@B::Array, ptr<blob<@Video::Mode>>> <- @Video::instance.primaryAdapter.getModes()
+                rep i u32, i < modes.count, i <- i + 1
+                    pMode ptr<blob<@Video::Mode>> <- modes.at(i).ptr<blob<@Video::Mode>>
+                    if pMode.val.id = modeId
+                        pSurface ptr<blob<@Video::Surface>> <- @Video::instance.primaryAdapter.getSurface(pMode)
+                        ret pCurrentProcess.val.registerResource(category, pSurface.vadr)
+                    ;
+                ;
+                ret 0
             ;
         else if eax = Syscall::System::RELEASE_RESOURCE
             // TODO
@@ -173,20 +192,60 @@ Syscall::Audio::STOP u32 <- 0x701
         else if eax = Syscall::Terminal::PRINT_CHARACTER
             @Term::printCharacter(ebx.u8, ecx.u8)
         // Video
-        else if eax = Syscall::Video::SET_MODE
-            //deviceVideo.setMode(ebx, ecx)
-        else if eax = Syscall::Video::COMMIT_DRAWING
-            //deviceVideo.commitDrawing()
-        else if eax = Syscall::Video::CLEAR_SCREEN
-            //deviceVideo.clear(ebx)
+        else if eax = Syscall::Video::GET_MODES_COUNT
+            ret @Video::instance.primaryAdapter.getModes().count
+        else if eax = Syscall::Video::GET_MODE_INFO
+            pModeInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
+
+            pMode ptr<blob<@Video::Mode>> <- @Video::instance.primaryAdapter.getModes().at(ecx).ptr<blob<@Video::Mode>>
+            pModeInfo.val[0] <- pMode.val.id
+            pModeInfo.val[1] <- pMode.val.width
+            pModeInfo.val[2] <- pMode.val.height
+            pModeInfo.val[3] <- pMode.val.bpp
+        else if eax = Syscall::Video::COMMIT
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            pSurface ptr<blob<@Video::Surface>> <- pCurrentProcess.val.resourceForResourceId(ebx).ptr<blob<@Video::Surface>>
+            if pSurface.vadr = 0: ret 0
+
+            pSurface.val.commit()
+        else if eax = Syscall::Video::CLEAR
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            pSurface ptr<blob<@Video::Surface>> <- pCurrentProcess.val.resourceForResourceId(ebx).ptr<blob<@Video::Surface>>
+            if pSurface.vadr = 0: ret 0
+
+            red u8 <- ((ecx >> 16) & 0xff).u8
+            green u8 <- ((ecx >> 8) & 0xff).u8
+            blue u8 <- ((ecx >> 0) & 0xff).u8
+
+            pSurface.val.clear(red, green, blue)
         else if eax = Syscall::Video::DRAW_PIXEL
-            //deviceVideo.drawPixel(ebx, ecx, edx)
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            pSurface ptr<blob<@Video::Surface>> <- pCurrentProcess.val.resourceForResourceId(ebx).ptr<blob<@Video::Surface>>
+            if pSurface.vadr = 0: ret 0
+
+            x u32 <- ecx
+            y u32 <- edx
+
+            red u8 <- ((esi >> 16) & 0xff).u8
+            green u8 <- ((esi >> 8) & 0xff).u8
+            blue u8 <- ((esi >> 0) & 0xff).u8
+
+            pSurface.val.drawPixel(x, y, red, green, blue)
         else if eax = Syscall::Video::DRAW_LINE
-            /*x1 u32 <- ebx >> 16
-            y1 u32 <- ebx & 0xffff
-            x2 u32 <- ecx >> 16
-            y2 u32 <- ecx & 0xffff
-            deviceVideo.drawLine(x1, y1, x2, y2, edx)*/
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            pSurface ptr<blob<@Video::Surface>> <- pCurrentProcess.val.resourceForResourceId(ebx).ptr<blob<@Video::Surface>>
+            if pSurface.vadr = 0: ret 0
+
+            x1 u32 <- ecx >> 16
+            y1 u32 <- ecx & 0xffff
+            x2 u32 <- edx >> 16
+            y2 u32 <- edx & 0xffff
+
+            red u8 <- ((esi >> 16) & 0xff).u8
+            green u8 <- ((esi >> 8) & 0xff).u8
+            blue u8 <- ((esi >> 0) & 0xff).u8
+
+            pSurface.val.drawLine(x1, y1, x2, y2, red, green, blue)
         // Audio
         else if eax = Syscall::Audio::PLAY
             @Devices::Audio::Speaker::instance.play(ebx, ecx)

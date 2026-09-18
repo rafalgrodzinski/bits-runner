@@ -12,8 +12,8 @@
     adapterSvga2 blob<AdapterSvga2>
 
     init fun
-        it.primaryAdapter <- {it.adapterVga.ptr}
-        //it.primaryAdapter <- {it.adapterVesa.ptr}
+        //it.primaryAdapter <- {it.adapterVga.ptr}
+        it.primaryAdapter <- {it.adapterVesa.ptr}
         /*rep i u32, i < @Bus::devicesPciCount, i <- i + 1
             it.adapterSvga2.init(@Bus::devicesPci[i])
         ;

@@ -40,7 +40,6 @@ busPci blob<@Bus::BusPci>
     pEntry ptr<blob<@Storage::Entry>>
     aFileBuffer a
 
-    /*
     // Load shell
     //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
     pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/VDEMO.BIN"))
@@ -48,46 +47,6 @@ busPci blob<@Bus::BusPci>
     pEntry.val.read(0, pEntry.val.fileSize, aFileBuffer)
     @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, pEntry.val.fileSize)
     @BSys::memFree(pEntry.vadr)
-    */
-
-    modes blob<@B::Array, ptr<blob<@Video::Mode>>> <- @Video::instance.primaryAdapter.getModes()
-    rep i u32, i < modes.count, i <- i + 1
-        pMode ptr<blob<@Video::Mode>> <- modes.at(i).ptr<blob<@Video::Mode>>
-        @B::StringHexForU32(pMode.val.id).print()
-        @B::String(" ").print()
-
-        @B::StringForU32(pMode.val.width).print()
-        @B::String("x").print()
-        @B::StringForU32(pMode.val.height).print()
-        @B::String("x").print()
-        @B::StringForU32(pMode.val.bpp).println()
-    ;
-
-    pSurface ptr<blob<@Video::Surface>> <- @Video::instance.primaryAdapter.getSurface(modes.at(1).ptr<blob<@Video::Mode>>)
-    pSurface.val.clear(0, 0, 0)
-    rep y u32, y < pSurface.val.getHeight(), y <- y + 1
-        rep x u32, x < pSurface.val.getWidth(), x <- x + 1
-            red u8
-            green u8
-            blue u8
-
-            if y < pSurface.val.getHeight() / 3
-                red <- (x * 255 / pSurface.val.getWidth()).u8
-            else if y < pSurface.val.getHeight() * 2 / 3
-                green <- (x * 255 / pSurface.val.getWidth()).u8
-            else
-                blue <- (x * 255 / pSurface.val.getWidth()).u8
-            ;
-            
-            /*red <- (x * 255 / pSurface.val.getWidth()).u8
-            green <- (y * 255 / pSurface.val.getHeight()).u8
-            blue <- ((red.u32 + green.u32) / 2).u8*/
-
-            pSurface.val.drawPixel(x, y, red, green, blue)
-        ;
-    ;
-    pSurface.val.drawLine(20, 50, 250, 200, 77, 44, 128)
-    pSurface.val.commit()
 
     @Dispatch::Dispatcher::instance.start()
 ;

@@ -21,6 +21,7 @@ System::RELEASE_RESOURCE u32 <- 0x031
 
 @export System::ResourceCategory::GET_STORAGE_ENTRY u32 <- 0x01
 @export System::ResourceCategory::CREATE_STORAGE_ENTRY u32 <- 0x02
+@export System::ResourceCategory::VIDEO_GET_SURFACE u32 <- 0x03
 
 @export InfoPciDevice blob
         busNum u32
@@ -157,41 +158,51 @@ Terminal::PRINT_CHARACTER u32 <- 0x501
 ;
 
 // Video
-Video::SET_MODE u32 <- 0x600
-Video::COMMIT_DRAWING u32 <- 0x610
-Video::CLEAR_SCREEN u32 <- 0x620
+Video::GET_MODES_COUNT u32 <- 0x600
+Video::GET_MODE_INFO u32 <- 0x601
+
+Video::COMMIT u32 <- 0x610
+
+Video::CLEAR u32 <- 0x620
 Video::DRAW_PIXEL u32 <- 0x621
 Video::DRAW_LINE u32 <- 0x622
 
-@export Video::RES_320x240 u32 <- 0x0140_00f0
-@export Video::RES_640x480 u32 <- 0x0280_01e0
-@export Video::RES_800x600 u32 <- 0x0320_0258
-
-@export Video::BPP_4 u32 <- 0x04
-@export Video::BPP_8 u32 <- 0x08
-@export Video::BPP_16 u32 <- 0x10
-@export Video::BPP_32 u32 <- 0x20
-
-@export Video::setMode fun: resolution u32, bitsPerPixel u32
-    syscallRaw(Video::SET_MODE, resolution, bitsPerPixel, 0, 0)
+@export Video::ModeInfo blob
+    id u32
+    width u32
+    height u32
+    bpp u32
 ;
 
-@export Video::commitDrawing fun
-    syscallRaw(Video::COMMIT_DRAWING, 0, 0, 0, 0)
+@export Video::getModesCount fun -> u32
+    ret syscallRaw(Video::GET_MODES_COUNT, 0, 0, 0, 0)
 ;
 
-@export Video::clearScreen fun: color u32
-    syscallRaw(Video::CLEAR_SCREEN, color, 0, 0, 0)
+@export Video::getModeInfo fun: index u32 -> blob<Video::ModeInfo>
+    modeInfo blob<Video::ModeInfo>
+    syscallRaw(Video::GET_MODE_INFO, modeInfo.adr.u32, index, 0, 0)
+    ret modeInfo
 ;
 
-@export Video::drawPixel fun: x u32, y u32, color u32
-    syscallRaw(Video::DRAW_PIXEL, x, y, color, 0)
+@export Video::commit fun: resourceId u32
+    syscallRaw(Video::COMMIT, resourceId, 0, 0, 0)
 ;
 
-@export Video::drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
+@export Video::clear fun: resourceId u32, red u8, green u8, blue u8
+    color u32 <- (red << 16) | (green << 8) | (blue << 0)
+    syscallRaw(Video::CLEAR, resourceId, color, 0, 0)
+;
+
+@export Video::drawPixel fun: resourceId u32, x u32, y u32, red u8, green u8, blue u8
+    color u32 <- (red << 16) | (green << 8) | (blue << 0)
+    syscallRaw(Video::DRAW_PIXEL, resourceId, x, y, color)
+;
+
+@export Video::drawLine fun: resourceId u32, x1 u32, y1 u32, x2 u32, y2 u32, red u8, green u8, blue u8
     p1 u32 <- (x1 << 16) | (y1 & 0xffff)
     p2 u32 <- (x2 << 16) | (y2 & 0xffff)
-    syscallRaw(Video::DRAW_LINE, p1, p2, color, 0)
+    color u32 <- (red << 16) | (green << 8) | (blue << 0)
+    syscallRaw(Video::DRAW_LINE, resourceId, p1, p2, color)
 ;
 
 // Audio

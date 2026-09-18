@@ -16,6 +16,7 @@ LIB="${SCRIPT_DIR}/../lib"
 brb --verb=v2 --opt=o2 --triple=i386-unknown-none --arch=i386 --function-sections --no-zero-initialized-in-bss --reloc=static \
 "${SCRIPT_DIR}/main.brc" \
 "${BLIB}/String.brc" \
+"${BLIB}/Array.brc" \
 "${LIB}/BSys.brc" \
 "${LIB}/Syscall.brc" \
 "${LIB}/Intrinsics.brc"

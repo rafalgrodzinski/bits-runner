@@ -1,16 +1,16 @@
 @import B
 @import Syscall
 
-width u32
+/*width u32
 height u32
 
 DEMOS_COUNT u32 <- 5
 demoMode u32 <- 0
 
 ascii u32
-mouseState blob<@Syscall::MouseState>
+mouseState blob<@Syscall::MouseState>*/
 
-setMode fun: mode u32
+/*setMode fun: mode u32
     if mode = 0
         width <- 640
         height <- 480
@@ -29,9 +29,9 @@ setMode fun: mode u32
         height <- 480
         @Syscall::gfxSetMode(@Syscall::GFX_MODE_RES_640x480, @Syscall::GFX_MODE_BPP_32)
     ;*/
-;
+;*/
 
-readKeyboard fun
+/*readKeyboard fun
     ascii <- @Syscall::Input::getAscii()
     if ascii = 'z'
         demoMode <- if demoMode = 0: DEMOS_COUNT - 1 else: demoMode - 1
@@ -42,21 +42,62 @@ readKeyboard fun
 
 readMouse fun
     mouseState <- @Syscall::Input::getMouseState()
-;
+;*/
 
 @export start fun
     @B::String("vdemo.bin >").println()
 
-    rep
+    selectedModeInfo blob<@Syscall::Video::ModeInfo>
+    modesCount u32 <- @Syscall::Video::getModesCount()
+    rep i u32, i < modesCount, i <- i + 1
+        modeInfo blob<@Syscall::Video::ModeInfo> <- @Syscall::Video::getModeInfo(i)
+
+        @B::StringHexForU32(modeInfo.id).print()
+        @B::String(" ").print()
+
+        @B::StringForU32(modeInfo.width).print()
+        @B::String("x").print()
+        @B::StringForU32(modeInfo.height).print()
+        @B::String("x").print()
+        @B::StringForU32(modeInfo.bpp).println()
+
+        if modeInfo.width = 800 and modeInfo.bpp = 24: selectedModeInfo <- modeInfo
+    ;
+
+    resourceId u32 <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::VIDEO_GET_SURFACE, selectedModeInfo.id, 0)
+    @Syscall::Video::clear(resourceId, 0, 0, 0)
+    rep y u32, y < selectedModeInfo.height, y <- y + 1
+        rep x u32, x < selectedModeInfo.width, x <- x + 1
+            red u8
+            green u8
+            blue u8
+
+            if y < selectedModeInfo.height / 3
+                red <- (x * 255 / selectedModeInfo.width).u8
+            else if y < selectedModeInfo.height * 2 / 3
+                green <- (x * 255 / selectedModeInfo.width).u8
+            else
+                blue <- (x * 255 / selectedModeInfo.width).u8
+            ;
+
+            @Syscall::Video::drawPixel(resourceId, x, y, red, green, blue)
+        ;
+    ;
+    @Syscall::Video::drawLine(resourceId, 20, 50, 250, 200, 77, 44, 128)
+    @Syscall::Video::commit(resourceId)
+
+    rep:
+
+    /*rep
              if demoMode = 0: demo_0()
         else if demoMode = 1: demo_1()
         else if demoMode = 2: demo_2()
         else if demoMode = 3: demo_3()
         else if demoMode = 4: demo_4()
-    ;
+    ;*/
 ;
 
-demo_0 fun
+/*demo_0 fun
     setMode(1)
 
     xPos s32 <- width.s32 / 2
@@ -290,4 +331,4 @@ demo_4 fun
 
         @Syscall::Video::commitDrawing()
     ;
-;
+;*/
