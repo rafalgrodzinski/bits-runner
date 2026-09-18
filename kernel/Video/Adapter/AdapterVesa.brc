@@ -110,27 +110,40 @@ VesaModeInfo blob
     commit fun: pMode ptr<blob<Mode>>
     ;
 
-    clear fun: pMode ptr<blob<Mode>>, color u32
+    clear fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8
         rep y u32, y < pMode.val.height, y <- y + 1
             rep x u32, x < pMode.val.width, x <- x + 1
-                it.drawPixel(pMode, x, y, color)
+                it.drawPixel(pMode, x, y, red, green, blue)
             ;
         ;
     ;
 
-    drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, color u32
+    drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
         pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
-
         offset u32 <- y * pMetadata.val.pitch + (x * (pMode.val.bpp / 8))
-        pPixel ptr<data<u8>> <- {pMetadata.val.aFramebuffer + offset}
 
-        // byte 0
-        pPixel.val[0] <- (color & 0xff).u8
-        // byte 1
-        if pMode.val.bpp > 8: pPixel.val[1] <- ((color >> 8) & 0xff).u8
-        // byte 2
-        if pMode.val.bpp > 16: pPixel.val[2] <- ((color >> 16) & 0xff).u8
-        // byte 3
-        if pMode.val.bpp > 24: pPixel.val[3] <- (color >> 24).u8
+        // 8 bit color
+        if pMode.val.bpp = 8
+            pPixel ptr<u8> <- {pMetadata.val.aFramebuffer + offset}
+            pixel u8
+            pixel <- pixel | (red & 0b1110_0000)
+            pixel <- pixel | ((green & 0b1110_0000) >> 3)
+            pixel <- pixel | ((blue & 0b1100_0000) >> 6)
+            pPixel.val <- pixel
+        // 16 bit color
+        else if pMode.val.bpp = 16
+            pPixel ptr<u16> <- {pMetadata.val.aFramebuffer + offset}
+            pixel u16
+            pixel <- pixel | ((red.u16 & 0b11111000) << 8)
+            pixel <- pixel | ((green.u16 & 0b11111100) << 3)
+            pixel <- pixel | ((blue.u16 & 0b11111000) >> 3)
+            pPixel.val <- pixel
+        // 24 bit color
+        else
+            pPixel ptr<data<u8>> <- {pMetadata.val.aFramebuffer + offset}
+            pPixel.val[2] <- red
+            pPixel.val[1] <- green
+            pPixel.val[0] <- blue
+        ;
     ;
 ;

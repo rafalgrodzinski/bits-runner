@@ -19,13 +19,13 @@
         it.iAdapter.commit(it.pMode)
     ;
 
-    clear fun: color u32
+    clear fun: red u8, green u8, blue u8
         if it.iAdapter.vadr = 0: ret
-        it.iAdapter.clear(it.pMode, color)
+        it.iAdapter.clear(it.pMode, red, green, blue)
     ;
 
-    drawPixel fun: x u32, y u32, color u32
+    drawPixel fun: x u32, y u32, red u8, green u8, blue u8
         if it.iAdapter.vadr = 0: ret
-        it.iAdapter.drawPixel(it.pMode, x, y, color)
+        it.iAdapter.drawPixel(it.pMode, x, y, red, green, blue)
     ;
 ;

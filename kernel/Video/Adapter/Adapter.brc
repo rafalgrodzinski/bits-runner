@@ -7,7 +7,7 @@
     getSurface fun: mode ptr<blob<Mode>> -> ptr<blob<Surface>>
 
     commit fun: pMode ptr<blob<Mode>>
-    clear fun: pMode ptr<blob<Mode>>, color u32
-    drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, color u32
+    clear fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8
+    drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
     //drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
 ;
