@@ -1,5 +1,7 @@
 @module Video
 
+@import Bus
+
 @export MODE_RES_320x240 u32 <- 0x0140_00f0
 @export MODE_RES_640x480 u32 <- 0x0280_01e0
 @export MODE_RES_800x600 u32 <- 0x0320_0258
@@ -13,11 +15,17 @@
 
 @export Video blob
     primaryAdapter proto<Adapter>
+
     adapterVga blob<AdapterVga>
     adapterVesa blob<AdapterVesa>
+    adapterSvga2 blob<AdapterSvga2>
 
     init fun
+        rep i u32, i < @Bus::devicesPciCount, i <- i + 1
+            it.adapterSvga2.init(@Bus::devicesPci[i])
+        ;
         //it.primaryAdapter <- {it.adapterVga.ptr}
-        it.primaryAdapter <- {it.adapterVesa.ptr}
+        //it.primaryAdapter <- {it.adapterVesa.ptr}
+        it.primaryAdapter <- {it.adapterSvga2.ptr}
     ;
 ;

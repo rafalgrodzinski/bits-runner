@@ -4,7 +4,7 @@
 
 @export Adapter proto
     getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
-    getSurface fun: mode ptr<blob<Mode>> -> ptr<blob<Surface>>
+    getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
 
     commit fun: pMode ptr<blob<Mode>>
     clear fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8

@@ -101,8 +101,8 @@ VesaModeInfo blob
 
         // Setup adapter
         pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
-        @Memory::PagingManager::instance.mapDirectMemory(pMetadata.val.aFramebuffer, pMetadata.val.pitch * pMode.val.height)
         @BiosService::Video::vesaSetMode(pMode.val.id)
+        @Memory::PagingManager::instance.mapDirectMemory(pMetadata.val.aFramebuffer, pMetadata.val.pitch * pMode.val.height)
 
         ret pSurface
     ;

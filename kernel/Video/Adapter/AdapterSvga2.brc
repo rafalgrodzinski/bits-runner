@@ -3,7 +3,6 @@
 @import B
 @import Bus
 @import BSys
-@import Dispatch
 @import Memory
 
 // PCI
@@ -34,11 +33,8 @@ SVGA2_REG_FIFO_SIZE u16 <- 0x13
 
 SVGA2_REG_CAPS u16 <- 0x11
 
-@export AdapterSvga2 blob//: Adapter
+@export AdapterSvga2 blob: Adapter
     portBase u16
-    width u32
-    height u32
-    pFrameBuffer ptr_volatile<data<u32>>
 
     readReg fun: reg u16 -> u32
         @BSys::out32(it.portBase + SVGA2_INDEX_PORT, reg)
@@ -67,66 +63,69 @@ SVGA2_REG_CAPS u16 <- 0x11
         fifoStart u32 <- it.readReg(SVGA2_REG_FIFO_START)
         fifoSize u32 <- it.readReg(SVGA2_REG_FIFO_SIZE)
         caps u32 <- it.readReg(SVGA2_REG_CAPS)
-
-        /*
-        it.setMode(1024, 768, 32)
-
-        rep y u32, y < it.height, y <- y + 1
-            rep x u32, x < it.width, x <- x + 1
-                red u8 <- (255 - (x * 255) / it.width).u8
-                green u8 <- ((x * 255) / it.width).u8
-                blue u8 <- ((y * 255) / it.height).u8
-
-                color u32 <- (red << 16) | (green << 8) | (blue)
-                it.pFrameBuffer.val[y * it.width + x] <- color
-            ;
-        ;
-        */
     ;
 
-    // MARK: proto<DeviceVideo>
+    //
+    // MARK: proto<Adapter>
+    //
 
-    getWidth fun -> u32
-        ret it.width
+    getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
+        modes blob<@B::Array, ptr<blob<Mode>>>
+
+        pMode ptr<blob<Mode>> <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
+        pMode.val.id <- 0
+        pMode.val.width <- 1024
+        pMode.val.height <- 768
+        pMode.val.bpp <- 32
+        modes.push(pMode)
+
+        ret modes
     ;
 
-    getHeight fun -> u32
-        ret it.height
-    ;
+    getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
+        // Setup surface
+        pSurface ptr<blob<Surface>> <- @BSys::memAlloc(blob<Surface>.size).ptr<blob<Surface>>
+        pSurface.val.iAdapter <- {it.ptr}
+        pSurface.val.pMode <- pMode
 
-    setMode fun: resolution u32, bpp u32
-        width u32 <- resolution >> 16
-        height u32 <- resolution & 0xffff
+        // Setup adapter
+        pMetadata ptr<blob<Mode::Metadata::Svga2>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Svga2>>
 
-        it.width <- width
-        it.height <- height
-
-        it.writeReg(SVGA2_REG_WIDTH, width)
-        it.writeReg(SVGA2_REG_HEIGHT, height)
-        it.writeReg(SVGA2_REG_BPP, bpp)
+        it.writeReg(SVGA2_REG_WIDTH, pMode.val.width)
+        it.writeReg(SVGA2_REG_HEIGHT, pMode.val.height)
+        it.writeReg(SVGA2_REG_BPP, pMode.val.bpp)
         it.writeReg(SVGA2_REG_ENABLE, 1)
 
-        // map memory
         fbStart u32 <- it.readReg(SVGA2_REG_FB_START)
         fbOffset u32 <- it.readReg(SVGA2_REG_FB_OFFSET)
         fbSize u32 <- it.readReg(SVGA2_REG_FB_SIZE)
-        it.pFrameBuffer <- {fbStart + fbOffset}
+        pMetadata.val.aFramebuffer <- (fbStart + fbOffset).a
         @Memory::PagingManager::instance.mapDirectMemory(fbStart.a, fbSize)
+
+        ret pSurface
     ;
 
-    commitDrawing fun
+    commit fun: pMode ptr<blob<Mode>>
     ;
 
-    clear fun: color u32
-        rep i u32, i < it.width * it.height, i <- i + 1
-            it.pFrameBuffer.val[i] <- color
+    clear fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8
+    ;
+
+    drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
+        pMetadata ptr<blob<Mode::Metadata::Svga2>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Svga2>>
+        pitch u32 <- (pMode.val.bpp / 8) * pMode.val.width
+        offset u32 <- y * pitch + (x * (pMode.val.bpp / 8))
+
+        // 24 bit color
+        if pMode.val.bpp = 24 or pMode.val.bpp = 32
+            pPixel ptr<data<u8>> <- {pMetadata.val.aFramebuffer + offset}
+            pPixel.val[2] <- red
+            pPixel.val[1] <- green
+            pPixel.val[0] <- blue
         ;
     ;
 
-    drawPixel fun: x u32, y u32, color u32
-        it.pFrameBuffer.val[y * it.width + x] <- color
-    ;
-
+    /*
     drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, color u32
         dx s32 <- if x2 >= x1: x2 - x1 else: x1 - x2
         dy s32 <- if y2 >= y1: y2 - y1 else: y1 - y2
@@ -179,4 +178,5 @@ SVGA2_REG_CAPS u16 <- 0x11
             ;
         ;
     ;
+    */
 ;

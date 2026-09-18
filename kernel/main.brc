@@ -30,7 +30,7 @@ busPci blob<@Bus::BusPci>
 
     @B::String("Initializing Bits Runner...").println()
     @Devices::Timer::Pit::instance.init()
-    //busPci.scan()
+    busPci.scan()
     @Storage::instance.init(biosBootDriveNumber, bootPartitionFirstSector)
     @Video::instance.init()
     
@@ -63,7 +63,7 @@ busPci blob<@Bus::BusPci>
         @B::StringForU32(pMode.val.bpp).println()
     ;
 
-    pSurface ptr<blob<@Video::Surface>> <- @Video::instance.primaryAdapter.getSurface(modes.at(10).ptr<blob<@Video::Mode>>)
+    pSurface ptr<blob<@Video::Surface>> <- @Video::instance.primaryAdapter.getSurface(modes.at(0).ptr<blob<@Video::Mode>>)
     rep y u32, y < pSurface.val.getHeight(), y <- y + 1
         rep x u32, x < pSurface.val.getWidth(), x <- x + 1
             red u8
