@@ -96,7 +96,7 @@ readMouse fun
 ;
 
 demo_0 fun
-    setMode(1)
+    setMode(0)
 
     xPos s32 <- width.s32 / 2
     yPos s32 <- width.s32 / 2
@@ -165,7 +165,7 @@ demo_0 fun
 ;
 
 demo_1 fun
-    setMode(0)
+    setMode(1)
 
     xPos s32 <- width.s32 / 2
     yPos s32 <- width.s32 / 2
@@ -250,7 +250,7 @@ demo_2 fun
 ;
 
 demo_3 fun
-    setMode(1)
+    setMode(0)
 
     x1 s32 <- width.s32 / 2
     y1 s32 <- width.s32 / 2
@@ -322,7 +322,7 @@ demo_3 fun
 ;
 
 demo_4 fun
-    setMode(1)
+    setMode(0)
 
     POINTS_COUNT u32 <- 5
 
