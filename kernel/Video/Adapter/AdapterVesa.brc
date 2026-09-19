@@ -1,0 +1,149 @@
+@module Video
+
+@import BiosService
+@import B
+@import Memory
+
+VesaInfo blob
+    signature data<u8, 4>
+    version u16
+    oemStringPtr data<u16, 2>
+    caps data<u8, 4>
+    videoModePtr data<u16, 2>
+    totalMemory u16
+    reserved data<u8, 492>
+;
+
+VesaModeInfo blob
+    attributes u16 // 0
+    windowA u8 // 2
+    windowB u8 // 3
+    granularity u16 // 4
+    windowSize u16 // 6
+    segmentA u16 // 8
+    segmentB u16 // 10
+    winFunPtr u32 // 12
+    pitch u16 // 16
+    width u16 // 18
+    height u16 // 20
+    xChar u8 // 22
+    yChar u8 // 23
+    planes u8 // 24
+    bpp u8 // 25
+    banks u8 // 26
+    memoryModel u8 // 27
+    bankSize u8 // 28
+    imagePages u8 // 29
+    reserved_0 u8 // 30
+    redMask u8 // 31
+    redPosition u8 // 32
+    greenMask u8 // 33
+    greenPosition u8 // 34
+    blueMask u8 // 35
+    bluePosition u8 // 36
+    reserved_1 u8 // 37
+    reserved_3 u8 // 38
+    directColorAttributes u8 // 39
+    framebufferPtr u32 // 40
+    offScreenMemoryOffset u32 // 44
+    offScreenMemorySize u16 // 48
+    reserved_4 data<u8, 206> // 50
+;
+
+@export AdapterVesa blob: Adapter
+    //
+    // MARK: proto<Adapter>
+    //
+
+    getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
+        modes blob<@B::Array, ptr<blob<Mode>>>
+
+        // First get and copy the list of modes
+        vesaInfo blob_pack<VesaInfo>
+        @BiosService::Video::vesaGetInfo(vesaInfo.adr)
+        pModeIds ptr<data<u16>> <- {vesaInfo.videoModePtr[1] * 0x10 + vesaInfo.videoModePtr[0]}
+        modeIds blob<@B::Array, u16>
+        rep i u32, pModeIds.val[i] < 0xffff, i <- i + 1
+            modeIds.push(pModeIds.val[i])
+        ;
+
+        // Then get details for each of the modes
+        rep i u32, i < modeIds.count, i <- i + 1
+            vesaModeInfo blob_pack<VesaModeInfo>
+            @BiosService::Video::vesaGetModeInfo(vesaModeInfo.adr, modeIds.at(i).u16)
+
+            // Filter out weird color modes
+            if vesaModeInfo.bpp = 8 or vesaModeInfo.bpp = 16 or vesaModeInfo.bpp = 24 or vesaModeInfo.bpp = 32
+                pMode ptr<blob<Mode>> <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
+
+                pMode.val.id <- modeIds.at(i).u16
+                pMode.val.width <- vesaModeInfo.width
+                pMode.val.height <- vesaModeInfo.height
+                pMode.val.bpp <- vesaModeInfo.bpp
+
+                pMetadata ptr<blob<Mode::Metadata::Vesa>> <- @BSys::memAlloc(blob<Mode::Metadata::Vesa>.size).ptr<blob<Mode::Metadata::Vesa>>
+                pMode.val.aMetadata <- pMetadata.vadr
+                pMetadata.val.aFramebuffer <- vesaModeInfo.framebufferPtr.a
+                pMetadata.val.pitch <- vesaModeInfo.pitch
+
+                modes.push(pMode)
+            ;
+        ;
+
+        ret modes
+    ;
+
+    getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
+        // Setup surface
+        pSurface ptr<blob<Surface>> <- @BSys::memAlloc(blob<Surface>.size).ptr<blob<Surface>>
+        pSurface.val.iAdapter <- {it.ptr}
+        pSurface.val.pMode <- pMode
+
+        // Setup adapter
+        pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
+        @BiosService::Video::vesaSetMode(pMode.val.id)
+        @Memory::PagingManager::instance.mapDirectMemory(pMetadata.val.aFramebuffer, pMetadata.val.pitch * pMode.val.height)
+
+        ret pSurface
+    ;
+
+    commit fun: pMode ptr<blob<Mode>>
+    ;
+
+    clear fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8
+        rep y u32, y < pMode.val.height, y <- y + 1
+            rep x u32, x < pMode.val.width, x <- x + 1
+                it.drawPixel(pMode, x, y, red, green, blue)
+            ;
+        ;
+    ;
+
+    drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
+        pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
+        offset u32 <- y * pMetadata.val.pitch + (x * (pMode.val.bpp / 8))
+
+        // 8 bit color
+        if pMode.val.bpp = 8
+            pPixel ptr<u8> <- {pMetadata.val.aFramebuffer + offset}
+            pixel u8
+            pixel <- pixel | (red & 0b1110_0000)
+            pixel <- pixel | ((green & 0b1110_0000) >> 3)
+            pixel <- pixel | ((blue & 0b1100_0000) >> 6)
+            pPixel.val <- pixel
+        // 16 bit color
+        else if pMode.val.bpp = 16
+            pPixel ptr<u16> <- {pMetadata.val.aFramebuffer + offset}
+            pixel u16
+            pixel <- pixel | ((red.u16 & 0b11111000) << 8)
+            pixel <- pixel | ((green.u16 & 0b11111100) << 3)
+            pixel <- pixel | ((blue.u16 & 0b11111000) >> 3)
+            pPixel.val <- pixel
+        // 24 bit color
+        else
+            pPixel ptr<data<u8>> <- {pMetadata.val.aFramebuffer + offset}
+            pPixel.val[2] <- red
+            pPixel.val[1] <- green
+            pPixel.val[0] <- blue
+        ;
+    ;
+;

@@ -71,15 +71,15 @@
     mov $0, eax
 ;
 
-@export disableInterrupts raw<"">
+@export disableInterrupts raw
     cli
 ;
 
-@export enableInterrupts raw<"">
+@export enableInterrupts raw
     sti
 ;
 
-@export halt raw<"">
+@export halt raw
     hlt
 ;
 

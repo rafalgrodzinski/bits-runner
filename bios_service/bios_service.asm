@@ -1,8 +1,12 @@
 %define BIOS_SERVICE_REBOOT 0x00
-%define BIOS_SERVICE_SET_VIDEO_MODE 0x01
 %define BIOS_SERVICE_BOOT_STORAGE_READ_SECTORS 0x02
 %define BIOS_SERVICE_BOOT_STORAGE_WRITE_SECTORS 0x04
 %define BIOS_SERVICE_BOOT_STORAGE_SECTORS_COUNT 0x03
+
+%define BIOS_SERVICE_VIDEO_VGA_SET_MODE 0x20
+%define BIOS_SERVICE_VIDEO_VESA_GET_INFO 0x21
+%define BIOS_SERVICE_VIDEO_VESA_GET_MODE_INFO 0x22
+%define BIOS_SERVICE_VIDEO_VESA_SET_MODE 0x23
 
 %define BIOS_SERVICE_TEXT_MODE_80x25 0x00
 %define BIOS_SERVICE_TEXT_MODE_80x50 0x01
@@ -31,14 +35,6 @@ bios_service_32:
     jmp .end
 .not_reboot:
 
-    ; Video mode
-    cmp eax, BIOS_SERVICE_SET_VIDEO_MODE
-    jne .not_set_video_mode
-    push ebx ; video_mode
-    call bios_service_set_video_mode_32
-    jmp .end
-.not_set_video_mode:
-
     ; Read sectors
     cmp eax, BIOS_SERVICE_BOOT_STORAGE_READ_SECTORS
     jne .not_read_sectors
@@ -66,6 +62,39 @@ bios_service_32:
     jmp .end
 .not_sectors_count:
 
+    ; Video VGA Set Mode
+    cmp eax, BIOS_SERVICE_VIDEO_VGA_SET_MODE
+    jne .not_video_vga_set_mode
+    push ebx ; video_mode
+    call bios_service_video_vga_set_mode_32
+    jmp .end
+.not_video_vga_set_mode:
+
+    ; Video VESA Get Info
+    cmp eax, BIOS_SERVICE_VIDEO_VESA_GET_INFO
+    jne .not_video_vesa_get_info
+    push ebx ; .target_adr
+    call bios_service_video_vesa_get_info_32
+    jmp .end
+.not_video_vesa_get_info:
+
+    ; Video VESA Get Mode Info
+    cmp eax, BIOS_SERVICE_VIDEO_VESA_GET_MODE_INFO
+    jne .not_video_vesa_get_mode_info
+    push ecx ; .mode
+    push ebx ; .target_adr
+    call bios_service_video_vesa_get_mode_info_32
+    jmp .end
+.not_video_vesa_get_mode_info:
+
+    ; Video VESA Set Mode
+    cmp eax, BIOS_SERVICE_VIDEO_VESA_SET_MODE
+    jne .not_video_vesa_set_mode
+    push ebx ; .mode
+    call bios_service_video_vesa_set_mode_32
+    jmp .end
+.not_video_vesa_set_mode:
+
 .end:
     cli
     ; Restore original kernel stack
@@ -86,63 +115,6 @@ bios_service_reboot_32:
     call switch_to_v86_mode_32
 [bits 16]
     jmp 0xffff:0
-
-;
-; Change video mode
-; in
-;  video_mode
-%define .args_count 1
-%define .video_mode [ebp + 8]
-[bits 32]
-bios_service_set_video_mode_32:
-    push ebp
-    mov ebp, esp
-
-    call switch_to_v86_mode_32
-[bits 16]
-    ; text 80x25
-    cmp dword .video_mode, BIOS_SERVICE_TEXT_MODE_80x25
-    jne .not_80x25
-    mov ax, 0x0003
-    mov bl, 0
-    int 0x10
-    jmp .end
-.not_80x25:
-
-    ; text 80x50
-    cmp dword .video_mode, BIOS_SERVICE_TEXT_MODE_80x50
-    jne .not_80x50
-    mov ax, 0x1112
-    mov bl, 0
-    int 0x10
-    jmp .end
-.not_80x50:
-
-    ;graphics 320x200x8
-    cmp dword .video_mode, BIOS_SERVICE_GPXS_MODE_320x200x8
-    jne .not_320x200x8
-    mov ax, 0x0013
-    int 0x10
-    jmp .end
-.not_320x200x8:
-
-    ;graphics 640x480x4
-    cmp dword .video_mode, BIOS_SERVICE_GPXS_MODE_640x480x4
-    jne .not_640x480x4
-    mov ax, 0x0012
-    int 0x10
-    jmp .end
-.not_640x480x4:
-
-.end:
-    call switch_to_protected_mode_16
-[bits 32]
-
-    mov esp, ebp
-    pop ebp
-    ret U32_SIZE * .args_count
-%undef .video_mode
-%undef .args_count
 
 ;
 ; Read sectors from the boot storage
@@ -218,3 +190,154 @@ bios_service_boot_storage_sectors_count_32:
     mul dword [boot_storage_drive_sectors]
 
     ret
+
+;
+; Video VGA Set Mode
+; in
+;  video_mode
+%define .args_count 1
+%define .video_mode [ebp + 8]
+[bits 32]
+bios_service_video_vga_set_mode_32:
+    push ebp
+    mov ebp, esp
+
+    call switch_to_v86_mode_32
+[bits 16]
+    ; text 80x25
+    cmp dword .video_mode, BIOS_SERVICE_TEXT_MODE_80x25
+    jne .not_80x25
+    mov ax, 0x0003
+    mov bl, 0
+    int 0x10
+    jmp .end
+.not_80x25:
+
+    ; text 80x50
+    cmp dword .video_mode, BIOS_SERVICE_TEXT_MODE_80x50
+    jne .not_80x50
+    mov ax, 0x1112
+    mov bl, 0
+    int 0x10
+    jmp .end
+.not_80x50:
+
+    ;graphics 320x200x8
+    cmp dword .video_mode, BIOS_SERVICE_GPXS_MODE_320x200x8
+    jne .not_320x200x8
+    mov ax, 0x0013
+    int 0x10
+    jmp .end
+.not_320x200x8:
+
+    ;graphics 640x480x4
+    cmp dword .video_mode, BIOS_SERVICE_GPXS_MODE_640x480x4
+    jne .not_640x480x4
+    mov ax, 0x0012
+    int 0x10
+    jmp .end
+.not_640x480x4:
+
+.end:
+    call switch_to_protected_mode_16
+[bits 32]
+
+    mov esp, ebp
+    pop ebp
+    ret U32_SIZE * .args_count
+%undef .video_mode
+%undef .args_count
+
+;
+; VESA Get Info
+; in
+;  .target_adr
+%define .args_count 1
+%define .target_adr [ebp + 8]
+[bits 32]
+bios_service_video_vesa_get_info_32:
+    push ebp
+    mov ebp, esp
+
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f00
+    mov di, buffer
+    int 0x10
+
+    call switch_to_protected_mode_16
+[bits 32]
+    ; Copy retreived data to the target address
+    mov ecx, 0x200
+    mov esi, buffer
+    mov edi, .target_adr
+    rep movsb
+
+    mov esp, ebp
+    pop ebp
+    ret U32_SIZE * .args_count
+%undef .target_adr
+%undef .args_count
+
+;
+; VESA Get Mode Info
+; in
+;  .target_adr
+;  .mode
+%define .args_count 2
+%define .target_adr [ebp + 8]
+%define .mode [ebp + 12]
+[bits 32]
+bios_service_video_vesa_get_mode_info_32:
+    push ebp
+    mov ebp, esp
+
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f01
+    mov di, buffer
+    mov cx, .mode
+    int 0x10
+
+    call switch_to_protected_mode_16
+[bits 32]
+    ; Copy retreived data to the target address
+    mov ecx, 0x100
+    mov esi, buffer
+    mov edi, .target_adr
+    rep movsb
+
+    mov esp, ebp
+    pop ebp
+    ret U32_SIZE * .args_count
+%undef .mode
+%undef .target_adr
+%undef .args_count
+
+;
+; VESA Set Mode
+; in
+;  .mode
+%define .args_count 1
+%define .mode [ebp + 8]
+[bits 32]
+bios_service_video_vesa_set_mode_32:
+    push ebp
+    mov ebp, esp
+
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f02
+    mov bx, .mode
+    ;and bx, 0x3fff ; Clear two top bits
+    ;or bx, 0x4000 ; Set bit 14 to enable linear frame buffer
+    int 0x10
+
+    call switch_to_protected_mode_16
+[bits 32]
+
+    mov esp, ebp
+    pop ebp
+    ret U32_SIZE * .args_count
+%undef .mode
+%undef .args_count

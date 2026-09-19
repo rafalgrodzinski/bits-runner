@@ -9,11 +9,11 @@ STANDARD_MODE u8 <- 0x00
 SCROLL_WHEEL_MODE u8 <- 0x03
 5_BUTTON_MODE u8 <- 0x04
 
-disableInterrupts raw<"">
+disableInterrupts raw
     cli
 ;
 
-enableInterrupts raw<"">
+enableInterrupts raw
     sti
 ;
 

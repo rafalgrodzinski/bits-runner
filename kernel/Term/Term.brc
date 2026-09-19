@@ -39,11 +39,11 @@ pBuffer ptr<data<u8>> <- { 0x0b8000 }
     if mode = MODE_80x50
         termWidth <- 80
         termHeight <- 50
-        @BiosService::setVideoMode(@BiosService::VIDEO_MODE_TEXT_80x50)
+        @BiosService::Video::vgaSetMode(@BiosService::VIDEO_MODE_TEXT_80x50)
     else
         termWidth <- 80
         termHeight <- 25
-        @BiosService::setVideoMode(@BiosService::VIDEO_MODE_TEXT_80x25)
+        @BiosService::Video::vgaSetMode(@BiosService::VIDEO_MODE_TEXT_80x25)
     ;
 
     clear(FOREGROUND_GRAY)
