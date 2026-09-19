@@ -33,7 +33,6 @@ OBJS=(
     Bus.o
     DeviceKeyboard.o
     DeviceMouse.o
-    DeviceVideo.o
     DrvCmos.o
     Devices.o
     Interrupt.o
@@ -42,6 +41,7 @@ OBJS=(
     Dispatch.o
     Storage.o
     Term.o
+    Video.o
 )
 
 # don't split on spaces, only on new lines
@@ -57,7 +57,7 @@ SOURCES_DIRS=(
 
 for SOURCES_DIR in "${SOURCES_DIRS[@]}"; do
     # find .brc files (except for BSys.brc, cause it is specific per system)
-    FILES=`find "${SOURCES_DIR}" -type d -name Storage -prune -o -name *.brc ! -name Speaker.brc ! -name Pit.brc -print | sort`
+    FILES=`find "${SOURCES_DIR}" -type d -name Storage -prune -o -type d -name Video -prune -o -name *.brc ! -name Speaker.brc ! -name Pit.brc -print | sort`
     for FILE in ${FILES}; do
         # and add them to the list
         SOURCES+=("${FILE}")
@@ -75,6 +75,17 @@ SOURCES+=("${SCRIPT_DIR}/Storage/Filesystem/Filesystem.brc")
 SOURCES+=("${SCRIPT_DIR}/Storage/Filesystem/FilesystemFat.brc")
 SOURCES+=("${SCRIPT_DIR}/Devices/Timer/Pit.brc")
 SOURCES+=("${SCRIPT_DIR}/Devices/Audio/Speaker.brc")
+
+# Video
+SOURCES+=("${SCRIPT_DIR}/Video/Video.brc")
+SOURCES+=("${SCRIPT_DIR}/Video/Surface/Surface.brc")
+SOURCES+=("${SCRIPT_DIR}/Video/Mode/ModeMetadataVesa.brc")
+SOURCES+=("${SCRIPT_DIR}/Video/Mode/ModeMetadataSvga2.brc")
+SOURCES+=("${SCRIPT_DIR}/Video/Mode/Mode.brc")
+SOURCES+=("${SCRIPT_DIR}/Video/Adapter/Adapter.brc")
+SOURCES+=("${SCRIPT_DIR}/Video/Adapter/AdapterSvga2.brc")
+SOURCES+=("${SCRIPT_DIR}/Video/Adapter/AdapterVesa.brc")
+SOURCES+=("${SCRIPT_DIR}/Video/Adapter/AdapterVga.brc")
 
 # build the source
 brb ${FLAGS[@]} ${SOURCES[@]}

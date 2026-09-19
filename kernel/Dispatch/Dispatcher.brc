@@ -130,18 +130,6 @@ Dispatcher::tss blob<Tss>
         it.runNextProcess()
     ;
 
-    getCurrentPageDirectoryPtr fun -> ptr<data<u32>>
-        pCurrentPageDirectory ptr<data<u32>>
-
-        if it.currentProcessIndex < it.processes.count
-            pCurrentPageDirectory <- { it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.pageTablesDirectory.adr }
-        else
-            pCurrentPageDirectory <- { @BSys::getCr3() }
-        ;
-
-        ret pCurrentPageDirectory
-    ;
-
     getCurrentProcess fun -> ptr<blob<Process>>
         if it.currentProcessIndex > it.processes.count: ret {0}
         ret it.processes.at(it.currentProcessIndex).ptr<blob<Process>>

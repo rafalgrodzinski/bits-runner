@@ -1,0 +1,84 @@
+@module Video
+
+@export Surface blob
+    iAdapter proto<Adapter>
+    pMode ptr<blob<Mode>>
+
+    getWidth fun -> u32
+        if it.pMode.vadr = 0: ret 0
+        ret it.pMode.val.width
+    ;
+
+    getHeight fun -> u32
+        if it.pMode.vadr = 0: ret 0
+        ret it.pMode.val.height
+    ;
+
+    commit fun
+        if it.iAdapter.vadr = 0: ret
+        it.iAdapter.commit(it.pMode)
+    ;
+
+    clear fun: red u8, green u8, blue u8
+        if it.iAdapter.vadr = 0: ret
+        it.iAdapter.clear(it.pMode, red, green, blue)
+    ;
+
+    drawPixel fun: x u32, y u32, red u8, green u8, blue u8
+        if it.iAdapter.vadr = 0: ret
+        it.iAdapter.drawPixel(it.pMode, x, y, red, green, blue)
+    ;
+
+    drawLine fun: x1 u32, y1 u32, x2 u32, y2 u32, red u8, green u8, blue u8
+        dx s32 <- if x2 >= x1: x2 - x1 else: x1 - x2
+        dy s32 <- if y2 >= y1: y2 - y1 else: y1 - y2
+
+        // more horizonal line
+        if dx >= dy
+            if x2 < x1
+                tmpX u32 <- x1
+                x1 <- x2
+                x2 <- tmpX
+
+                tmpY u32 <- y1
+                y1 <- y2
+                y2 <- tmpY
+            ;
+
+            p s32 <- dy * 2 - dx
+            y u32 <- y1
+            rep x u32 <- x1, x <= x2, x <- x + 1
+                it.drawPixel(x, y, red, green, blue)
+                if p < 0
+                    p <- p + 2 * dy
+                else
+                    y <- if y1 <= y2: y + 1 else: y - 1
+                    p <- p + 2 * (dy - dx)
+                ;
+            ;
+        // more vertical line
+        else
+            if y2 < y1
+                tmpX u32 <- x1
+                x1 <- x2
+                x2 <- tmpX
+
+                tmpY u32 <- y1
+                y1 <- y2
+                y2 <- tmpY
+            ;
+
+            p s32 <- dx * 2 - dy
+            x u32 <- x1
+            rep y u32 <- y1, y <= y2, y <- y + 1
+                it.drawPixel(x, y, red, green, blue)
+                if p < 0
+                    p <- p + 2 * dx
+                else
+                    x <- if x1 <= x2: x + 1 else: x - 1
+                    p <- p + 2 * (dx - dy)
+                ;
+            ;
+        ;
+    ;
+;

@@ -4,6 +4,10 @@
 width u32
 height u32
 
+mode0 blob<@Syscall::Video::ModeInfo>
+mode1 blob<@Syscall::Video::ModeInfo>
+resourceId u32
+
 DEMOS_COUNT u32 <- 5
 demoMode u32 <- 0
 
@@ -12,23 +16,14 @@ mouseState blob<@Syscall::MouseState>
 
 setMode fun: mode u32
     if mode = 0
-        width <- 640
-        height <- 480
-        @Syscall::Video::setMode(@Syscall::Video::RES_640x480, @Syscall::Video::BPP_4)
+        width <- mode0.width
+        height <- mode0.height
+        resourceId <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::VIDEO_GET_SURFACE, mode0.id, 0)
     else if mode = 1
-        width <- 320
-        height <- 240
-        @Syscall::Video::setMode(@Syscall::Video::RES_320x240, @Syscall::Video::BPP_8)
+        width <- mode1.width
+        height <- mode1.height
+        resourceId <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::VIDEO_GET_SURFACE, mode1.id, 0)
     ;
-    /*if mode = 0
-        width <- 800
-        height <- 600
-        @Syscall::gfxSetMode(@Syscall::GFX_MODE_RES_800x600, @Syscall::GFX_MODE_BPP_32)
-    else if mode = 1
-        width <- 640
-        height <- 480
-        @Syscall::gfxSetMode(@Syscall::GFX_MODE_RES_640x480, @Syscall::GFX_MODE_BPP_32)
-    ;*/
 ;
 
 readKeyboard fun
@@ -47,6 +42,50 @@ readMouse fun
 @export start fun
     @B::String("vdemo.bin >").println()
 
+    selectedModeInfo blob<@Syscall::Video::ModeInfo>
+    modesCount u32 <- @Syscall::Video::getModesCount()
+    rep i u32, i < modesCount, i <- i + 1
+        modeInfo blob<@Syscall::Video::ModeInfo> <- @Syscall::Video::getModeInfo(i)
+
+        if modeInfo.width = 320 and modeInfo.height = 240 and modeInfo.bpp = 8
+            mode0 <- modeInfo
+        else if modeInfo.width = 640 and modeInfo.height = 480 and modeInfo.bpp = 16
+            mode0 <- modeInfo
+        else if modeInfo.width = 800 and modeInfo.height = 600 and modeInfo.bpp >= 24
+            mode1 <- modeInfo
+        else if mode0.id = 0
+            mode0 <- modeInfo
+        else if mode1.id = 0
+            mode1 <- modeInfo
+        ;
+
+        @B::StringHexForU32(modeInfo.id).print()
+        @B::String(" ").print()
+        @B::StringForU32(modeInfo.width).print()
+        @B::String("x").print()
+        @B::StringForU32(modeInfo.height).print()
+        @B::String("x").print()
+        @B::StringForU32(modeInfo.bpp).println()
+    ;
+
+    @B::String("").println()
+
+    @B::StringHexForU32(mode0.id).print()
+    @B::String(" ").print()
+    @B::StringForU32(mode0.width).print()
+    @B::String("x").print()
+    @B::StringForU32(mode0.height).print()
+    @B::String("x").print()
+    @B::StringForU32(mode0.bpp).println()
+
+    @B::StringHexForU32(mode1.id).print()
+    @B::String(" ").print()
+    @B::StringForU32(mode1.width).print()
+    @B::String("x").print()
+    @B::StringForU32(mode1.height).print()
+    @B::String("x").print()
+    @B::StringForU32(mode1.bpp).println()
+
     rep
              if demoMode = 0: demo_0()
         else if demoMode = 1: demo_1()
@@ -57,30 +96,47 @@ readMouse fun
 ;
 
 demo_0 fun
-    setMode(1)
+    setMode(0)
 
     xPos s32 <- width.s32 / 2
     yPos s32 <- width.s32 / 2
     xVel s32 <- 5
     yVel s32 <- 5
 
-    bgColor u32 <- 0
-    fgColor u32 <- 1
+    fgRed u8 <- 27
+    fgGreen u8 <- 128
+    fgBlue u8 <- 77
+
+    bgRed u8 <- 127
+    bgGreen u8 <- 28
+    bgBlue u8 <- 177
 
     rep demoMode = 0
         readKeyboard()
         readMouse()
 
-        @Syscall::Video::clearScreen(bgColor)
+        @Syscall::Video::clear(resourceId, bgRed, bgGreen, bgBlue)
 
         if mouseState.buttonsState &? 0x01
-            fgColor <- fgColor + 1
-            if fgColor > 15: fgColor <- 0
+            fgRed <- fgRed + 7
+            if fgRed > 255: fgRed <- fgRed - 255
+
+            fgGreen <- fgGreen + 3
+            if fgGreen > 255: fgGreen <- fgGreen - 255
+
+            fgBlue <- fgBlue + 21
+            if fgBlue > 255: fgBlue <- fgBlue - 255
         ;
 
         if mouseState.buttonsState &? 0x02
-            bgColor <- bgColor + 1
-            if bgColor > 15: bgColor <- 0
+            bgRed <- bgRed + 5
+            if bgRed > 255: bgRed <- bgRed - 255
+
+            bgGreen <- bgGreen + 7
+            if bgGreen > 255: bgGreen <- bgGreen - 255
+
+            bgBlue <- bgBlue + 13
+            if bgBlue > 255: bgBlue <- bgBlue - 255
         ;
 
         xPos <- xPos + mouseState.deltaX
@@ -100,37 +156,54 @@ demo_0 fun
 
         rep iy u32 <- 0, iy < 20, iy <- iy + 1
             rep ix u32 <- 0, ix < 20, ix <- ix + 1
-                @Syscall::Video::drawPixel((ix + xPos - 10).u32, (iy + yPos - 10).u32, fgColor)
+                @Syscall::Video::drawPixel(resourceId, (ix + xPos - 10).u32, (iy + yPos - 10).u32, fgRed, fgGreen, fgBlue)
             ;
         ;
 
-        @Syscall::Video::commitDrawing()
+        @Syscall::Video::commit(resourceId)
     ;
 ;
 
 demo_1 fun
-    setMode(0)
+    setMode(1)
 
     xPos s32 <- width.s32 / 2
     yPos s32 <- width.s32 / 2
 
-    bgColor u32 <- 0
-    fgColor u32 <- 1
+    fgRed u8 <- 144
+    fgGreen u8 <- 180
+    fgBlue u8 <- 20
+
+    bgRed u8 <- 33
+    bgGreen u8 <- 133
+    bgBlue u8 <- 233
 
     rep demoMode = 1
         readKeyboard()
         readMouse()
 
-        @Syscall::Video::clearScreen(bgColor)
+        @Syscall::Video::clear(resourceId, bgRed, bgGreen, bgBlue)
 
         if mouseState.buttonsState &? 0x01
-            fgColor <- fgColor + 1
-            if fgColor > 15: fgColor <- 0
+            fgRed <- fgRed + 1
+            if fgRed > 255: fgRed <- fgRed - 255
+
+            fgGreen <- fgGreen + 7
+            if fgGreen > 255: fgGreen <- fgGreen - 255
+
+            fgBlue <- fgBlue + 8
+            if fgBlue > 255: fgBlue <- fgBlue - 255
         ;
 
         if mouseState.buttonsState &? 0x02
-            bgColor <- bgColor + 1
-            if bgColor > 15: bgColor <- 0
+            bgRed <- bgRed + 9
+            if bgRed > 255: bgRed <- bgRed - 255
+
+            bgGreen <- bgGreen + 3
+            if bgGreen > 255: bgGreen <- bgGreen - 255
+
+            bgBlue <- bgBlue + 6
+            if bgBlue > 255: bgBlue <- bgBlue - 255
         ;
 
         xPos <- xPos + mouseState.deltaX
@@ -150,21 +223,23 @@ demo_1 fun
 
         rep iy u32 <- 0, iy < 20, iy <- iy + 1
             rep ix u32 <- 0, ix < 20, ix <- ix + 1
-                @Syscall::Video::drawPixel((ix + xPos - 10).u32, (iy + yPos - 10).u32, fgColor)
+                @Syscall::Video::drawPixel(resourceId, (ix + xPos - 10).u32, (iy + yPos - 10).u32, fgRed, fgGreen, fgBlue)
             ;
         ;
 
-        @Syscall::Video::commitDrawing()
+        @Syscall::Video::commit(resourceId)
     ;
 ;
 
 demo_2 fun
-    setMode(0)
+    setMode(1)
 
     rep iy u32 <- 0, iy < height, iy <- iy + 1
         rep ix u32 <- 0, ix < width, ix <- ix + 1
-            color u32 <- (ix / (width / 8)) + (iy / (height / 2) * 8)
-            @Syscall::Video::drawPixel(ix, iy, color)
+            red u8 <- ((ix / (width / 255)) + (iy / (height / 255) * 8)).u8
+            green u8 <- ((ix / (width / 255)) + (iy / (height / 255) * 8)).u8
+            blue u8 <- ((ix / (width / 255)) + (iy / (height / 255) * 8)).u8
+            @Syscall::Video::drawPixel(resourceId, ix, iy, red, green, blue)
         ;
     ;
 
@@ -175,7 +250,7 @@ demo_2 fun
 ;
 
 demo_3 fun
-    setMode(1)
+    setMode(0)
 
     x1 s32 <- width.s32 / 2
     y1 s32 <- width.s32 / 2
@@ -183,7 +258,9 @@ demo_3 fun
     x2 s32 <- width.s32 / 2
     y2 s32 <- width.s32 / 2
 
-    fgColor u32 <- 1
+    red u8 <- 144
+    green u8 <- 180
+    blue u8 <- 20
 
     isFront bool <- true
 
@@ -192,8 +269,14 @@ demo_3 fun
         readMouse()
 
         if mouseState.buttonsState &? 0x01
-            fgColor <- fgColor + 1
-            if fgColor > 15: fgColor <- 1
+            red <- red + 1
+            if red > 255: red <- red - 255
+
+            green <- green + 7
+            if green > 255: green <- green - 255
+
+            blue <- blue + 8
+            if blue > 255: blue <- blue - 255
         ;
 
         if mouseState.buttonsState &? 0x02
@@ -232,14 +315,14 @@ demo_3 fun
             ;
         ;
 
-        @Syscall::Video::clearScreen(0)
-        @Syscall::Video::drawLine(x1.u32, y1.u32, x2.u32, y2.u32, fgColor)
-        @Syscall::Video::commitDrawing()
+        @Syscall::Video::clear(resourceId, 0, 0, 0)
+        @Syscall::Video::drawLine(resourceId, x1.u32, y1.u32, x2.u32, y2.u32, red, green, blue)
+        @Syscall::Video::commit(resourceId)
     ;
 ;
 
 demo_4 fun
-    setMode(1)
+    setMode(0)
 
     POINTS_COUNT u32 <- 5
 
@@ -248,15 +331,23 @@ demo_4 fun
     sx data<s32, 5> <- { 1, 2, 3, 1, 2}
     sy data<s32, 5> <- { 4, 2, 1, 4, 2}
 
-    fgColor u32 <- 0
+    red u8 <- 67
+    green u8 <- 33
+    blue u8 <- 200
 
     rep demoMode = 4
         readKeyboard()
         readMouse()
 
         if mouseState.buttonsState &? 0x01
-            fgColor <- fgColor + 1
-            if fgColor > 16: fgColor <- 1
+            red <- red + 3
+            if red > 255: red <- red - 255
+
+            green <- green + 5
+            if green > 255: green <- green - 255
+
+            blue <- blue + 9
+            if blue > 255: blue <- blue - 255
         ;
 
         rep i u32 <- 0, i < POINTS_COUNT, i <- i + 1
@@ -280,14 +371,14 @@ demo_4 fun
             ;
         ;
 
-        @Syscall::Video::clearScreen(0)
+        @Syscall::Video::clear(resourceId, 0, 0, 0)
 
         rep i u32 <- 0, i < POINTS_COUNT, i <- i + 1
             i2 u32 <- if i < POINTS_COUNT - 1: i + 1 else: 0
 
-            @Syscall::Video::drawLine(px[i].u32, py[i].u32, px[i2].u32, py[i2].u32, (fgColor + i) % 16 + 1)
+            @Syscall::Video::drawLine(resourceId, px[i].u32, py[i].u32, px[i2].u32, py[i2].u32, red, green, blue)
         ;
 
-        @Syscall::Video::commitDrawing()
+        @Syscall::Video::commit(resourceId)
     ;
 ;
