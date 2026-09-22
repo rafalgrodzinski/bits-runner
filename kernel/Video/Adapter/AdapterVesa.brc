@@ -15,39 +15,39 @@ VesaInfo blob
 ;
 
 VesaModeInfo blob
-    attributes u16 // 0
-    windowA u8 // 2
-    windowB u8 // 3
-    granularity u16 // 4
-    windowSize u16 // 6
-    segmentA u16 // 8
-    segmentB u16 // 10
-    winFunPtr u32 // 12
-    pitch u16 // 16
-    width u16 // 18
-    height u16 // 20
-    xChar u8 // 22
-    yChar u8 // 23
-    planes u8 // 24
-    bpp u8 // 25
-    banks u8 // 26
-    memoryModel u8 // 27
-    bankSize u8 // 28
-    imagePages u8 // 29
-    reserved_0 u8 // 30
-    redMask u8 // 31
-    redPosition u8 // 32
-    greenMask u8 // 33
-    greenPosition u8 // 34
-    blueMask u8 // 35
-    bluePosition u8 // 36
-    reserved_1 u8 // 37
-    reserved_3 u8 // 38
-    directColorAttributes u8 // 39
-    framebufferPtr u32 // 40
-    offScreenMemoryOffset u32 // 44
-    offScreenMemorySize u16 // 48
-    reserved_4 data<u8, 206> // 50
+    attributes u16
+    u8 // windowA
+    u8 //windowB
+    u16 //granularity
+    u16 // windowSize
+    u16 // segmentA
+    u16 //segmentB
+    u32 // winFunPtr
+    pitch u16
+    width u16
+    height u16
+    u8 // xChar
+    u8 // yChar
+    u8 // planes
+    bpp u8
+    u8 // banks
+    u8 // memoryModel
+    u8 // bankSize
+    u8 // imagePages
+    u8 // reserved
+    u8 // redMask
+    u8 // redPosition
+    u8 // greenMask
+    u8 // greenPosition
+    u8 // blueMask
+    u8 // bluePosition
+    u8 // reserved
+    u8 // reserved
+    u8 // directColorAttributes
+    framebufferPtr u32
+    u32 // offScreenMemoryOffset
+    u16 // offScreenMemorySize
+    data<u8, 206> // reserved
 ;
 
 @export AdapterVesa blob: Adapter
