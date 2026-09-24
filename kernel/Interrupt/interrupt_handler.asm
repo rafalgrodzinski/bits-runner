@@ -51,7 +51,7 @@ IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x0b segment not present
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x0c stack-segment fault
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x0d general protection
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x0e page fault
-IDT_ENTRY 0 ; 0x0f
+IDT_ENTRY 0 ; 0x0f reserved
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x10 fpu fault
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x11 alignment check
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x12 machine check
@@ -301,56 +301,6 @@ interrupt_handler_14:
 interrupt_handler_15:
     ; error info pushed by CPU
     push 0x15
-    jmp interrupt_handler
-
-interrupt_handler_16:
-    push  0
-    push 0x16
-    jmp interrupt_handler
-
-interrupt_handler_17:
-    push  0
-    push 0x17
-    jmp interrupt_handler
-
-interrupt_handler_18:
-    push  0
-    push 0x18
-    jmp interrupt_handler
-
-interrupt_handler_19:
-    push  0
-    push 0x19
-    jmp interrupt_handler
-
-interrupt_handler_1a:
-    push  0
-    push 0x1a
-    jmp interrupt_handler
-
-interrupt_handler_1b:
-    push  0
-    push 0x1b
-    jmp interrupt_handler
-
-interrupt_handler_1c:
-    push  0
-    push 0x1c
-    jmp interrupt_handler
-
-interrupt_handler_1d:
-    push  0
-    push 0x1d
-    jmp interrupt_handler
-
-interrupt_handler_1e:
-    push  0
-    push 0x1e
-    jmp interrupt_handler
-
-interrupt_handler_1f:
-    push  0
-    push 0x1f
     jmp interrupt_handler
 
 ; IRQ 0
