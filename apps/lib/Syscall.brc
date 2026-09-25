@@ -12,6 +12,15 @@ syscallRaw raw<"=r, m, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{esi}">: /*$
     mov $0, eax
 ;
 
+debugDumpRegistersRaw raw
+    int 0x31
+;
+
+// Debug
+@export Debug::dumpRegisters fun
+    debugDumpRegistersRaw()
+;
+
 // System
 System::REBOOT u32 <- 0x000
 System::GET_TIMESTAMP u32 <- 0x010

@@ -435,6 +435,9 @@ interrupt_handler_31:
 %define .gs [ebp - U32_SIZE * 1]
 %define .cs [ebp + U32_SIZE * 11]
 %define .eip [ebp + U32_SIZE * 10]
+%define .eflags [ebp + U32_SIZE * 12]
+%define .uss [ebp + U32_SIZE * 14]
+%define .uesp [ebp + U32_SIZE * 13]
 %define .interrupt [ebp + 4 * 8]
 %define .info [ebp + 4 * 9]
 interrupt_handler:
@@ -445,10 +448,10 @@ interrupt_handler:
     ;xchg bx, bx
 
     ; Switch to kernel segments
-    push dword ds
-    push dword es
-    push dword fs
-    push dword gs
+    push ds
+    push es
+    push fs
+    push gs
 
     mov ax, GDT_KERNEL_DATA
     mov ds, ax
@@ -471,15 +474,30 @@ interrupt_handler:
     ; Push arguments
     push dword .info
     push dword .interrupt
-    push dword .eip
     push dword .gs
     push dword .fs
     push dword .es
     push dword .ds
+
+    push dword .eflags
+    push dword .eip
     push dword .cs
-    add dword .esp, 0x14 ; Adjust for the arguments passed to interrupt_handler
+
+    ; handle esp & ss depending on if we're coming from kernel or user mode
+    test .cs, 011b
+    jz .not_user_mode
+    ; user mode
+    push dword .uesp
+    push dword .uss
+    jmp .stack_handled
+.not_user_mode:
+    ; kernel mode
     push dword .esp
+    add dword [esp], 0x14 ; Adjust for the arguments passed to interrupt_handler
+    push ss
+.stack_handled:
     push dword .ebp
+
     push dword .edi
     push dword .esi
     push dword .edx
@@ -501,7 +519,7 @@ interrupt_handler:
 .skip_ack_pic2:
 
     ; pop pushed arguments
-    add esp, U32_SIZE * 16
+    add esp, U32_SIZE * 18
 
     .int_handling_finished:
     ; Restore segments

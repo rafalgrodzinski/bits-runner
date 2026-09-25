@@ -52,6 +52,9 @@
             cmd_play()
         else if cmd.isEqual(@B::String("help"))
             cmd_help()
+        // Debug
+        else if cmd.isEqual(@B::String("dreg"))
+            @Syscall::Debug::dumpRegisters()
         else
             @B::String("Dunno").printlnColor(@B::String::FOREGROUND_RED)
         ;

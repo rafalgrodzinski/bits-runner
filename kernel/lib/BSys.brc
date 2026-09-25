@@ -84,7 +84,6 @@
 ;
 
 @export debugDump raw
-    xchg bx, bx
     int 0x31
 ;
 
