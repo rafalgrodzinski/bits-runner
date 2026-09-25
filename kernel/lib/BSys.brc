@@ -23,6 +23,10 @@
     mov $0, esp
 ;
 
+@export getCr0 raw<"=r"> -> u32
+    mov $0, cr0
+;
+
 @export getCr2 raw<"=r"> -> u32
     mov $0, cr2
 ;

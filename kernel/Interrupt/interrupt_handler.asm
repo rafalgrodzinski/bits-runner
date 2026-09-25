@@ -417,35 +417,29 @@ interrupt_handler_31:
 
 ;
 ; Aggregated handler for all interrupts
-; iret stack frame registers are arranged as follows:
-; gs, fs, es, ds
-; edi, esi, ebp, esp, ebx, edx, ecx, eax
-; info, interrupt, cs, eip
-%define .eax [ebp + U32_SIZE * 7]
-%define .ebx [ebp + U32_SIZE * 4]
-%define .ecx [ebp + U32_SIZE * 6]
-%define .edx [ebp + U32_SIZE * 5]
-%define .esi [ebp + U32_SIZE * 1]
-%define .edi [ebp + U32_SIZE * 0]
-%define .ebp [ebp + U32_SIZE * 2]
-%define .esp [ebp + U32_SIZE * 3]
-%define .ds [ebp - U32_SIZE * 4]
-%define .es [ebp - U32_SIZE * 3]
-%define .fs [ebp - U32_SIZE * 2]
-%define .gs [ebp - U32_SIZE * 1]
-%define .cs [ebp + U32_SIZE * 11]
-%define .eip [ebp + U32_SIZE * 10]
-%define .eflags [ebp + U32_SIZE * 12]
-%define .uss [ebp + U32_SIZE * 14]
-%define .uesp [ebp + U32_SIZE * 13]
-%define .interrupt [ebp + 4 * 8]
-%define .info [ebp + 4 * 9]
+%define .eax [ebp + U32_SIZE * 7] ; pushad
+%define .ebx [ebp + U32_SIZE * 4] ; pushad
+%define .ecx [ebp + U32_SIZE * 6] ; pushad
+%define .edx [ebp + U32_SIZE * 5] ; pushad
+%define .esi [ebp + U32_SIZE * 1] ; pushad
+%define .edi [ebp + U32_SIZE * 0] ; pushad
+%define .ebp [ebp + U32_SIZE * 2] ; pushad
+%define .esp [ebp + U32_SIZE * 3] ; pushad
+%define .ds [ebp - U32_SIZE * 4] ; push ds
+%define .es [ebp - U32_SIZE * 3] ; push es
+%define .fs [ebp - U32_SIZE * 2] ; push fs
+%define .gs [ebp - U32_SIZE * 1] ; push gs
+%define .cs [ebp + U32_SIZE * 11] ; interrupt frame
+%define .eip [ebp + U32_SIZE * 10] ; interrupt frame
+%define .eflags [ebp + U32_SIZE * 12] ; interrupt frame
+%define .uss [ebp + U32_SIZE * 14] ; interrupt frame
+%define .uesp [ebp + U32_SIZE * 13] ; interrupt frame
+%define .interrupt [ebp + 4 * 8] ; interrupt_handler
+%define .errorCode [ebp + 4 * 9] ; interrupt_handler
 interrupt_handler:
     cli
     pushad
     mov ebp, esp
-
-    ;xchg bx, bx
 
     ; Switch to kernel segments
     push ds
@@ -471,40 +465,27 @@ interrupt_handler:
 
     .not_spurious:
 
-    ; Push arguments
-    push dword .info
-    push dword .interrupt
-    push dword .gs
-    push dword .fs
-    push dword .es
-    push dword .ds
-
-    push dword .eflags
-    push dword .eip
-    push dword .cs
-
-    ; handle esp & ss depending on if we're coming from kernel or user mode
+    ; push esp & ss depending on if we're coming from kernel or user mode
     test .cs, 011b
-    jz .not_user_mode
+    jz .kernel_mode
     ; user mode
     push dword .uesp
     push dword .uss
-    jmp .stack_handled
-.not_user_mode:
+    jmp .esp_ss_pushed
+.kernel_mode:
     ; kernel mode
     push dword .esp
     add dword [esp], 0x14 ; Adjust for the arguments passed to interrupt_handler
     push ss
-.stack_handled:
-    push dword .ebp
+.esp_ss_pushed:
 
-    push dword .edi
-    push dword .esi
-    push dword .edx
-    push dword .ecx
-    push dword .ebx
-    push dword .eax
+    ; Push arguments
+    push dword .errorCode
+    push dword .interrupt
+    push esp ; pCpuState
+    add [esp], U32_SIZE * 2
 
+    ; Call handler
     call Interrupt.handleInterrupt
 
     ; Store return value
@@ -519,7 +500,7 @@ interrupt_handler:
 .skip_ack_pic2:
 
     ; pop pushed arguments
-    add esp, U32_SIZE * 18
+    add esp, U32_SIZE * 5 ; pCpuState, .interrupt, .errorCode, ss, esp
 
     .int_handling_finished:
     ; Restore segments
@@ -533,8 +514,11 @@ interrupt_handler:
     add esp, 8
     sti
     iret
-%undef .info
+%undef .errorCode
 %undef .interrupt
+%undef .uesp
+%undef .uss
+%undef .eflags
 %undef .eip
 %undef .cs
 %undef .gs

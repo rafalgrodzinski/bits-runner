@@ -19,6 +19,37 @@ INT_DEBUG_DUMP u32 <- 0x31
 deviceKeyboard blob<@DeviceKeyboard::DeviceKeyboard>
 deviceMouse blob<@DeviceMouse::DeviceMouse>
 
+@export CpuState blob
+    ss u16
+    u16 // stack alignment
+    esp u32
+
+    gs u16
+    u16 // stack alignment
+    fs u16
+    u16 // stack alignment
+    es u16
+    u16 // stack alignment
+    ds u16
+    u16 // stack alignment
+
+    edi u32
+    esi u32
+    ebp u32
+    u32 // esp0
+    ebx u32
+    edx u32
+    ecx u32
+    eax u32
+
+    u32 // interrupt
+    u32 // errorCode
+
+    eip u32
+    cs u32
+    eflags u32
+;
+
 @export Handler::instance blob<Handler>
 
 @export Handler blob
@@ -28,7 +59,7 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
         deviceMouse.init()
     ;
 
-    handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, edi u32, ebp u32, esp u32, eip u32, eflags u32, cs u16, ds u16, es u16, fs u16, gs u16, ss u16, interrupt u32, errorCode u32 -> u32
+    handle fun: pCpuState ptr<blob<CpuState>>, interrupt u32, errorCode u32 -> u32
         // Page fault
         if interrupt = INT_PAGE_FAULT
             @Term::printString("Page fault accessing memory at: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
@@ -46,10 +77,16 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
             deviceMouse.handleInterrupt()
         // Syscall
         else if interrupt = INT_SYSCALL
-            ret SyscallHandler::instance.handle(eax, ebx, ecx, edx, esi)
+            ret SyscallHandler::instance.handle(
+                pCpuState.val.eax,
+                pCpuState.val.ebx,
+                pCpuState.val.ecx,
+                pCpuState.val.edx,
+                pCpuState.val.esi
+            )
         // Debug
         else if interrupt = INT_DEBUG_DUMP
-            it.debugDump(eax, ebx, ecx, edx, esi, edi, ebp, esp, eip, eflags, cs, ds, es, fs, gs, ss)
+            it.debugDump(pCpuState)
         // Other
         else
             @Term::printString("Unhandled interrupt: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
@@ -60,48 +97,53 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
             rep: @BSys::halt()
         ;
 
-        ret eax
+        ret pCpuState.val.eax
     ;
 
-    debugDump fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, edi u32, ebp u32, esp u32, eip u32, eflags u32, cs u16, ds u16, es u16, fs u16, gs u16, ss u16
+    debugDump fun: pCpuState ptr<blob<CpuState>>
         @B::String("eax: ").print()
-        @B::StringHexForU32(eax).print()
+        @B::StringHexForU32(pCpuState.val.eax).print()
         @B::String(", ebx: ").print()
-        @B::StringHexForU32(ebx).print()
+        @B::StringHexForU32(pCpuState.val.ebx).print()
         @B::String(", ecx: ").print()
-        @B::StringHexForU32(ecx).print()
+        @B::StringHexForU32(pCpuState.val.ecx).print()
         @B::String(", edx: ").print()
-        @B::StringHexForU32(edx).println()
+        @B::StringHexForU32(pCpuState.val.edx).println()
 
         @B::String("esi: ").print()
-        @B::StringHexForU32(esi).print()
+        @B::StringHexForU32(pCpuState.val.esi).print()
         @B::String(", edi: ").print()
-        @B::StringHexForU32(edi).print()
+        @B::StringHexForU32(pCpuState.val.edi).print()
         @B::String(", ebp: ").print()
-        @B::StringHexForU32(ebp).print()
+        @B::StringHexForU32(pCpuState.val.ebp).print()
         @B::String(", esp: ").print()
-        @B::StringHexForU32(esp).println()
+        @B::StringHexForU32(pCpuState.val.esp).println()
 
         @B::String("cs: ").print()
-        @B::StringHexForU32(cs).print()
+        @B::StringHexForU32(pCpuState.val.cs).print()
         @B::String(", ds: ").print()
-        @B::StringHexForU32(ds).print()
+        @B::StringHexForU32(pCpuState.val.ds).print()
         @B::String(", es: ").print()
-        @B::StringHexForU32(es).print()
+        @B::StringHexForU32(pCpuState.val.es).print()
         @B::String(", fs: ").print()
-        @B::StringHexForU32(fs).print()
+        @B::StringHexForU32(pCpuState.val.fs).print()
         @B::String(", gs: ").print()
-        @B::StringHexForU32(gs).print()
+        @B::StringHexForU32(pCpuState.val.gs).print()
         @B::String(", ss: ").print()
-        @B::StringHexForU32(ss).println()
+        @B::StringHexForU32(pCpuState.val.ss).println()
 
         @B::String("eip: ").print()
-        @B::StringHexForU32(eip).print()
+        @B::StringHexForU32(pCpuState.val.eip).print()
         @B::String(", eflags: ").print()
-        @B::StringHexForU32(eflags).println()
+        @B::StringHexForU32(pCpuState.val.eflags).println()
+
+        @B::String("cr0: ").print()
+        @B::StringHexForU32(@BSys::getCr0()).print()
+        @B::String(", cr3: ").print()
+        @B::StringHexForU32(@BSys::getCr3()).println()
     ;
 ;
 
-@export handleInterrupt fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, edi u32, ebp u32, ss u16, esp u32, cs u16, eip u32, eflags u32, ds u16, es u16, fs u16, gs u16, interrupt u32, errorCode u32 -> u32
-    ret Handler::instance.handle(eax, ebx, ecx, edx, esi, edi, ebp, esp, eip, eflags, cs, ds, es, fs, gs, ss, interrupt, errorCode)
+@export handleInterrupt fun: pCpuState ptr<blob<CpuState>>, interrupt u32, errorCode u32 -> u32
+    ret Handler::instance.handle(pCpuState, interrupt, errorCode)
 ;
