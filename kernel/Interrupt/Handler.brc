@@ -14,6 +14,7 @@ INT_IRQ0 u32 <- 0x20 // timer
 INT_IRQ1 u32 <- 0x21 // keyboard
 INT_IRQ12 u32 <- 0x2c // mouse
 INT_SYSCALL u32 <- 0x30
+INT_DEBUG_DUMP u32 <- 0x31
 
 deviceKeyboard blob<@DeviceKeyboard::DeviceKeyboard>
 deviceMouse blob<@DeviceMouse::DeviceMouse>
@@ -27,7 +28,7 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
         deviceMouse.init()
     ;
 
-    handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, interrupt u32, errorCode u32 -> u32
+    handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, edi u32, ebp u32, esp u32, cs u16, ds u16, es u16, fs u16, gs u16, eip u32, interrupt u32, errorCode u32 -> u32
         // Page fault
         if interrupt = INT_PAGE_FAULT
             @Term::printString("Page fault accessing memory at: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
@@ -46,6 +47,9 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
         // Syscall
         else if interrupt = INT_SYSCALL
             ret SyscallHandler::instance.handle(eax, ebx, ecx, edx, esi)
+        // Debug
+        else if interrupt = INT_DEBUG_DUMP
+            it.debugDump(eax, ebx, ecx, edx, esi, edi, ebp, esp, cs, ds, es, fs, gs, eip)
         // Other
         else
             @Term::printString("Unhandled interrupt: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
@@ -58,8 +62,42 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
 
         ret eax
     ;
+
+    debugDump fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, edi u32, ebp u32, esp u32, cs u16, ds u16, es u16, fs u16, gs u16, eip u32
+        @B::String("eax: ").print()
+        @B::StringHexForU32(eax).print()
+        @B::String(", ebx: ").print()
+        @B::StringHexForU32(ebx).print()
+        @B::String(", ecx: ").print()
+        @B::StringHexForU32(ecx).print()
+        @B::String(", edx: ").print()
+        @B::StringHexForU32(edx).println()
+
+        @B::String("esi: ").print()
+        @B::StringHexForU32(esi).print()
+        @B::String(", edi: ").print()
+        @B::StringHexForU32(edi).print()
+        @B::String("ebp: ").print()
+        @B::StringHexForU32(ebp).print()
+        @B::String(", esp: ").print()
+        @B::StringHexForU32(esp).println()
+
+        @B::String("ds: ").print()
+        @B::StringHexForU32(ds).print()
+        @B::String(", es: ").print()
+        @B::StringHexForU32(es).print()
+        @B::String(", fs: ").print()
+        @B::StringHexForU32(fs).print()
+        @B::String(", gs: ").print()
+        @B::StringHexForU32(gs).println()
+
+        @B::String("cs: ").print()
+        @B::StringHexForU32(cs).print()
+        @B::String(", eip: ").print()
+        @B::StringHexForU32(eip).println()
+    ;
 ;
 
-@export handleInterrupt fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, interrupt u32, errorCode u32 -> u32
-    ret Handler::instance.handle(eax, ebx, ecx, edx, esi, interrupt, errorCode)
+@export handleInterrupt fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, edi u32, ebp u32, esp u32, cs u16, ds u16, es u16, fs u16, gs u16, eip u32, interrupt u32, errorCode u32 -> u32
+    ret Handler::instance.handle(eax, ebx, ecx, edx, esi, edi, ebp, esp, cs, ds, es, fs, gs, eip, interrupt, errorCode)
 ;

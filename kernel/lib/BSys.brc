@@ -83,6 +83,11 @@
     hlt
 ;
 
+@export debugDump raw
+    xchg bx, bx
+    int 0x31
+;
+
 // Memory
 @export memAlignedAlloc fun: size u32, alignment u32 -> a
     ret @Memory::HeapManager::instance.allocateAligned({0}, size, alignment)
