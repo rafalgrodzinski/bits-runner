@@ -21,9 +21,9 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
 @export PagingManager::PAGE_USER_STACK u8 <- 0x21
 @export PagingManager::PAGE_DIRECT_MAPPING u8 <- 0x30
 
-PagingManager::PAGES_TABLE_SIZE u32 <- u32.size * 1024
-PagingManager::PAGE_TABLES_ADR a <- 0xffc0_0000
-PagingManager::PAGE_TABLES_DIRECTORY_ADR a <- 0xffff_f000
+@export PagingManager::PAGES_TABLE_SIZE u32 <- u32.size * 1024
+@export PagingManager::PAGE_TABLES_ADR a <- 0xffc0_0000
+@export PagingManager::PAGE_TABLES_DIRECTORY_ADR a <- 0xffff_f000
 
 @export PagingManager::FLAGS_RWP u32 <- 0b0011 // Read-Write, Present
 @export PagingManager::FLAGS_URWP u32 <- 0b0111 // User, Read-Write, Present

@@ -3,6 +3,8 @@
 
 extern Interrupt.handleInterrupt
 
+%define U32_SIZE 4
+
 %define PIC1_CMD_PORT 0x20
 %define PIC1_DATA_PORT 0x21
 %define PIC2_CMD_PORT 0xa0
@@ -51,7 +53,7 @@ IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x0b segment not present
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x0c stack-segment fault
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x0d general protection
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x0e page fault
-IDT_ENTRY 0 ; 0x0f
+IDT_ENTRY 0 ; 0x0f reserved
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x10 fpu fault
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x11 alignment check
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x12 machine check
@@ -84,7 +86,9 @@ IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2c IRQ c
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2d IRQ d
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2e IRQ e
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2f IRQ f
-IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x30 SYS
+IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x30 SYSCALL
+IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x31 DEBUG_DUMP_CPU_STATE
+IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x32 DEBUG_CALL
 idt_protected_mode_end:
 
 %macro UPDATE_IDT_ADDRESS 2
@@ -141,7 +145,9 @@ interrupt_handler_init:
     UPDATE_IDT_ADDRESS 0x2d, interrupt_handler_2d ; 0x2d IRQ d
     UPDATE_IDT_ADDRESS 0x2e, interrupt_handler_2e ; 0x2e IRQ e
     UPDATE_IDT_ADDRESS 0x2f, interrupt_handler_2f ; 0x2f IRQ f
-    UPDATE_IDT_ADDRESS 0x30, interrupt_handler_30 ; 0x30 SYS
+    UPDATE_IDT_ADDRESS 0x30, interrupt_handler_30 ; 0x30 SYSCALL
+    UPDATE_IDT_ADDRESS 0x31, interrupt_handler_31 ; 0x31 DEBUG_DUMP_CPU_STATE
+    UPDATE_IDT_ADDRESS 0x32, interrupt_handler_32 ; 0x32 DEBUG_CALL
 
     ; ICW1, initialize
     mov al, 0x11
@@ -303,56 +309,6 @@ interrupt_handler_15:
     push 0x15
     jmp interrupt_handler
 
-interrupt_handler_16:
-    push  0
-    push 0x16
-    jmp interrupt_handler
-
-interrupt_handler_17:
-    push  0
-    push 0x17
-    jmp interrupt_handler
-
-interrupt_handler_18:
-    push  0
-    push 0x18
-    jmp interrupt_handler
-
-interrupt_handler_19:
-    push  0
-    push 0x19
-    jmp interrupt_handler
-
-interrupt_handler_1a:
-    push  0
-    push 0x1a
-    jmp interrupt_handler
-
-interrupt_handler_1b:
-    push  0
-    push 0x1b
-    jmp interrupt_handler
-
-interrupt_handler_1c:
-    push  0
-    push 0x1c
-    jmp interrupt_handler
-
-interrupt_handler_1d:
-    push  0
-    push 0x1d
-    jmp interrupt_handler
-
-interrupt_handler_1e:
-    push  0
-    push 0x1e
-    jmp interrupt_handler
-
-interrupt_handler_1f:
-    push  0
-    push 0x1f
-    jmp interrupt_handler
-
 ; IRQ 0
 interrupt_handler_20:
     push 0
@@ -449,24 +405,45 @@ interrupt_handler_2f:
     push 0x2f
     jmp interrupt_handler
 
-; SYS
+; SYSCALL
 interrupt_handler_30:
     push 0
     push 0x30
     jmp interrupt_handler
 
+; DEBUG_DUMP_CPU_STATE
+interrupt_handler_31:
+    push 0
+    push 0x31
+    jmp interrupt_handler
+
+; DEBUG_CALL
+interrupt_handler_32:
+    push 0
+    push 0x32
+    jmp interrupt_handler
+
 ;
 ; Aggregated handler for all interrupts
-; iret stack frame registers are arranged as follows:
-; gs, fs, es, ds
-; edi, esi, ebp, esp, ebx, edx, ecx, eax
-%define .eax [ebp + 4 * 7]
-%define .ebx [ebp + 4 * 4]
-%define .ecx [ebp + 4 * 6]
-%define .edx [ebp + 4 * 5]
-%define .esi [ebp + 4 * 1]
-%define .interrupt [ebp + 4 * 8]
-%define .info [ebp + 4 * 9]
+%define .eax [ebp + U32_SIZE * 7] ; pushad
+%define .ebx [ebp + U32_SIZE * 4] ; pushad
+%define .ecx [ebp + U32_SIZE * 6] ; pushad
+%define .edx [ebp + U32_SIZE * 5] ; pushad
+%define .esi [ebp + U32_SIZE * 1] ; pushad
+%define .edi [ebp + U32_SIZE * 0] ; pushad
+%define .ebp [ebp + U32_SIZE * 2] ; pushad
+%define .esp [ebp + U32_SIZE * 3] ; pushad
+%define .ds [ebp - U32_SIZE * 4] ; push ds
+%define .es [ebp - U32_SIZE * 3] ; push es
+%define .fs [ebp - U32_SIZE * 2] ; push fs
+%define .gs [ebp - U32_SIZE * 1] ; push gs
+%define .cs [ebp + U32_SIZE * 11] ; interrupt frame
+%define .eip [ebp + U32_SIZE * 10] ; interrupt frame
+%define .eflags [ebp + U32_SIZE * 12] ; interrupt frame
+%define .uss [ebp + U32_SIZE * 14] ; interrupt frame
+%define .uesp [ebp + U32_SIZE * 13] ; interrupt frame
+%define .interrupt [ebp + U32_SIZE * 8] ; interrupt_handler
+%define .errorCode [ebp + U32_SIZE * 9] ; interrupt_handler
 interrupt_handler:
     cli
     pushad
@@ -496,15 +473,27 @@ interrupt_handler:
 
     .not_spurious:
 
-    ; Push arguments
-    push dword .info
-    push dword .interrupt
-    push dword .esi
-    push dword .edx
-    push dword .ecx
-    push dword .ebx
-    push dword .eax
+    ; push esp & ss depending on if we're coming from kernel or user mode
+    test .cs, 011b
+    jz .kernel_mode
+    ; user mode
+    push dword .uesp
+    push dword .uss
+    jmp .esp_ss_pushed
+.kernel_mode:
+    ; kernel mode
+    push dword .esp
+    add dword [esp], 0x14 ; Adjust for the arguments passed to interrupt_handler
+    push ss
+.esp_ss_pushed:
 
+    ; Push arguments
+    push dword .errorCode
+    push dword .interrupt
+    push esp ; pCpuState
+    add [esp], U32_SIZE * 2
+
+    ; Call handler
     call Interrupt.handleInterrupt
 
     ; Store return value
@@ -518,8 +507,8 @@ interrupt_handler:
     out PIC2_CMD_PORT, al
 .skip_ack_pic2:
 
-    ; Skip pushed arguments
-    add esp, 4 * 7
+    ; pop pushed arguments
+    add esp, U32_SIZE * 5 ; pCpuState, .interrupt, .errorCode, ss, esp
 
     .int_handling_finished:
     ; Restore segments
@@ -533,7 +522,22 @@ interrupt_handler:
     add esp, 8
     sti
     iret
-%undef .info
-%undef .interrupt 
+%undef .errorCode
+%undef .interrupt
+%undef .uesp
+%undef .uss
+%undef .eflags
+%undef .eip
+%undef .cs
+%undef .gs
+%undef .fs
+%undef .es
+%undef .ds
+%undef .esp
+%undef .ebp
+%undef .edi
+%undef .esi
+%undef .edx
+%undef .ecx
 %undef .ebx
 %undef .eax
