@@ -59,6 +59,8 @@
             @Syscall::Debug::dumpStack(80)
         else if cmd.isEqual(@B::String("dpaging"))
             @Syscall::Debug::dumpPaging()
+        else if cmd.isEqual(@B::String("dmem"))
+            @Syscall::Debug::dumpMemory(0x40_0000, 256)
         // Else
         else
             @B::String("Dunno").printlnColor(@B::String::FOREGROUND_RED)

@@ -4,6 +4,7 @@
 
 HandlerDebug::DUMP_STACK u32 <- 0x00
 HandlerDebug::DUMP_PAGING u32 <- 0x01
+HandlerDebug::DUMP_MEMORY u32 <- 0x02
 
 @export HandlerDebug blob
     handle fun: pCpuState ptr<blob<CpuState>>, interrupt u32, errorCode u32
@@ -13,6 +14,8 @@ HandlerDebug::DUMP_PAGING u32 <- 0x01
             it.dumpStack(pCpuState.val.esp.a, pCpuState.val.ebx)
         else if pCpuState.val.eax = HandlerDebug::DUMP_PAGING
             it.dumpPaging()
+        else if pCpuState.val.eax = HandlerDebug::DUMP_MEMORY
+            it.dumpMemory(pCpuState.val.ebx.a, pCpuState.val.ecx)
         ;
     ;
 
@@ -118,5 +121,16 @@ HandlerDebug::DUMP_PAGING u32 <- 0x01
                 ;
             ;
         ;
+    ;
+
+    dumpMemory fun: aMem a, size u32
+        pMem ptr<data<u8>> <- aMem.ptr<data<u8>>
+
+        rep i u32, i < size, i <- i + 1
+            if i > 0 and i % 16 = 0: @B::String("").println()
+            @B::StringHexForU32(pMem.val[i]).print()
+            @B::String(" ").print()
+        ;
+        @B::String("").println()
     ;
 ;
