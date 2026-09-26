@@ -91,9 +91,21 @@
     int 0x31
 ;
 
-@export debugDumpStack raw<"m, ~{eax}">: size u32
-    xchg bx, bx
-    mov eax, $0
+@export debugDumpPaging raw<"~{eax}">
+    mov eax, 0x00
+    int 0x32
+;
+
+@export debugDumpStack raw<"m, ~{eax}, ~{ebx}">: size u32
+    mov eax, 0x01
+    mov ebx, $0
+    int 0x32
+;
+
+@export debugDumpMemory raw<"m, m, ~{eax}, ~{ebx}, ~{ecx}">: aMem u32, size u32
+    mov eax, 0x02
+    mov ebx, $0
+    mov ecx, $1
     int 0x32
 ;
 

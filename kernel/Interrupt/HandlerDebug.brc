@@ -2,8 +2,8 @@
 
 @import Memory
 
-HandlerDebug::DUMP_STACK u32 <- 0x00
-HandlerDebug::DUMP_PAGING u32 <- 0x01
+HandlerDebug::DUMP_PAGING u32 <- 0x00
+HandlerDebug::DUMP_STACK u32 <- 0x01
 HandlerDebug::DUMP_MEMORY u32 <- 0x02
 
 @export HandlerDebug blob
