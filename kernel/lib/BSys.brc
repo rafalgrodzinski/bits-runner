@@ -87,8 +87,14 @@
     hlt
 ;
 
-@export debugDump raw
+@export debugDumpCpuState raw
     int 0x31
+;
+
+@export debugDumpStack raw<"m, ~{eax}">: size u32
+    xchg bx, bx
+    mov eax, $0
+    int 0x32
 ;
 
 // Memory

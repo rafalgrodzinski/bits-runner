@@ -54,7 +54,10 @@
             cmd_help()
         // Debug
         else if cmd.isEqual(@B::String("dreg"))
-            @Syscall::Debug::dumpRegisters()
+            @Syscall::Debug::dumpCpuState()
+        else if cmd.isEqual(@B::String("dstack"))
+            @Syscall::Debug::dumpStack(80)
+        // Else
         else
             @B::String("Dunno").printlnColor(@B::String::FOREGROUND_RED)
         ;

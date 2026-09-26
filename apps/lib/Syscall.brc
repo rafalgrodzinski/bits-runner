@@ -12,15 +12,6 @@ syscallRaw raw<"=r, m, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{esi}">: /*$
     mov $0, eax
 ;
 
-debugDumpRegistersRaw raw
-    int 0x31
-;
-
-// Debug
-@export Debug::dumpRegisters fun
-    debugDumpRegistersRaw()
-;
-
 // System
 System::REBOOT u32 <- 0x000
 System::GET_TIMESTAMP u32 <- 0x010
@@ -224,4 +215,14 @@ Audio::STOP u32 <- 0x701
 
 @export Audio::stop fun
     syscallRaw(Audio::STOP, 0, 0, 0, 0)
+;
+
+// Debug
+@export Debug::dumpCpuState raw
+    int 0x31
+;
+
+@export Debug::dumpStack raw<"m, ~{eax}">: size u32
+    mov eax, $0
+    int 0x32
 ;

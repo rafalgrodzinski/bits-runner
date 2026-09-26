@@ -87,7 +87,8 @@ IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2d IRQ d
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2e IRQ e
 IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2f IRQ f
 IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x30 SYSCALL
-IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x31 DEBUG_DUMP
+IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x31 DEBUG_DUMP_CPU_STATE
+IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x32 DEBUG_DUMP_STACK
 idt_protected_mode_end:
 
 %macro UPDATE_IDT_ADDRESS 2
@@ -145,7 +146,8 @@ interrupt_handler_init:
     UPDATE_IDT_ADDRESS 0x2e, interrupt_handler_2e ; 0x2e IRQ e
     UPDATE_IDT_ADDRESS 0x2f, interrupt_handler_2f ; 0x2f IRQ f
     UPDATE_IDT_ADDRESS 0x30, interrupt_handler_30 ; 0x30 SYSCALL
-    UPDATE_IDT_ADDRESS 0x31, interrupt_handler_31 ; 0x31 DEBUG_DUMP
+    UPDATE_IDT_ADDRESS 0x31, interrupt_handler_31 ; 0x31 DEBUG_DUMP_CPU_STATE
+    UPDATE_IDT_ADDRESS 0x32, interrupt_handler_32 ; 0x32 DEBUG_DUMP_STACK
 
     ; ICW1, initialize
     mov al, 0x11
@@ -409,10 +411,16 @@ interrupt_handler_30:
     push 0x30
     jmp interrupt_handler
 
-; DEBUG_DUMP
+; DEBUG_DUMP_CPU_STATE
 interrupt_handler_31:
     push 0
     push 0x31
+    jmp interrupt_handler
+
+; DEBUG_DUMP_STACK
+interrupt_handler_32:
+    push 0
+    push 0x32
     jmp interrupt_handler
 
 ;
@@ -434,8 +442,8 @@ interrupt_handler_31:
 %define .eflags [ebp + U32_SIZE * 12] ; interrupt frame
 %define .uss [ebp + U32_SIZE * 14] ; interrupt frame
 %define .uesp [ebp + U32_SIZE * 13] ; interrupt frame
-%define .interrupt [ebp + 4 * 8] ; interrupt_handler
-%define .errorCode [ebp + 4 * 9] ; interrupt_handler
+%define .interrupt [ebp + U32_SIZE * 8] ; interrupt_handler
+%define .errorCode [ebp + U32_SIZE * 9] ; interrupt_handler
 interrupt_handler:
     cli
     pushad
