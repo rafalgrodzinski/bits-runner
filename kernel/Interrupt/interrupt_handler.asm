@@ -89,6 +89,7 @@ IDT_ENTRY GDT_CODE_PROTECTED_MODE ; 0x2f IRQ f
 IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x30 SYSCALL
 IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x31 DEBUG_DUMP_CPU_STATE
 IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x32 DEBUG_DUMP_STACK
+IDT_ENTRY_USER GDT_CODE_PROTECTED_MODE ; 0x33 DEBUG_DUMP_PAGING
 idt_protected_mode_end:
 
 %macro UPDATE_IDT_ADDRESS 2
@@ -148,6 +149,7 @@ interrupt_handler_init:
     UPDATE_IDT_ADDRESS 0x30, interrupt_handler_30 ; 0x30 SYSCALL
     UPDATE_IDT_ADDRESS 0x31, interrupt_handler_31 ; 0x31 DEBUG_DUMP_CPU_STATE
     UPDATE_IDT_ADDRESS 0x32, interrupt_handler_32 ; 0x32 DEBUG_DUMP_STACK
+    UPDATE_IDT_ADDRESS 0x33, interrupt_handler_33 ; 0x33 DEBUG_DUMP_PAGING
 
     ; ICW1, initialize
     mov al, 0x11
@@ -421,6 +423,12 @@ interrupt_handler_31:
 interrupt_handler_32:
     push 0
     push 0x32
+    jmp interrupt_handler
+
+; DEBUG_DUMP_PAGING
+interrupt_handler_33:
+    push 0
+    push 0x33
     jmp interrupt_handler
 
 ;

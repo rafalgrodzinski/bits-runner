@@ -226,3 +226,7 @@ Audio::STOP u32 <- 0x701
     mov eax, $0
     int 0x32
 ;
+
+@export Debug::dumpPaging raw
+    int 0x33
+;

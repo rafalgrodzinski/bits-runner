@@ -6,6 +6,7 @@
 @import DeviceKeyboard
 @import DeviceMouse
 @import Devices
+@import Memory
 
 @extern interrupt_handler_init fun
 
@@ -16,6 +17,7 @@ INT_IRQ12 u32 <- 0x2c // mouse
 INT_SYSCALL u32 <- 0x30
 INT_DEBUG_DUMP_CPU_STATE u32 <- 0x31
 INT_DEBUG_DUMP_STACK u32 <- 0x32
+INT_DEBUG_DUMP_PAGING u32 <- 0x33
 
 deviceKeyboard blob<@DeviceKeyboard::DeviceKeyboard>
 deviceMouse blob<@DeviceMouse::DeviceMouse>
@@ -90,6 +92,8 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
             it.debugDumpCpuState(pCpuState)
         else if interrupt = INT_DEBUG_DUMP_STACK
             it.debugDumpStack(pCpuState.val.esp.a, pCpuState.val.eax)
+        else if interrupt = INT_DEBUG_DUMP_PAGING
+            it.debugDumpPaging()
         // Other
         else
             @Term::printString("Unhandled interrupt: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
@@ -153,6 +157,57 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
             @B::StringHexForU32(aStack.u32 + i).print()
             @B::String(": ").print()
             @B::StringHexForU32({aStack + i}.ptr<u32>.val).println()
+        ;
+    ;
+
+    debugDumpPaging fun
+        pPageTablesDirectory ptr<data<u32>> <- {@Memory::PagingManager::PAGE_TABLES_DIRECTORY_ADR}
+        rep iTable u32, iTable < 1024, iTable <- iTable + 1
+            if pPageTablesDirectory.val[iTable] != 0
+                // Index
+                @B::StringForU32(iTable).print()
+                // Linear range
+                @B::String(": L").print()
+                @B::StringHexForU32(iTable * 1024 * 4096).print()
+                @B::String(" - L").print()
+                @B::StringHexForU32((iTable + 1) * 1024 * 4096 - 1).print()
+                // Physical stored location
+                @B::String(" @ P").print()
+                @B::StringHexForU32(pPageTablesDirectory.val[iTable] & 0xffff_f000).print()
+                // Flags
+                @B::String(":").print()
+                if pPageTablesDirectory.val[iTable] &? 0b001: @B::String(" P").print()
+                if pPageTablesDirectory.val[iTable] &? 0b010: @B::String(" RW").print()
+                if pPageTablesDirectory.val[iTable] &? 0b100: @B::String(" U").print()
+
+                @B::String("").println()
+
+                pPagesTable ptr<data<u32>> <- {@Memory::PagingManager::PAGE_TABLES_ADR + iTable * @Memory::PagingManager::PAGES_TABLE_SIZE}
+                rep iPage u32, iPage < 1024, iPage <- iPage + 1
+                    if pPagesTable.val[iPage] != 0
+                        // Index
+                        @B::String("  ").print()
+                        @B::StringForU32(iPage).print()
+                        // Linear range
+                        @B::String(": L").print()
+                        @B::StringHexForU32(iTable * 1024 * 4096 + iPage * 4096).print()
+                        @B::String(" - L").print()
+                        @B::StringHexForU32(iTable * 1024 * 4096 + (iPage + 1) * 4096 - 1).print()
+                        // Physical range
+                        @B::String(" to P").print()
+                        @B::StringHexForU32(pPagesTable.val[iPage] & 0xffff_f000).print()
+                        @B::String(" - P").print()
+                        @B::StringHexForU32((pPagesTable.val[iPage] & 0xffff_f000) + 4096 - 1).print()
+                        // Flags
+                        @B::String(":").print()
+                        if pPagesTable.val[iPage] &? 0b001: @B::String(" P").print()
+                        if pPagesTable.val[iPage] &? 0b010: @B::String(" RW").print()
+                        if pPagesTable.val[iPage] &? 0b100: @B::String(" U").print()
+
+                        @B::String("").println()
+                    ;
+                ;
+            ;
         ;
     ;
 ;
