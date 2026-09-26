@@ -6,7 +6,6 @@
 @import DeviceKeyboard
 @import DeviceMouse
 @import Devices
-@import Memory
 
 @extern interrupt_handler_init fun
 
@@ -15,9 +14,8 @@ INT_IRQ0 u32 <- 0x20 // timer
 INT_IRQ1 u32 <- 0x21 // keyboard
 INT_IRQ12 u32 <- 0x2c // mouse
 INT_SYSCALL u32 <- 0x30
-INT_DEBUG_DUMP_CPU_STATE u32 <- 0x31
-INT_DEBUG_DUMP_STACK u32 <- 0x32
-INT_DEBUG_DUMP_PAGING u32 <- 0x33
+Int::DEBUG_DUMP_CPU_STATE u32 <- 0x31
+Int::DEBUG_CALL u32 <- 0x32
 
 deviceKeyboard blob<@DeviceKeyboard::DeviceKeyboard>
 deviceMouse blob<@DeviceMouse::DeviceMouse>
@@ -56,6 +54,8 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
 @export Handler::instance blob<Handler>
 
 @export Handler blob
+    handlerDebug blob<HandlerDebug>
+
     init fun
         interrupt_handler_init()
         deviceKeyboard.init()
@@ -88,12 +88,8 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
                 pCpuState.val.esi
             )
         // Debug
-        else if interrupt = INT_DEBUG_DUMP_CPU_STATE
-            it.debugDumpCpuState(pCpuState)
-        else if interrupt = INT_DEBUG_DUMP_STACK
-            it.debugDumpStack(pCpuState.val.esp.a, pCpuState.val.eax)
-        else if interrupt = INT_DEBUG_DUMP_PAGING
-            it.debugDumpPaging()
+        else if interrupt = Int::DEBUG_DUMP_CPU_STATE or interrupt = Int::DEBUG_CALL
+            it.handlerDebug.handle(pCpuState, interrupt, errorCode)
         // Other
         else
             @Term::printString("Unhandled interrupt: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
@@ -105,110 +101,6 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
         ;
 
         ret pCpuState.val.eax
-    ;
-
-    debugDumpCpuState fun: pCpuState ptr<blob<CpuState>>
-        @B::String("eax: ").print()
-        @B::StringHexForU32(pCpuState.val.eax).print()
-        @B::String(", ebx: ").print()
-        @B::StringHexForU32(pCpuState.val.ebx).print()
-        @B::String(", ecx: ").print()
-        @B::StringHexForU32(pCpuState.val.ecx).print()
-        @B::String(", edx: ").print()
-        @B::StringHexForU32(pCpuState.val.edx).println()
-
-        @B::String("esi: ").print()
-        @B::StringHexForU32(pCpuState.val.esi).print()
-        @B::String(", edi: ").print()
-        @B::StringHexForU32(pCpuState.val.edi).print()
-        @B::String(", ebp: ").print()
-        @B::StringHexForU32(pCpuState.val.ebp).print()
-        @B::String(", esp: ").print()
-        @B::StringHexForU32(pCpuState.val.esp).println()
-
-        @B::String("cs: ").print()
-        @B::StringHexForU32(pCpuState.val.cs).print()
-        @B::String(", ds: ").print()
-        @B::StringHexForU32(pCpuState.val.ds).print()
-        @B::String(", es: ").print()
-        @B::StringHexForU32(pCpuState.val.es).print()
-        @B::String(", fs: ").print()
-        @B::StringHexForU32(pCpuState.val.fs).print()
-        @B::String(", gs: ").print()
-        @B::StringHexForU32(pCpuState.val.gs).print()
-        @B::String(", ss: ").print()
-        @B::StringHexForU32(pCpuState.val.ss).println()
-
-        @B::String("eip: ").print()
-        @B::StringHexForU32(pCpuState.val.eip).print()
-        @B::String(", eflags: ").print()
-        @B::StringHexForU32(pCpuState.val.eflags).println()
-
-        @B::String("cr0: ").print()
-        @B::StringHexForU32(@BSys::getCr0()).print()
-        @B::String(", cr3: ").print()
-        @B::StringHexForU32(@BSys::getCr3()).println()
-    ;
-
-    debugDumpStack fun: aStack a, size u32
-        aStack <- aStack & 0xffff_fffc // align-down to 4 byte boundary
-
-        rep i u32, i < size, i <- i + u32.size
-            @B::StringHexForU32(aStack.u32 + i).print()
-            @B::String(": ").print()
-            @B::StringHexForU32({aStack + i}.ptr<u32>.val).println()
-        ;
-    ;
-
-    debugDumpPaging fun
-        pPageTablesDirectory ptr<data<u32>> <- {@Memory::PagingManager::PAGE_TABLES_DIRECTORY_ADR}
-        rep iTable u32, iTable < 1024, iTable <- iTable + 1
-            if pPageTablesDirectory.val[iTable] != 0
-                // Index
-                @B::StringForU32(iTable).print()
-                // Linear range
-                @B::String(": L").print()
-                @B::StringHexForU32(iTable * 1024 * 4096).print()
-                @B::String(" - L").print()
-                @B::StringHexForU32((iTable + 1) * 1024 * 4096 - 1).print()
-                // Physical stored location
-                @B::String(" @ P").print()
-                @B::StringHexForU32(pPageTablesDirectory.val[iTable] & 0xffff_f000).print()
-                // Flags
-                @B::String(":").print()
-                if pPageTablesDirectory.val[iTable] &? 0b001: @B::String(" P").print()
-                if pPageTablesDirectory.val[iTable] &? 0b010: @B::String(" RW").print()
-                if pPageTablesDirectory.val[iTable] &? 0b100: @B::String(" U").print()
-
-                @B::String("").println()
-
-                pPagesTable ptr<data<u32>> <- {@Memory::PagingManager::PAGE_TABLES_ADR + iTable * @Memory::PagingManager::PAGES_TABLE_SIZE}
-                rep iPage u32, iPage < 1024, iPage <- iPage + 1
-                    if pPagesTable.val[iPage] != 0
-                        // Index
-                        @B::String("  ").print()
-                        @B::StringForU32(iPage).print()
-                        // Linear range
-                        @B::String(": L").print()
-                        @B::StringHexForU32(iTable * 1024 * 4096 + iPage * 4096).print()
-                        @B::String(" - L").print()
-                        @B::StringHexForU32(iTable * 1024 * 4096 + (iPage + 1) * 4096 - 1).print()
-                        // Physical range
-                        @B::String(" to P").print()
-                        @B::StringHexForU32(pPagesTable.val[iPage] & 0xffff_f000).print()
-                        @B::String(" - P").print()
-                        @B::StringHexForU32((pPagesTable.val[iPage] & 0xffff_f000) + 4096 - 1).print()
-                        // Flags
-                        @B::String(":").print()
-                        if pPagesTable.val[iPage] &? 0b001: @B::String(" P").print()
-                        if pPagesTable.val[iPage] &? 0b010: @B::String(" RW").print()
-                        if pPagesTable.val[iPage] &? 0b100: @B::String(" U").print()
-
-                        @B::String("").println()
-                    ;
-                ;
-            ;
-        ;
     ;
 ;
 

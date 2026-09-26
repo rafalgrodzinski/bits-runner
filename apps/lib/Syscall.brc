@@ -218,15 +218,23 @@ Audio::STOP u32 <- 0x701
 ;
 
 // Debug
+Debug::DUMP_STACK u32 <- 0x00
+Debug::DUMP_PAGING u32 <- 0x01
+
+@export debugCallRaw raw<"m, m, ~{eax}, ~{ebx}">: /*$0*/debugCallNumber u32, /*$1*/arg0 u32
+    mov eax, $0
+    mov ebx, $1
+    int 0x32
+;
+
 @export Debug::dumpCpuState raw
     int 0x31
 ;
 
-@export Debug::dumpStack raw<"m, ~{eax}">: size u32
-    mov eax, $0
-    int 0x32
+@export Debug::dumpStack fun: size u32
+    debugCallRaw(Debug::DUMP_STACK, size)
 ;
 
-@export Debug::dumpPaging raw
-    int 0x33
+@export Debug::dumpPaging fun
+    debugCallRaw(Debug::DUMP_PAGING, 0)
 ;
