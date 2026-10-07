@@ -7,108 +7,213 @@
 Driver::Ps2::CMD_PORT u16 <- 0x64
 Driver::Ps2::DATA_PORT u16 <- 0x60
 
+Driver::Ps2::KEYBOARD_L_SHIFT u32 <- 0x2a
+Driver::Ps2::KEYBOARD_R_SHIFT u32 <- 0x36
+
+Driver::Ps2::KEYBOARD_ASCII_MAP data<u8> <- {
+    '\0', // 0x00 unused
+    '\0', // 0x01 esc
+    '1',  // 0x02
+    '2',  // 0x03
+    '3',  // 0x04
+    '4',  // 0x05
+    '5',  // 0x06
+    '6',  // 0x07
+    '7',  // 0x08
+    '8',  // 0x09
+    '9',  // 0x0a
+    '0',  // 0x0b
+    '-',  // 0x0c
+    '=',  // 0x0d
+    '\b', // 0x0e
+    '\t', // 0x0f
+    'q',  // 0x10
+    'w',  // 0x11
+    'e',  // 0x12
+    'r',  // 0x13 
+    't',  // 0x14
+    'y',  // 0x15
+    'u',  // 0x16
+    'i',  // 0x17
+    'o',  // 0x18
+    'p',  // 0x19
+    '[',  // 0x1a
+    ']',  // 0x1b
+    '\n', // 0x1c
+    '\0', //0x1d L Ctrl
+    'a',  // 0x1e
+    's',  // 0x1f
+    'd',  // 0x20
+    'f',  // 0x21
+    'g',  // 0x22
+    'h',  // 0x23
+    'j',  // 0x24
+    'k',  // 0x25
+    'l',  // 0x26
+    ';',  // 0x27
+    '\'', // 0x28
+    '`',  // 0x29
+    '\0', // 0x2a L Shift
+    '\\', // 0x2b
+    'z',  // 0x2c
+    'x',  // 0x2d
+    'c',  // 0x2e
+    'v',  // 0x2f
+    'b',  // 0x30
+    'n',  // 0x31
+    'm',  // 0x32
+    ',',  // 0x33
+    '.',  // 0x34
+    '/',  // 0x35
+    '\0', // 0x36 R shift
+    '\0', // 0x37 ?
+    '\0', // 0x38 ?
+    ' '   // 0x39
+}
+
+Driver::Ps2::KEYBOARD_ASCII_MAP_SHIFTED data<u8> <- {
+    '\0', // 0x00 unused
+    '\0', // 0x01 esc
+    '!',  // 0x02
+    '@',  // 0x03
+    '#',  // 0x04
+    '$',  // 0x05
+    '%',  // 0x06
+    '^',  // 0x07
+    '&',  // 0x08
+    '*',  // 0x09
+    '(',  // 0x0a
+    ')',  // 0x0b
+    '_',  // 0x0c
+    '+',  // 0x0d
+    '\b', // 0x0e
+    '\t', // 0x0f
+    'Q',  // 0x10
+    'W',  // 0x11
+    'E',  // 0x12
+    'R',  // 0x13
+    'T',  // 0x14
+    'Y',  // 0x15
+    'U',  // 0x16
+    'I',  // 0x17
+    'O',  // 0x18
+    'P',  // 0x19
+    '{',  // 0x1a
+    '}',  // 0x1b
+    '\n', // 0x1c
+    '\0', // 0x1d L Ctrl
+    'A',  // 0x1e
+    'S',  // 0x1f
+    'D',  // 0x20
+    'F',  // 0x21
+    'G',  // 0x22
+    'H',  // 0x23
+    'J',  // 0x24
+    'K',  // 0x25
+    'L',  // 0x26
+    ':',  // 0x27
+    '\"',  // 0x28
+    '~',  // 0x29
+    '\0', // 0x2a L Shift
+    '|',  // 0x2b
+    'Z',  // 0x2c
+    'X',  // 0x2d
+    'C',  // 0x2e
+    'V',  // 0x2f
+    'B',  // 0x30
+    'N',  // 0x31
+    'M',  // 0x32
+    '<',  // 0x33
+    '>',  // 0x34
+    '?',  // 0x35
+    '\0', // 0x36 R shift
+    '\0', // 0x37 ?
+    '\0', // 0x38 ?
+    ' '   // 0x39
+}
+
 Driver::Ps2::MOUSE_MODE_STANDARD u8 <- 0x00
 Driver::Ps2::MOUSE_MODE_SCROLL_WHEEL u8 <- 0x03
 Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
 
-@export Driver::Ps2 blob: Keyboard, Pointer
-    mode u8
+@export Driver::Ps2 blob: Keyboard, Mouse
+    // Keyboard
+    keyboardStatus data<bool, 128>
 
-    status data<u8, 4>
-    currentStatusIndex u32
+    // Mouse
+    mouseMode u8
+    mouseStatus data<u8, 4>
+    currentMouseStatusIndex u32
 
-    isPressedStates data<bool, 5>
-    offsets data<s32, 3>
+    mouseIsPressedStates data<bool, 5>
+    mouseOffsets data<s32, 3>
 
     init fun
         @BSys::disableInterrupts()
 
-        it.flushDataPort()
+        Driver::Ps2::drainDataPort()
 
-        // Enable second PS/2 port
-        it.waitForWriteReady()
+        // Enable secondary PS/2 port
+        Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::CMD_PORT, 0xa8)
 
-        it.flushDataPort()
+        Driver::Ps2::drainDataPort()
 
         // first try enabling scroll wheel mode
-        it.writeMouse(0xf3)
-        it.writeMouse(200)
+        Driver::Ps2::writeSecondary(0xf3)
+        Driver::Ps2::writeSecondary(200)
 
-        it.writeMouse(0xf3)
-        it.writeMouse(100)
+        Driver::Ps2::writeSecondary(0xf3)
+        Driver::Ps2::writeSecondary(100)
 
-        it.writeMouse(0xf3)
-        it.writeMouse(80)
+        Driver::Ps2::writeSecondary(0xf3)
+        Driver::Ps2::writeSecondary(80)
 
-        it.writeMouse(0xf2)
-        it.waitForReadReady()
-        it.mode <- @BSys::in8(Driver::Ps2::DATA_PORT)
+        Driver::Ps2::writeSecondary(0xf2)
+        Driver::Ps2::waitForReadReady()
+        it.mouseMode <- @BSys::in8(Driver::Ps2::DATA_PORT)
 
         // if succeeded, try enableing 5-button mode
-        if it.mode = Driver::Ps2::MOUSE_MODE_SCROLL_WHEEL
-            it.writeMouse(0xf3)
-            it.writeMouse(200)
+        if it.mouseMode = Driver::Ps2::MOUSE_MODE_SCROLL_WHEEL
+            Driver::Ps2::writeSecondary(0xf3)
+            Driver::Ps2::writeSecondary(200)
 
-            it.writeMouse(0xf3)
-            it.writeMouse(200)
+            Driver::Ps2::writeSecondary(0xf3)
+            Driver::Ps2::writeSecondary(200)
 
-            it.writeMouse(0xf3)
-            it.writeMouse(80)
+            Driver::Ps2::writeSecondary(0xf3)
+            Driver::Ps2::writeSecondary(80)
 
-            it.writeMouse(0xf2)
-            it.waitForReadReady()
-            it.mode <- @BSys::in8(Driver::Ps2::DATA_PORT)    
+            Driver::Ps2::writeSecondary(0xf2)
+            Driver::Ps2::waitForReadReady()
+            it.mouseMode <- @BSys::in8(Driver::Ps2::DATA_PORT)    
         ;
 
         // Enable interrupts
-        it.waitForWriteReady()
+        Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::CMD_PORT, 0x20)
 
-        it.waitForReadReady()
+        Driver::Ps2::waitForReadReady()
         status u8 <- @BSys::in8(Driver::Ps2::DATA_PORT)
 
         // Enable mouse
         status <- status | 0b0000_0010 // enable IRQ 12
         status <- status & 0b1101_1111 // enable mouse clock
 
-        it.waitForWriteReady()
+        Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::CMD_PORT, 0x60)
 
-        it.waitForWriteReady()
+        Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::DATA_PORT, status)
 
         // Enable data reporting
-        it.writeMouse(0xf4)
+        Driver::Ps2::writeSecondary(0xf4)
 
         // Register keyboard & pointer IRQ handlers
-        @Interrupt::Handler::instance.registerIrqCallback(1, DriverPs2::irqCallback.ptr)
-        @Interrupt::Handler::instance.registerIrqCallback(12, DriverPs2::irqCallback.ptr)
+        @Interrupt::Handler::instance.registerIrqCallback(1, Driver::Ps2::irqCallback.ptr)
+        @Interrupt::Handler::instance.registerIrqCallback(12, Driver::Ps2::irqCallback.ptr)
 
         @BSys::enableInterrupts()
-    ;
-
-    waitForWriteReady fun
-        rep @BSys::in8(Driver::Ps2::CMD_PORT) &? 0x02:
-    ;
-
-    waitForReadReady fun
-        rep not @BSys::in8(Driver::Ps2::CMD_PORT) &? 0x01:
-    ;
-
-    flushDataPort fun
-        rep @BSys::in8(Driver::Ps2::CMD_PORT) &? 0x01: @BSys::in8(Driver::Ps2::DATA_PORT)
-    ;
-
-    writeMouse fun: value u8
-        it.waitForWriteReady()
-        @BSys::out8(Driver::Ps2::CMD_PORT, 0xd4)
-
-        it.waitForWriteReady()
-        @BSys::out8(Driver::Ps2::DATA_PORT, value)
-
-        it.waitForReadReady()
-        @BSys::in8(Driver::Ps2::DATA_PORT) // get ACK 0xfa
     ;
 
     handleInterrupt fun
@@ -130,68 +235,105 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
         isPressed bool <- scanCode & 0x80 = 0
         scanCode <- scanCode & 0x7f // get rid of the flag
 
-        @B::StringHexForU32(scanCode).print()
+        // ignore if there is not status update (eg, repeated key)
+        if it.keyboardStatus[scanCode] = isPressed: ret
+
+        it.keyboardStatus[scanCode] <- isPressed
+
+        // Translate into ASCII
+        ascii u8
+
+        // check range
+        if scanCode < Driver::Ps2::KEYBOARD_ASCII_MAP.count and isPressed
+            isShiftPressed bool <- it.keyboardStatus[Driver::Ps2::KEYBOARD_L_SHIFT] or it.keyboardStatus[Driver::Ps2::KEYBOARD_R_SHIFT]
+            ascii <- if isShiftPressed: Driver::Ps2::KEYBOARD_ASCII_MAP_SHIFTED[scanCode] else: Driver::Ps2::KEYBOARD_ASCII_MAP[scanCode]
+        ;
+
+        @B::StringForChar(ascii).print()
     ;
 
     handleMouseInterrupt fun
         // store received data in current slot
-        it.status[it.currentStatusIndex] <- @BSys::in8(Driver::Ps2::DATA_PORT)
+        it.mouseStatus[it.currentMouseStatusIndex] <- @BSys::in8(Driver::Ps2::DATA_PORT)
 
-        it.currentStatusIndex <- it.currentStatusIndex + 1
-        if it.mode = Driver::Ps2::MOUSE_MODE_STANDARD and it.currentStatusIndex < 3: ret
-        if (it.mode = Driver::Ps2::MOUSE_MODE_SCROLL_WHEEL or it.mode = Driver::Ps2::MOUSE_MODE_5_BUTTON) and it.currentStatusIndex < 4: ret
+        it.currentMouseStatusIndex <- it.currentMouseStatusIndex + 1
+        if it.mouseMode = Driver::Ps2::MOUSE_MODE_STANDARD and it.currentMouseStatusIndex < 3: ret
+        if (it.mouseMode = Driver::Ps2::MOUSE_MODE_SCROLL_WHEEL or it.mouseMode = Driver::Ps2::MOUSE_MODE_5_BUTTON) and it.currentMouseStatusIndex < 4: ret
 
         // received all the required data bytes, reset the counter
-        it.currentStatusIndex <- 0
+        it.currentMouseStatusIndex <- 0
 
         // get standard pressed buttons
-        it.isPressedStates[0] <- it.status[0] &? 0b0000_0001
-        it.isPressedStates[1] <- it.status[0] &? 0b0000_0010
-        it.isPressedStates[2] <- it.status[0] &? 0b0000_0100
+        it.mouseIsPressedStates[0] <- it.mouseStatus[0] &? 0b0000_0001
+        it.mouseIsPressedStates[1] <- it.mouseStatus[0] &? 0b0000_0010
+        it.mouseIsPressedStates[2] <- it.mouseStatus[0] &? 0b0000_0100
 
         // get extended pressed buttons
-        if it.mode = Driver::Ps2::MOUSE_MODE_5_BUTTON
-            it.isPressedStates[3] <- it.status[3] &? 0b0001_0000
-            it.isPressedStates[4] <- it.status[3] &? 0b0010_0000
+        if it.mouseMode = Driver::Ps2::MOUSE_MODE_5_BUTTON
+            it.mouseIsPressedStates[3] <- it.mouseStatus[3] &? 0b0001_0000
+            it.mouseIsPressedStates[4] <- it.mouseStatus[3] &? 0b0010_0000
         ;
 
         // decode X delta
-        it.offsets[0] <- it.status[1]
-        if it.status[0] &? 0b0001_0000
-            it.offsets[0] <- it.offsets[0] | 0xffff_ff00
+        it.mouseOffsets[0] <- it.mouseStatus[1]
+        if it.mouseStatus[0] &? 0b0001_0000
+            it.mouseOffsets[0] <- it.mouseOffsets[0] | 0xffff_ff00
         ;
 
         // decode Y delta
-        it.offsets[1] <- it.status[2]
-        if it.status[0] &? 0b0010_0000
-            it.offsets[1] <- it.offsets[1] | 0xffff_ff00
+        it.mouseOffsets[1] <- it.mouseStatus[2]
+        if it.mouseStatus[0] &? 0b0010_0000
+            it.mouseOffsets[1] <- it.mouseOffsets[1] | 0xffff_ff00
         ;
 
         // decode scroll wheel delta
-        if it.mode = Driver::Ps2::MOUSE_MODE_SCROLL_WHEEL
-            it.offsets[2] <- it.status[3] & 0b0111_1111
-            if it.status[3] &? 0b1000_0000
-                it.offsets[2] <- it.offsets[2] | 0xffff_ff80
+        if it.mouseMode = Driver::Ps2::MOUSE_MODE_SCROLL_WHEEL
+            it.mouseOffsets[2] <- it.mouseStatus[3] & 0b0111_1111
+            if it.mouseStatus[3] &? 0b1000_0000
+                it.mouseOffsets[2] <- it.mouseOffsets[2] | 0xffff_ff80
             ;
-        else if it.mode = Driver::Ps2::MOUSE_MODE_5_BUTTON
-            it.offsets[2] <- it.status[3] & 0b0000_0111
-            if it.status[3] &? 0b0000_1000
-                it.offsets[2] <- it.offsets[2] | 0xffff_fff8
+        else if it.mouseMode = Driver::Ps2::MOUSE_MODE_5_BUTTON
+            it.mouseOffsets[2] <- it.mouseStatus[3] & 0b0000_0111
+            if it.mouseStatus[3] &? 0b0000_1000
+                it.mouseOffsets[2] <- it.mouseOffsets[2] | 0xffff_fff8
             ;
         ;
 
         rep i u32, i < 5, i <- i + 1
-            if it.isPressedStates[i]: @B::String("T ").print() else: @B::String("F ").print()
+            if it.mouseIsPressedStates[i]: @B::String("T ").print() else: @B::String("F ").print()
         ;
 
         rep i u32, i < 3, i <- i + 1
-            @B::StringForS32(it.offsets[i]).print()
+            @B::StringForS32(it.mouseOffsets[i]).print()
             @B::String(" ").print()
         ;
         @B::String("").println()
     ;
 ;
 
-DriverPs2::irqCallback fun
+Driver::Ps2::irqCallback fun
     instance.driverPs2.handleInterrupt()
+;
+
+Driver::Ps2::waitForReadReady fun
+    rep not @BSys::in8(Driver::Ps2::CMD_PORT) &? 0b0000_0001:
+;
+
+Driver::Ps2::waitForWriteReady fun
+    rep @BSys::in8(Driver::Ps2::CMD_PORT) &? 0b0000_0010:
+;
+
+Driver::Ps2::drainDataPort fun
+    rep @BSys::in8(Driver::Ps2::CMD_PORT) &? 0b0000_0001: @BSys::in8(Driver::Ps2::DATA_PORT)
+;
+
+Driver::Ps2::writeSecondary fun: value u8
+    Driver::Ps2::waitForWriteReady()
+    @BSys::out8(Driver::Ps2::CMD_PORT, 0xd4) // Select secondary PS/2 port
+
+    Driver::Ps2::waitForWriteReady()
+    @BSys::out8(Driver::Ps2::DATA_PORT, value)
+
+    Driver::Ps2::waitForReadReady()
+    @BSys::in8(Driver::Ps2::DATA_PORT) // get ACK 0xfa
 ;

@@ -1,0 +1,4 @@
+@module Input
+
+@export Mouse proto
+;

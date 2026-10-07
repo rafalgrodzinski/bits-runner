@@ -84,7 +84,7 @@ SOURCES+=("${SCRIPT_DIR}/Devices/Audio/Speaker.brc")
 # Input
 SOURCES+=("${SCRIPT_DIR}/Input/Drivers/DriverPs2.brc")
 SOURCES+=("${SCRIPT_DIR}/Input/Keyboard/Keyboard.brc")
-SOURCES+=("${SCRIPT_DIR}/Input/Pointer/Pointer.brc")
+SOURCES+=("${SCRIPT_DIR}/Input/Mouse/Mouse.brc")
 SOURCES+=("${SCRIPT_DIR}/Input/Input.brc")
 
 # Video

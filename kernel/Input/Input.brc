@@ -4,13 +4,13 @@
 
 @export Input blob
     mainKeyboard proto<Keyboard>
-    mainPointer proto<Pointer>
+    mainMouse proto<Mouse>
 
     driverPs2 blob<Driver::Ps2>
 
     init fun
         it.driverPs2.init()
         it.mainKeyboard <- {it.driverPs2.ptr}
-        it.mainPointer <- {it.driverPs2.ptr}
+        it.mainMouse <- {it.driverPs2.ptr}
     ;
 ;
