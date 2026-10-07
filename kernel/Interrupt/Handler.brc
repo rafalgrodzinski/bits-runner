@@ -96,8 +96,6 @@ Handler::INT_DEBUG_CALL u32 <- 0x32
     ;
 
     registerIrqCallback fun: irq u32, callback ptr<fun>
-    @B::StringForU32(irq).println()
-        @B::StringForU32(irq).println()
         // ignore cascading IRQ
         if irq >= it.irqCallbacks.count or irq = 2: ret
 
@@ -113,12 +111,7 @@ Handler::INT_DEBUG_CALL u32 <- 0x32
         ;
 
         mask u8 <- @BSys::in8(port)
-                @B::StringHexForU32(mask).print()
         mask <- mask & ~(1 << irq)
-
-        @B::StringHexForU32(irq).print()
-        @B::StringHexForU32(mask).print()
-        @B::StringHexForU32(port).println()
 
         @BSys::out8(port, mask)
     ;

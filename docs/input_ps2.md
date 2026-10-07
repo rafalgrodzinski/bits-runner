@@ -1,6 +1,6 @@
 # PS/2 Input
 
-Controller status register:
+Controller status register (read from port `0x64`):
 ```
 0 Output buffer status (1: full)
 ---
@@ -10,7 +10,7 @@ Controller status register:
 ---
 3 Command/Data (0: data to PS/2 device, 1: data to PS/2 controller)
 ---
-4 ?
+4 Keyboard Locked
 ---
 5 Is data from secondary PS/2 port (1: secondary)
 ---
@@ -116,3 +116,5 @@ Scroll wheel mode
 
 - I8042 PS/2 Controller
 (https://wiki.osdev.org/I8042_PS/2_Controller#Detecting_PS/2_Device_Types)[https://wiki.osdev.org/I8042_PS/2_Controller#Detecting_PS/2_Device_Types]
+
+- "Operating Systems Development - Keyboard": (https://brokenthorn.com/Resources/OSDev19.html)[https://brokenthorn.com/Resources/OSDev19.html]
