@@ -173,6 +173,8 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
         Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::CMD_PORT, 0xa8)
 
+        Driver::Ps2::drainDataPort()
+
         // first try enabling scroll wheel mode
         Driver::Ps2::writeSecondary(0xf3)
         Driver::Ps2::writeSecondary(200)
