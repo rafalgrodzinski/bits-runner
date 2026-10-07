@@ -148,22 +148,30 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
     mouseIsPressedStates data<bool, 5>
     mouseOffsets data<s32, 3>
 
-    init fun
+    init fun -> bool
         @BSys::disableInterrupts()
 
         Driver::Ps2::drainDataPort()
+
+        // Reset and check primary
+        if Driver::Ps2::writePrimary(0xff) != 0xfa: ret false // 0xfa for ack
+
+        Driver::Ps2::waitForReadReady()
+        if @BSys::in8(Driver::Ps2::DATA_PORT) != 0xaa: ret false // 0xaa for success
+
+        // Reset and check secondary
+        if Driver::Ps2::writeSecondary(0xff) != 0xfa: ret false // 0xfa for ack
+
+        Driver::Ps2::waitForReadReady()
+        if @BSys::in8(Driver::Ps2::DATA_PORT) != 0xaa: ret false // 0xaa for success
 
         // Enable primary PS/2 port
         Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::CMD_PORT, 0xae)
 
-        Driver::Ps2::drainDataPort()
-
         // Enable secondary PS/2 port
         Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::CMD_PORT, 0xa8)
-
-        Driver::Ps2::drainDataPort()
 
         // first try enabling scroll wheel mode
         Driver::Ps2::writeSecondary(0xf3)
@@ -223,6 +231,8 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
         @Interrupt::Handler::instance.registerIrqCallback(12, Driver::Ps2::irqCallback.ptr)
 
         @BSys::enableInterrupts()
+
+        ret true
     ;
 
     handleInterrupt fun
@@ -336,15 +346,15 @@ Driver::Ps2::drainDataPort fun
     rep @BSys::in8(Driver::Ps2::CMD_PORT) &? 0b0000_0001: @BSys::in8(Driver::Ps2::DATA_PORT)
 ;
 
-Driver::Ps2::writePrimary fun: value u8
+Driver::Ps2::writePrimary fun: value u8 -> u8
     Driver::Ps2::waitForWriteReady()
     @BSys::out8(Driver::Ps2::DATA_PORT, value)
 
     Driver::Ps2::waitForReadReady()
-    @BSys::in8(Driver::Ps2::DATA_PORT) // get ACK 0xfa
+    ret @BSys::in8(Driver::Ps2::DATA_PORT) // get ACK 0xfa
 ;
 
-Driver::Ps2::writeSecondary fun: value u8
+Driver::Ps2::writeSecondary fun: value u8 -> u8
     Driver::Ps2::waitForWriteReady()
     @BSys::out8(Driver::Ps2::CMD_PORT, 0xd4) // Select secondary PS/2 port
 
@@ -352,5 +362,5 @@ Driver::Ps2::writeSecondary fun: value u8
     @BSys::out8(Driver::Ps2::DATA_PORT, value)
 
     Driver::Ps2::waitForReadReady()
-    @BSys::in8(Driver::Ps2::DATA_PORT) // get ACK 0xfa
+    ret @BSys::in8(Driver::Ps2::DATA_PORT) // get ACK 0xfa
 ;

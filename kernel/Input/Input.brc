@@ -6,11 +6,17 @@
     mainKeyboard proto<Keyboard>
     mainMouse proto<Mouse>
 
+    driverNone blob<DriverNone>
     driverPs2 blob<Driver::Ps2>
 
     init fun
-        it.driverPs2.init()
-        it.mainKeyboard <- {it.driverPs2.ptr}
-        it.mainMouse <- {it.driverPs2.ptr}
+        if it.driverPs2.init()
+            it.mainKeyboard <- {it.driverPs2.ptr}
+            it.mainMouse <- {it.driverPs2.ptr}
+            ret
+        ;
+
+        it.mainKeyboard <- {it.driverNone.ptr}
+        it.mainMouse <- {it.driverNone.ptr}
     ;
 ;
