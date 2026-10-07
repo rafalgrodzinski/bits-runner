@@ -3,8 +3,6 @@
 @import B
 @import BSys
 @import Term
-//@import DeviceKeyboard
-//@import DeviceMouse
 @import Devices
 
 @extern interrupt_handler_init fun
@@ -16,9 +14,6 @@ INT_IRQ12 u32 <- 0x2c // mouse
 INT_SYSCALL u32 <- 0x30
 Int::DEBUG_DUMP_CPU_STATE u32 <- 0x31
 Int::DEBUG_CALL u32 <- 0x32
-
-//deviceKeyboard blob<@DeviceKeyboard::DeviceKeyboard>
-//deviceMouse blob<@DeviceMouse::DeviceMouse>
 
 @export CpuState blob
     ss u16
@@ -54,14 +49,13 @@ Int::DEBUG_CALL u32 <- 0x32
 @export Handler::instance blob<Handler>
 
 @export Handler blob
+    handlerSyscall blob<HandlerSyscall>
     handlerDebug blob<HandlerDebug>
 
     irqCallbacks data<ptr<fun>, 16>
 
     init fun
         interrupt_handler_init()
-        //deviceKeyboard.init()
-        //deviceMouse.init()
     ;
 
     handle fun: pCpuState ptr<blob<CpuState>>, interrupt u32, errorCode u32 -> u32
@@ -76,15 +70,13 @@ Int::DEBUG_CALL u32 <- 0x32
             @Devices::Timer::Pit::instance.handleInterrupt()
         // Keyboard
         else if interrupt = INT_IRQ1
-            //deviceKeyboard.handleInterrupt()
             if it.irqCallbacks[1].vadr != 0: it.irqCallbacks[1].val()
         // Mouse
         else if interrupt = INT_IRQ12
-            //deviceMouse.handleInterrupt()
             if it.irqCallbacks[12].vadr != 0: it.irqCallbacks[12].val()
         // Syscall
         else if interrupt = INT_SYSCALL
-            ret SyscallHandler::instance.handle(
+            ret it.handlerSyscall.handle(
                 pCpuState.val.eax,
                 pCpuState.val.ebx,
                 pCpuState.val.ecx,
@@ -108,6 +100,7 @@ Int::DEBUG_CALL u32 <- 0x32
     ;
 
     registerIrqCallback fun: irq u32, callback ptr<fun>
+        if irq >= it.irqCallbacks.count: ret
         it.irqCallbacks[irq] <- callback
     ;
 ;
