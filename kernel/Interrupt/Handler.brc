@@ -71,6 +71,8 @@ Handler::INT_DEBUG_CALL u32 <- 0x32
             @Devices::Timer::Pit::instance.handleInterrupt()
         // IRQs
         else if interrupt >= Handler::INT_IRQ0 and interrupt < Handler::INT_IRQ0 + 16
+            @B::String("IRQ ").print()
+            @B::StringHexForU32(interrupt).println()
             irq u32 <- interrupt - Handler::INT_IRQ0
             if it.irqCallbacks[irq].vadr != 0: it.irqCallbacks[irq].val()
         // Syscall

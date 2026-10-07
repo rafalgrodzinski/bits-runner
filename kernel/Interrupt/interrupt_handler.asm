@@ -174,7 +174,7 @@ interrupt_handler_init:
     ; mask all IRQs excpet for the cascade to IRQ 2
     mov al, 11111011b
     out PIC1_DATA_PORT, al
-    mov al, 0x11111111b
+    mov al, 11111111b
     out PIC2_DATA_PORT, al
 
     pop eax

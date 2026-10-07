@@ -238,7 +238,7 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
         @Interrupt::Handler::instance.registerIrqCallback(1, Driver::Ps2::irqCallback.ptr)
         @Interrupt::Handler::instance.registerIrqCallback(12, Driver::Ps2::irqCallback.ptr)
 
-        @B::String("d10").print()
+        @B::String("d10!").print()
 
         @BSys::enableInterrupts()
     ;
