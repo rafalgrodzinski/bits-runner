@@ -21,9 +21,9 @@ Controller status register:
 
 Controller configuration register
 ```
-0 Enable first port ints (1: enabled)
+0 Enable primary port ints (1: enabled)
 ---
-1 Enable second port ints (1: enabled)
+1 Enable secondary port ints (1: enabled)
 ---
 2 System flag (1: POST passed)
 ---

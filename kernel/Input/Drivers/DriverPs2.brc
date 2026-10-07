@@ -156,6 +156,12 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
 
         @B::String("d2").print()
 
+        // Enable primary PS/2 port
+        Driver::Ps2::waitForWriteReady()
+        @BSys::out8(Driver::Ps2::CMD_PORT, 0xae)
+
+        Driver::Ps2::drainDataPort()
+
         // Enable secondary PS/2 port
         Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::CMD_PORT, 0xa8)
@@ -217,9 +223,12 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
 
         @B::String("d7").print()
 
-        // Enable mouse
+        status <- status | 0b0000_0001 // enable IRQ 1
+        status <- status & 0b1110_1111 // enable primary port clock
+        status <- status | 0b0100_0000 // enable primary port translation
+
         status <- status | 0b0000_0010 // enable IRQ 12
-        status <- status & 0b1101_1111 // enable mouse clock
+        status <- status & 0b1101_1111 // enable secondary port clock
 
         Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::CMD_PORT, 0x60)
