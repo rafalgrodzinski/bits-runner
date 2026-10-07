@@ -149,29 +149,46 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
     mouseOffsets data<s32, 3>
 
     init fun
+        @B::String("d1").print()
         @BSys::disableInterrupts()
 
         Driver::Ps2::drainDataPort()
+
+        @B::String("d2").print()
 
         // Enable secondary PS/2 port
         Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::CMD_PORT, 0xa8)
 
+        @B::String("d3").print()
+
         Driver::Ps2::drainDataPort()
+
+        @B::String("d4").print()
 
         // first try enabling scroll wheel mode
         Driver::Ps2::writeSecondary(0xf3)
+        @B::String("d4-1").print()
         Driver::Ps2::writeSecondary(200)
+        @B::String("d4-2").print()
 
         Driver::Ps2::writeSecondary(0xf3)
+        @B::String("d4-3").print()
         Driver::Ps2::writeSecondary(100)
+        @B::String("d4-4").print()
 
         Driver::Ps2::writeSecondary(0xf3)
+        @B::String("d4-5").print()
         Driver::Ps2::writeSecondary(80)
+        @B::String("d4-6").print()
 
         Driver::Ps2::writeSecondary(0xf2)
+        @B::String("d4-7").print()
         Driver::Ps2::waitForReadReady()
+        @B::String("d4-8").print()
         it.mouseMode <- @BSys::in8(Driver::Ps2::DATA_PORT)
+
+        @B::String("d5").print()
 
         // if succeeded, try enableing 5-button mode
         if it.mouseMode = Driver::Ps2::MOUSE_MODE_SCROLL_WHEEL
@@ -189,12 +206,16 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
             it.mouseMode <- @BSys::in8(Driver::Ps2::DATA_PORT)    
         ;
 
+        @B::String("d6").print()
+
         // Enable interrupts
         Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::CMD_PORT, 0x20)
 
         Driver::Ps2::waitForReadReady()
         status u8 <- @BSys::in8(Driver::Ps2::DATA_PORT)
+
+        @B::String("d7").print()
 
         // Enable mouse
         status <- status | 0b0000_0010 // enable IRQ 12
@@ -206,17 +227,24 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
         Driver::Ps2::waitForWriteReady()
         @BSys::out8(Driver::Ps2::DATA_PORT, status)
 
+        @B::String("d8").print()
+
         // Enable data reporting
         Driver::Ps2::writeSecondary(0xf4)
+
+        @B::String("d9").print()
 
         // Register keyboard & pointer IRQ handlers
         @Interrupt::Handler::instance.registerIrqCallback(1, Driver::Ps2::irqCallback.ptr)
         @Interrupt::Handler::instance.registerIrqCallback(12, Driver::Ps2::irqCallback.ptr)
 
+        @B::String("d10").print()
+
         @BSys::enableInterrupts()
     ;
 
     handleInterrupt fun
+        @B::String("hint").print()
         // Check if there is data in the output buffer
         rep status u8 <- @BSys::in8(Driver::Ps2::CMD_PORT), status &? 0b0000_0001, status <- @BSys::in8(Driver::Ps2::CMD_PORT)
             // Data from secondary port?
@@ -230,6 +258,7 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
     ;
 
     handleKeyboardInterrupt fun
+        @B::String("hint kbd").print()
         scanCode u8 <- @BSys::in8(Driver::Ps2::DATA_PORT)
 
         isPressed bool <- scanCode & 0x80 = 0
@@ -253,6 +282,7 @@ Driver::Ps2::MOUSE_MODE_5_BUTTON u8 <- 0x04
     ;
 
     handleMouseInterrupt fun
+        @B::String("hint mouse").print()
         // store received data in current slot
         it.mouseStatus[it.currentMouseStatusIndex] <- @BSys::in8(Driver::Ps2::DATA_PORT)
 
@@ -316,11 +346,11 @@ Driver::Ps2::irqCallback fun
 ;
 
 Driver::Ps2::waitForReadReady fun
-    rep not @BSys::in8(Driver::Ps2::CMD_PORT) &? 0b0000_0001:
+    rep count u32, count < 100_000 and not @BSys::in8(Driver::Ps2::CMD_PORT) &? 0b0000_0001, count <- count + 1:
 ;
 
 Driver::Ps2::waitForWriteReady fun
-    rep @BSys::in8(Driver::Ps2::CMD_PORT) &? 0b0000_0010:
+    rep count u32, count < 100_000 and @BSys::in8(Driver::Ps2::CMD_PORT) &? 0b0000_0010, count <- count + 1:
 ;
 
 Driver::Ps2::drainDataPort fun

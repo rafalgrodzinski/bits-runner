@@ -7,13 +7,14 @@
 
 @extern interrupt_handler_init fun
 
-INT_PAGE_FAULT u32 <- 0x0e
-INT_IRQ0 u32 <- 0x20 // timer
-INT_IRQ1 u32 <- 0x21 // keyboard
-INT_IRQ12 u32 <- 0x2c // mouse
-INT_SYSCALL u32 <- 0x30
-Int::DEBUG_DUMP_CPU_STATE u32 <- 0x31
-Int::DEBUG_CALL u32 <- 0x32
+Handler::PIC1_DATA_PORT u16 <- 0x21
+Handler::PIC2_DATA_PORT u16 <- 0xa1
+
+Handler::INT_PAGE_FAULT u32 <- 0x0e
+Handler::INT_IRQ0 u32 <- 0x20
+Handler::INT_SYSCALL u32 <- 0x30
+Handler::INT_DEBUG_DUMP_CPU_STATE u32 <- 0x31
+Handler::INT_DEBUG_CALL u32 <- 0x32
 
 @export CpuState blob
     ss u16
@@ -60,22 +61,20 @@ Int::DEBUG_CALL u32 <- 0x32
 
     handle fun: pCpuState ptr<blob<CpuState>>, interrupt u32, errorCode u32 -> u32
         // Page fault
-        if interrupt = INT_PAGE_FAULT
+        if interrupt = Handler::INT_PAGE_FAULT
             @Term::printString("Page fault accessing memory at: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
             @Term::printHex(@BSys::getCr2(), @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
             @Term::printNewLine()
             rep: @BSys::halt()
         // Timer
-        else if interrupt = INT_IRQ0
+        else if interrupt = Handler::INT_IRQ0
             @Devices::Timer::Pit::instance.handleInterrupt()
-        // Keyboard
-        else if interrupt = INT_IRQ1
-            if it.irqCallbacks[1].vadr != 0: it.irqCallbacks[1].val()
-        // Mouse
-        else if interrupt = INT_IRQ12
-            if it.irqCallbacks[12].vadr != 0: it.irqCallbacks[12].val()
+        // IRQs
+        else if interrupt >= Handler::INT_IRQ0 and interrupt < Handler::INT_IRQ0 + 16
+            irq u32 <- interrupt - Handler::INT_IRQ0
+            if it.irqCallbacks[irq].vadr != 0: it.irqCallbacks[irq].val()
         // Syscall
-        else if interrupt = INT_SYSCALL
+        else if interrupt = Handler::INT_SYSCALL
             ret it.handlerSyscall.handle(
                 pCpuState.val.eax,
                 pCpuState.val.ebx,
@@ -84,7 +83,7 @@ Int::DEBUG_CALL u32 <- 0x32
                 pCpuState.val.esi
             )
         // Debug
-        else if interrupt = Int::DEBUG_DUMP_CPU_STATE or interrupt = Int::DEBUG_CALL
+        else if interrupt = Handler::INT_DEBUG_DUMP_CPU_STATE or interrupt = Handler::INT_DEBUG_CALL
             it.handlerDebug.handle(pCpuState, interrupt, errorCode)
         // Other
         else
@@ -100,8 +99,31 @@ Int::DEBUG_CALL u32 <- 0x32
     ;
 
     registerIrqCallback fun: irq u32, callback ptr<fun>
-        if irq >= it.irqCallbacks.count: ret
+    @B::StringForU32(irq).println()
+        @B::StringForU32(irq).println()
+        // ignore cascading IRQ
+        if irq >= it.irqCallbacks.count or irq = 2: ret
+
+        // Register callback
         it.irqCallbacks[irq] <- callback
+
+        // Unmask IRQ
+        port u16 <- if irq < 8
+            Handler::PIC1_DATA_PORT
+        else
+            irq <- irq - 8
+            Handler::PIC2_DATA_PORT
+        ;
+
+        mask u8 <- @BSys::in8(port)
+                @B::StringHexForU32(mask).print()
+        mask <- mask & ~(1 << irq)
+
+        @B::StringHexForU32(irq).print()
+        @B::StringHexForU32(mask).print()
+        @B::StringHexForU32(port).println()
+
+        @BSys::out8(port, mask)
     ;
 ;
 
