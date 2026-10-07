@@ -10,6 +10,7 @@
 @import Bus
 @import Devices
 @import Video
+@import Input
 
 busPci blob<@Bus::BusPci>
 
@@ -32,6 +33,7 @@ busPci blob<@Bus::BusPci>
     @Devices::Timer::Pit::instance.init()
     busPci.scan()
     @Storage::instance.init(biosBootDriveNumber, bootPartitionFirstSector)
+    @Input::instance.init()
     @Video::instance.init()
     
     @B::String("All ready, welcome to Bits Runner!\n").printlnColor(@B::String::FOREGROUND_GREEN)
@@ -41,12 +43,12 @@ busPci blob<@Bus::BusPci>
     aFileBuffer a
 
     // Load shell
-    pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
+    /*pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
     //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/VDEMO.BIN"))
     aFileBuffer <- @BSys::memAlloc(pEntry.val.fileSize)
     pEntry.val.read(0, pEntry.val.fileSize, aFileBuffer)
     @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, pEntry.val.fileSize)
-    @BSys::memFree(pEntry.vadr)
+    @BSys::memFree(pEntry.vadr)*/
 
     @Dispatch::Dispatcher::instance.start()
 ;

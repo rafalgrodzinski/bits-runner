@@ -1,0 +1,16 @@
+@module Input
+
+@export instance blob<Input>
+
+@export Input blob
+    mainKeyboard proto<Keyboard>
+    mainPointer proto<Pointer>
+
+    driverPs2 blob<Driver::Ps2>
+
+    init fun
+        it.driverPs2.init()
+        it.mainKeyboard <- {it.driverPs2.ptr}
+        it.mainPointer <- {it.driverPs2.ptr}
+    ;
+;

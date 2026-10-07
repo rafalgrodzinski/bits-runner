@@ -1,6 +1,6 @@
 # PS/2 Input
 
-Controller tatus register:
+Controller status register:
 ```
 0 Output buffer status (1: full)
 ---
@@ -12,7 +12,7 @@ Controller tatus register:
 ---
 4 ?
 ---
-5 ?
+5 Is data from secondary PS/2 port (1: secondary)
 ---
 6 Time-out error (0: no error)
 ---

@@ -179,15 +179,15 @@ Syscall::Audio::STOP u32 <- 0x701
             ret 0
         // Input
         else if eax = Syscall::Input::KEYBOARD_GET_ASCII
-            ascii u32 <- deviceKeyboard.getAscii()
+            /*ascii u32 <- deviceKeyboard.getAscii()
             deviceKeyboard.resetState()
-            ret ascii
+            ret ascii*/
         else if eax = Syscall::Input::MOUSE_GET_STATE
-            pMouseState ptr<data<s32>> <- ebx.a.ptr<data<s32>>
+            /*pMouseState ptr<data<s32>> <- ebx.a.ptr<data<s32>>
             pMouseState.val[0] <- deviceMouse.getButtonsState()
             pMouseState.val[1] <- deviceMouse.getDeltaX()
             pMouseState.val[2] <- deviceMouse.getDeltaY()
-            deviceMouse.resetState()
+            deviceMouse.resetState()*/
         // Terminal
         else if eax = Syscall::Terminal::PRINT_CHARACTER
             @Term::printCharacter(ebx.u8, ecx.u8)

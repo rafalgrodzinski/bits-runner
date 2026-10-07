@@ -13,7 +13,7 @@
                 "reveal": "silent",
                 "revealProblems": "onProblem",
                 "close": true,
-                "focus": false
+                "focus": true
             }
         },
         {
@@ -24,7 +24,7 @@
                 "reveal": "silent",
                 "revealProblems": "onProblem",
                 "close": true,
-                "focus": false
+                "focus": true
             }
         }
     ]
