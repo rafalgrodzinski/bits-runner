@@ -1,4 +1,7 @@
 @module Input
 
 @export KeyboardNone blob: Keyboard
+    getCharacter fun -> u8
+        ret 0
+    ;
 ;

@@ -5,4 +5,10 @@
         DriverPs2::instance.init()
         ret DriverPs2::instance.isKeyboardInitialized
     ;
+
+    getCharacter fun -> u8
+        character u8 <- DriverPs2::instance.keyboardBufferedCharacter
+        DriverPs2::instance.keyboardBufferedCharacter <- 0
+        ret character
+    ;
 ;

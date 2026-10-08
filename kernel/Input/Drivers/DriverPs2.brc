@@ -145,6 +145,7 @@ DriverPs2::instance blob<DriverPs2>
     isKeyboardInitialized bool
 
     keyboardStatus data<bool, 128>
+    keyboardBufferedCharacter u8
 
     // Mouse
     isMouseInitialized bool
@@ -286,7 +287,7 @@ DriverPs2::instance blob<DriverPs2>
             ascii <- if isShiftPressed: DriverPs2::KEYBOARD_ASCII_MAP_SHIFTED[scanCode] else: DriverPs2::KEYBOARD_ASCII_MAP[scanCode]
         ;
 
-        @B::StringForChar(ascii).print()
+        it.keyboardBufferedCharacter <- ascii
     ;
 
     handleMouseInterrupt fun
@@ -335,16 +336,6 @@ DriverPs2::instance blob<DriverPs2>
                 it.mouseOffsets[2] <- it.mouseOffsets[2] | 0xffff_fff8
             ;
         ;
-
-        rep i u32, i < 5, i <- i + 1
-            if it.mouseIsPressedStates[i]: @B::String("T ").print() else: @B::String("F ").print()
-        ;
-
-        rep i u32, i < 3, i <- i + 1
-            @B::StringForS32(it.mouseOffsets[i]).print()
-            @B::String(" ").print()
-        ;
-        @B::String("").println()
     ;
 ;
 

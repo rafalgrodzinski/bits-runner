@@ -43,12 +43,12 @@ busPci blob<@Bus::BusPci>
     aFileBuffer a
 
     // Load shell
-    /*pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
+    pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
     //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/VDEMO.BIN"))
     aFileBuffer <- @BSys::memAlloc(pEntry.val.fileSize)
     pEntry.val.read(0, pEntry.val.fileSize, aFileBuffer)
     @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, pEntry.val.fileSize)
-    @BSys::memFree(pEntry.vadr)*/
+    @BSys::memFree(pEntry.vadr)
 
     @Dispatch::Dispatcher::instance.start()
 ;

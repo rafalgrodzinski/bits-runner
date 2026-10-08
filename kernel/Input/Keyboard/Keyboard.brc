@@ -1,4 +1,5 @@
 @module Input
 
 @export Keyboard proto
+    getCharacter fun -> u8
 ;

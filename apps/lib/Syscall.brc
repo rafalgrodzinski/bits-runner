@@ -138,6 +138,7 @@ Input::MOUSE_GET_STATE u32 <- 0x410
     buttonsState u32
     deltaX s32
     deltaY s32
+    deltaZ s32
 ;
 
 @export Input::getAscii fun -> u32

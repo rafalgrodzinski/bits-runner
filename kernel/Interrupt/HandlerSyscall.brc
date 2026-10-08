@@ -9,6 +9,7 @@
 @import Storage
 @import Term
 @import Video
+@import Input
 
 // System
 HandlerSyscall::System::REBOOT u32 <- 0x000
@@ -35,7 +36,7 @@ HandlerSyscall::Storage::READ_ENTRY u32 <- 0x302
 HandlerSyscall::Storage::WRITE_ENTRY u32 <- 0x303
 
 // Input
-HandlerSyscall::Input::KEYBOARD_GET_ASCII u32 <- 0x401
+HandlerSyscall::Input::KEYBOARD_GET_CHARACTER u32 <- 0x401
 HandlerSyscall::Input::MOUSE_GET_STATE u32 <- 0x410
 
 // Terminal
@@ -176,16 +177,14 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
             if pEntry.vadr != 0: ret pEntry.val.write(startByte, bytesCount, sourceAddress)
             ret 0
         // Input
-        else if eax = HandlerSyscall::Input::KEYBOARD_GET_ASCII
-            /*ascii u32 <- deviceKeyboard.getAscii()
-            deviceKeyboard.resetState()
-            ret ascii*/
+        else if eax = HandlerSyscall::Input::KEYBOARD_GET_CHARACTER
+            ret @Input::instance.primaryKeyboard.getCharacter()
         else if eax = HandlerSyscall::Input::MOUSE_GET_STATE
-            /*pMouseState ptr<data<s32>> <- ebx.a.ptr<data<s32>>
-            pMouseState.val[0] <- deviceMouse.getButtonsState()
-            pMouseState.val[1] <- deviceMouse.getDeltaX()
-            pMouseState.val[2] <- deviceMouse.getDeltaY()
-            deviceMouse.resetState()*/
+            pMouseState ptr<data<s32>> <- ebx.a.ptr<data<s32>>
+            pMouseState.val[0] <- @Input::instance.primaryMouse.getButonsState()
+            pMouseState.val[1] <- @Input::instance.primaryMouse.getDeltaX()
+            pMouseState.val[2] <- @Input::instance.primaryMouse.getDeltaY()
+            pMouseState.val[3] <- @Input::instance.primaryMouse.getDeltaZ()
         // Terminal
         else if eax = HandlerSyscall::Terminal::PRINT_CHARACTER
             @Term::printCharacter(ebx.u8, ecx.u8)
