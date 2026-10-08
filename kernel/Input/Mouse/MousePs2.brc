@@ -1,0 +1,8 @@
+@module Input
+
+@export MousePs2 blob: Mouse
+    init fun -> bool
+        DriverPs2::instance.init()
+        ret DriverPs2::instance.isKeyboardInitialized
+    ;
+;

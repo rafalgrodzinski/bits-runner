@@ -3,20 +3,28 @@
 @export instance blob<Input>
 
 @export Input blob
-    mainKeyboard proto<Keyboard>
-    mainMouse proto<Mouse>
+    primaryKeyboard proto<Keyboard>
+    primaryMouse proto<Mouse>
 
-    driverNone blob<DriverNone>
-    driverPs2 blob<Driver::Ps2>
+    keyboardNone blob<KeyboardNone>
+    keyboardPs2 blob<KeyboardPs2>
+
+    mouseNone blob<MouseNone>
+    mousePs2 blob<MousePs2>
 
     init fun
-        if it.driverPs2.init()
-            it.mainKeyboard <- {it.driverPs2.ptr}
-            it.mainMouse <- {it.driverPs2.ptr}
-            ret
+        // Init Keyboard
+        if it.keyboardPs2.init()
+            it.primaryKeyboard <- {it.keyboardPs2.ptr}
+        else
+            it.primaryKeyboard <- {it.keyboardNone.ptr}
         ;
 
-        it.mainKeyboard <- {it.driverNone.ptr}
-        it.mainMouse <- {it.driverNone.ptr}
+        // Init Mouse
+        if it.mousePs2.init()
+            it.primaryMouse <- {it.mousePs2.ptr}
+        else
+            it.primaryMouse <- {it.mouseNone.ptr}
+        ;
     ;
 ;

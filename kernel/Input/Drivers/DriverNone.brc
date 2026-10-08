@@ -1,4 +1,0 @@
-@module Input
-
-@export DriverNone blob: Keyboard, Mouse
-;
