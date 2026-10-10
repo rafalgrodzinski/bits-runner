@@ -75,7 +75,16 @@
     mov $0, eax
 ;
 
-@export disableInterrupts raw
+@export disableInterrupts raw<"=r, ~{eax}"> -> bool
+    mov $0, 0
+
+    pushfd
+    pop eax
+    test eax, 0x200
+    jz .flag_not_set${:uid}
+    mov $0, 1
+
+.flag_not_set${:uid}:
     cli
 ;
 

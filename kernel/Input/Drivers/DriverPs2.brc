@@ -158,38 +158,59 @@ DriverPs2::instance blob<DriverPs2>
     mouseOffsets data<s32, 3>
 
     init fun
+        @B::String("a ").printColor(@B::String::FOREGROUND_GREEN)
         if it.isInitialized: ret
         it.isInitialized <- true
-
+@B::String("b ").printColor(@B::String::FOREGROUND_GREEN)
         @BSys::disableInterrupts()
 
         DriverPs2::drainDataPort()
-
+        
+@B::String("c ").printColor(@B::String::FOREGROUND_GREEN)
         // Reset and check primary
-        if DriverPs2::writePrimary(0xff) != 0xfa: ret // 0xfa for ack
-
+        abc u8 <- DriverPs2::writePrimary(0xff)
+        @B::StringHexForU32(abc).printColor(@B::String::FOREGROUND_RED)
+        if abc != 0xfa: ret // 0xfa for ack
+@B::String("d ").printColor(@B::String::FOREGROUND_GREEN)
         DriverPs2::waitForReadReady()
-        if @BSys::in8(DriverPs2::DATA_PORT) != 0xaa: ret // 0xaa for success
+ abc <- @BSys::in8(DriverPs2::DATA_PORT)
+                @B::StringHexForU32(abc).printColor(@B::String::FOREGROUND_RED)
+        if abc != 0xaa: ret // 0xaa for success
+@B::String("e ").printColor(@B::String::FOREGROUND_GREEN)
 
         DriverPs2::drainDataPort()
-
+    
+@B::String("f ").printColor(@B::String::FOREGROUND_GREEN)
         // Reset and check secondary
-        if DriverPs2::writeSecondary(0xff) != 0xfa: ret // 0xfa for ack
-
+        abc <- DriverPs2::writeSecondary(0xff)
+        @B::StringHexForU32(abc).printColor(@B::String::FOREGROUND_RED)
+        if abc != 0xfa: ret // 0xfa for ack
+@B::String("g ").printColor(@B::String::FOREGROUND_GREEN)
         DriverPs2::waitForReadReady()
-        if @BSys::in8(DriverPs2::DATA_PORT) != 0xaa: ret // 0xaa for success
+        abc <- @BSys::in8(DriverPs2::DATA_PORT)
+        @B::StringHexForU32(abc).printColor(@B::String::FOREGROUND_RED)
+        if abc != 0xaa: ret // 0xaa for success
+@B::String("h ").printColor(@B::String::FOREGROUND_GREEN)
 
         DriverPs2::drainDataPort()
-
+        
+        
+@B::String("i ").printColor(@B::String::FOREGROUND_GREEN)
         // Enable primary PS/2 port
         DriverPs2::waitForWriteReady()
         @BSys::out8(DriverPs2::CMD_PORT, 0xae)
+@B::String("j ").printColor(@B::String::FOREGROUND_GREEN)
 
         // Enable secondary PS/2 port
         DriverPs2::waitForWriteReady()
         @BSys::out8(DriverPs2::CMD_PORT, 0xa8)
+@B::String("k ").printColor(@B::String::FOREGROUND_GREEN)
 
         DriverPs2::drainDataPort()
+
+        // Use default settings
+        //DriverPs2::writePrimary(0xf6)
+        //DriverPs2::writeSecondary(0xf6)
 
         // first try enabling scroll wheel mode
         DriverPs2::writeSecondary(0xf3)
@@ -203,7 +224,7 @@ DriverPs2::instance blob<DriverPs2>
         DriverPs2::writeSecondary(0xf2)
         DriverPs2::waitForReadReady()
         it.mouseMode <- @BSys::in8(DriverPs2::DATA_PORT)
-
+@B::String("l ").printColor(@B::String::FOREGROUND_GREEN)
         // if succeeded, try enableing 5-button mode
         if it.mouseMode = DriverPs2::MOUSE_MODE_SCROLL_WHEEL
             DriverPs2::writeSecondary(0xf3)
@@ -220,13 +241,15 @@ DriverPs2::instance blob<DriverPs2>
             it.mouseMode <- @BSys::in8(DriverPs2::DATA_PORT)    
         ;
 
+@B::String("m ").printColor(@B::String::FOREGROUND_GREEN)
         // Enable interrupts
         DriverPs2::waitForWriteReady()
         @BSys::out8(DriverPs2::CMD_PORT, 0x20)
 
+        
         DriverPs2::waitForReadReady()
         status u8 <- @BSys::in8(DriverPs2::DATA_PORT)
-
+@B::String("n ").printColor(@B::String::FOREGROUND_GREEN)
         status <- status | 0b0000_0001 // enable IRQ 1
         status <- status & 0b1110_1111 // enable primary port clock
         status <- status | 0b0100_0000 // enable primary port translation
@@ -239,28 +262,38 @@ DriverPs2::instance blob<DriverPs2>
 
         DriverPs2::waitForWriteReady()
         @BSys::out8(DriverPs2::DATA_PORT, status)
-
+        
+@B::String("o ").printColor(@B::String::FOREGROUND_GREEN)
         // Enable data reporting
         DriverPs2::writePrimary(0xf4)
         DriverPs2::writeSecondary(0xf4)
-
+@B::String("p ").printColor(@B::String::FOREGROUND_GREEN)
         // Register keyboard & pointer IRQ handlers
         @Interrupt::Handler::instance.registerIrqCallback(1, DriverPs2::irqCallback.ptr)
         @Interrupt::Handler::instance.registerIrqCallback(12, DriverPs2::irqCallback.ptr)
-
+@B::String("q ").printColor(@B::String::FOREGROUND_GREEN)
         @BSys::enableInterrupts()
 
         it.isKeyboardInitialized <- true
         it.isMouseInitialized <- true
+        @B::String("r ").printColor(@B::String::FOREGROUND_GREEN)
     ;
 
     handleInterrupt fun
+        //status u8 <- @BSys::in8(DriverPs2::CMD_PORT)
+        //@B::String("int").println()
         // Check if there is data in the output buffer
         rep status u8 <- @BSys::in8(DriverPs2::CMD_PORT), status &? 0b0000_0001, status <- @BSys::in8(DriverPs2::CMD_PORT)
+            // parity or time-out error ?
+            if status &? 0b1100_0000
+                DriverPs2::drainDataPort()
+                ret
+            ;
+
             // Data from secondary port?
             if (status &? 0b0010_0000)
                 it.handleMouseInterrupt()
-            // Data from primary port?
+            // Data from primary port
             else
                 it.handleKeyboardInterrupt()
             ;
@@ -268,6 +301,7 @@ DriverPs2::instance blob<DriverPs2>
     ;
 
     handleKeyboardInterrupt fun
+        @B::String("int kb").println()
         scanCode u8 <- @BSys::in8(DriverPs2::DATA_PORT)
 
         isPressed bool <- scanCode & 0x80 = 0
@@ -288,9 +322,11 @@ DriverPs2::instance blob<DriverPs2>
         ;
 
         it.keyboardBufferedCharacter <- ascii
+        @B::StringForChar(ascii).print()
     ;
 
     handleMouseInterrupt fun
+    @B::String("int mouse").println()
         // store received data in current slot
         it.mouseStatus[it.currentMouseStatusIndex] <- @BSys::in8(DriverPs2::DATA_PORT)
 
@@ -344,11 +380,11 @@ DriverPs2::irqCallback fun
 ;
 
 DriverPs2::waitForReadReady fun
-    rep count u32, count < 100_000 and not @BSys::in8(DriverPs2::CMD_PORT) &? 0b0000_0001, count <- count + 1:
+    rep count u32, count < 1_000_000 and not @BSys::in8(DriverPs2::CMD_PORT) &? 0b0000_0001, count <- count + 1:
 ;
 
 DriverPs2::waitForWriteReady fun
-    rep count u32, count < 100_000 and @BSys::in8(DriverPs2::CMD_PORT) &? 0b0000_0010, count <- count + 1:
+    rep count u32, count < 1_000_000 and @BSys::in8(DriverPs2::CMD_PORT) &? 0b0000_0010, count <- count + 1:
 ;
 
 DriverPs2::drainDataPort fun
@@ -366,6 +402,9 @@ DriverPs2::writePrimary fun: value u8 -> u8
 DriverPs2::writeSecondary fun: value u8 -> u8
     DriverPs2::waitForWriteReady()
     @BSys::out8(DriverPs2::CMD_PORT, 0xd4) // Select secondary PS/2 port
+
+    //DriverPs2::waitForReadReady()
+    //@BSys::in8(DriverPs2::DATA_PORT) // get ACK 0xfa
 
     DriverPs2::waitForWriteReady()
     @BSys::out8(DriverPs2::DATA_PORT, value)
