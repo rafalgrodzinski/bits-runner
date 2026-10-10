@@ -1,6 +1,6 @@
 # PS/2 Input
 
-Controller tatus register:
+Controller status register (read from port `0x64`):
 ```
 0 Output buffer status (1: full)
 ---
@@ -10,9 +10,9 @@ Controller tatus register:
 ---
 3 Command/Data (0: data to PS/2 device, 1: data to PS/2 controller)
 ---
-4 ?
+4 Keyboard Locked
 ---
-5 ?
+5 Is data from secondary PS/2 port (1: secondary)
 ---
 6 Time-out error (0: no error)
 ---
@@ -21,9 +21,9 @@ Controller tatus register:
 
 Controller configuration register
 ```
-0 Enable first port ints (1: enabled)
+0 Enable primary port ints (1: enabled)
 ---
-1 Enable second port ints (1: enabled)
+1 Enable secondary port ints (1: enabled)
 ---
 2 System flag (1: POST passed)
 ---
@@ -44,10 +44,10 @@ Ports:
 - `0x60` Data port
 
 Commands:
-- `0xae` enable first PS/2 port
-- `0xa8` Enable second PS/2 port
+- `0xae` enable primary PS/2 port
+- `0xa8` Enable secondary PS/2 port
 - `0xf3` Set sample rate
-- `0xd4` Send data to second PS/2 port
+- `0xd4` Send data to secondary PS/2 port
 - `0x20` Get status
 - `0x60` Set status
 - `0xf4` Enable data reporting
@@ -116,3 +116,5 @@ Scroll wheel mode
 
 - I8042 PS/2 Controller
 (https://wiki.osdev.org/I8042_PS/2_Controller#Detecting_PS/2_Device_Types)[https://wiki.osdev.org/I8042_PS/2_Controller#Detecting_PS/2_Device_Types]
+
+- "Operating Systems Development - Keyboard": (https://brokenthorn.com/Resources/OSDev19.html)[https://brokenthorn.com/Resources/OSDev19.html]

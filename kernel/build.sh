@@ -42,6 +42,7 @@ OBJS=(
     Storage.o
     Term.o
     Video.o
+    Input.o
 )
 
 # don't split on spaces, only on new lines
@@ -57,7 +58,11 @@ SOURCES_DIRS=(
 
 for SOURCES_DIR in "${SOURCES_DIRS[@]}"; do
     # find .brc files (except for BSys.brc, cause it is specific per system)
-    FILES=`find "${SOURCES_DIR}" -type d -name Storage -prune -o -type d -name Video -prune -o -name *.brc ! -name Speaker.brc ! -name Pit.brc -print | sort`
+    FILES=`find "${SOURCES_DIR}" \
+    -type d -name Storage -prune -o \
+    -type d -name Video -prune -o \
+    -type d -name Input -prune -o \
+    -name *.brc ! -name Speaker.brc ! -name Pit.brc -print | sort`
     for FILE in ${FILES}; do
         # and add them to the list
         SOURCES+=("${FILE}")
@@ -75,6 +80,16 @@ SOURCES+=("${SCRIPT_DIR}/Storage/Filesystem/Filesystem.brc")
 SOURCES+=("${SCRIPT_DIR}/Storage/Filesystem/FilesystemFat.brc")
 SOURCES+=("${SCRIPT_DIR}/Devices/Timer/Pit.brc")
 SOURCES+=("${SCRIPT_DIR}/Devices/Audio/Speaker.brc")
+
+# Input
+SOURCES+=("${SCRIPT_DIR}/Input/Drivers/DriverPs2.brc")
+SOURCES+=("${SCRIPT_DIR}/Input/Keyboard/Keyboard.brc")
+SOURCES+=("${SCRIPT_DIR}/Input/Keyboard/KeyboardNone.brc")
+SOURCES+=("${SCRIPT_DIR}/Input/Keyboard/KeyboardPs2.brc")
+SOURCES+=("${SCRIPT_DIR}/Input/Mouse/Mouse.brc")
+SOURCES+=("${SCRIPT_DIR}/Input/Mouse/MouseNone.brc")
+SOURCES+=("${SCRIPT_DIR}/Input/Mouse/MousePs2.brc")
+SOURCES+=("${SCRIPT_DIR}/Input/Input.brc")
 
 # Video
 SOURCES+=("${SCRIPT_DIR}/Video/Video.brc")

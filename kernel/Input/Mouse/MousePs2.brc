@@ -1,0 +1,36 @@
+@module Input
+
+@export MousePs2 blob: Mouse
+    init fun -> bool
+        DriverPs2::instance.init()
+        ret DriverPs2::instance.isKeyboardInitialized
+    ;
+
+    getButonsState fun -> u32
+        state u32
+        if DriverPs2::instance.mouseIsPressedStates[0]: state <- state | (1 << 0)
+        if DriverPs2::instance.mouseIsPressedStates[1]: state <- state | (1 << 1)
+        if DriverPs2::instance.mouseIsPressedStates[2]: state <- state | (1 << 2)
+        if DriverPs2::instance.mouseIsPressedStates[3]: state <- state | (1 << 3)
+        if DriverPs2::instance.mouseIsPressedStates[4]: state <- state | (1 << 4)
+        ret state
+    ;
+
+    getDeltaX fun -> s32
+        delta s32 <- DriverPs2::instance.mouseOffsets[0]
+        DriverPs2::instance.mouseOffsets[0] <- 0
+        ret delta
+    ;
+
+    getDeltaY fun -> s32
+        delta s32 <- DriverPs2::instance.mouseOffsets[1]
+        DriverPs2::instance.mouseOffsets[1] <- 0
+        ret delta
+    ;
+
+    getDeltaZ fun -> s32
+        delta s32 <- DriverPs2::instance.mouseOffsets[2]
+        DriverPs2::instance.mouseOffsets[2] <- 0
+        ret delta
+    ;
+;

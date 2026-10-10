@@ -1,0 +1,19 @@
+@module Input
+
+@export MouseNone blob: Mouse
+    getButonsState fun -> u32
+        ret 0
+    ;
+
+    getDeltaX fun -> s32
+        ret 0
+    ;
+
+    getDeltaY fun -> s32
+        ret 0
+    ;
+
+    getDeltaZ fun -> s32
+        ret 0
+    ;
+;

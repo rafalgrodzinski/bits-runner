@@ -115,6 +115,10 @@ saved_gdt_data: dw GDT_DATA_PROTECTED_MODE
 saved_gdt_stack: dw GDT_DATA_PROTECTED_MODE
 saved_esp: dd 0
 
+; Store PIC masks when going into v86 mode
+saved_pic1_mask: db 11111011b ; Unmask chain to slave PIC on IRQ 2 by default
+saved_pic2_mask: db 11111111b
+
 ; kernel info
 boot_drive_number: dd 0
 boot_partition_first_sector: dd 0
@@ -425,9 +429,10 @@ restore_protected_mode_interrupts_32:
     out PIC1_DATA_PORT, al
     out PIC2_DATA_PORT, al
 
-    ; unmask IRQs
-    mov al, 0x00
+    ; restore IRQ masks
+    mov al, [saved_pic1_mask]
     out PIC1_DATA_PORT, al
+    mov al, [saved_pic2_mask]
     out PIC2_DATA_PORT, al
 
     lidt [idt_descriptor_protected_mode]
@@ -512,6 +517,12 @@ restore_v86_mode_interrupts_16:
     sidt [idt_descriptor_protected_mode] ; otherwise store it as protected mode
     
     push eax
+
+    ; keep current IRQ mask values
+    in al, PIC1_DATA_PORT
+    mov [saved_pic1_mask], al
+    in al, PIC2_DATA_PORT
+    mov [saved_pic2_mask], al
 
     ; ICW1, initialize
     mov al, 0x11

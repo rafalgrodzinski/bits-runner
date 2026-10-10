@@ -10,6 +10,7 @@
 @import Bus
 @import Devices
 @import Video
+@import Input
 
 busPci blob<@Bus::BusPci>
 
@@ -29,9 +30,10 @@ busPci blob<@Bus::BusPci>
     @Term::init(@Term::MODE_80x25)
 
     @B::String("Initializing Bits Runner...").println()
-    @Devices::Timer::Pit::instance.init()
+    //@Devices::Timer::Pit::instance.init()
     busPci.scan()
     @Storage::instance.init(biosBootDriveNumber, bootPartitionFirstSector)
+    @Input::instance.init()
     @Video::instance.init()
     
     @B::String("All ready, welcome to Bits Runner!\n").printlnColor(@B::String::FOREGROUND_GREEN)

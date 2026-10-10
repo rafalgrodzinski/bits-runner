@@ -3,22 +3,18 @@
 @import B
 @import BSys
 @import Term
-@import DeviceKeyboard
-@import DeviceMouse
 @import Devices
 
 @extern interrupt_handler_init fun
 
-INT_PAGE_FAULT u32 <- 0x0e
-INT_IRQ0 u32 <- 0x20 // timer
-INT_IRQ1 u32 <- 0x21 // keyboard
-INT_IRQ12 u32 <- 0x2c // mouse
-INT_SYSCALL u32 <- 0x30
-Int::DEBUG_DUMP_CPU_STATE u32 <- 0x31
-Int::DEBUG_CALL u32 <- 0x32
+Handler::PIC1_DATA_PORT u16 <- 0x21
+Handler::PIC2_DATA_PORT u16 <- 0xa1
 
-deviceKeyboard blob<@DeviceKeyboard::DeviceKeyboard>
-deviceMouse blob<@DeviceMouse::DeviceMouse>
+Handler::INT_PAGE_FAULT u32 <- 0x0e
+Handler::INT_IRQ0 u32 <- 0x20
+Handler::INT_SYSCALL u32 <- 0x30
+Handler::INT_DEBUG_DUMP_CPU_STATE u32 <- 0x31
+Handler::INT_DEBUG_CALL u32 <- 0x32
 
 @export CpuState blob
     ss u16
@@ -54,33 +50,29 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
 @export Handler::instance blob<Handler>
 
 @export Handler blob
+    handlerSyscall blob<HandlerSyscall>
     handlerDebug blob<HandlerDebug>
+
+    irqCallbacks data<ptr<fun>, 16>
 
     init fun
         interrupt_handler_init()
-        deviceKeyboard.init()
-        deviceMouse.init()
     ;
 
     handle fun: pCpuState ptr<blob<CpuState>>, interrupt u32, errorCode u32 -> u32
         // Page fault
-        if interrupt = INT_PAGE_FAULT
+        if interrupt = Handler::INT_PAGE_FAULT
             @Term::printString("Page fault accessing memory at: ", @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
             @Term::printHex(@BSys::getCr2(), @Term::FOREGROUND_RED + @Term::ATTRIB_BLINKING)
             @Term::printNewLine()
             rep: @BSys::halt()
-        // Timer
-        else if interrupt = INT_IRQ0
-            @Devices::Timer::Pit::instance.handleInterrupt()
-        // Keyboard
-        else if interrupt = INT_IRQ1
-            deviceKeyboard.handleInterrupt()
-        // Mouse
-        else if interrupt = INT_IRQ12
-            deviceMouse.handleInterrupt()
+        // IRQs
+        else if interrupt >= Handler::INT_IRQ0 and interrupt < Handler::INT_IRQ0 + 16
+            irq u32 <- interrupt - Handler::INT_IRQ0
+            if it.irqCallbacks[irq].vadr != 0: it.irqCallbacks[irq].val()
         // Syscall
-        else if interrupt = INT_SYSCALL
-            ret SyscallHandler::instance.handle(
+        else if interrupt = Handler::INT_SYSCALL
+            ret it.handlerSyscall.handle(
                 pCpuState.val.eax,
                 pCpuState.val.ebx,
                 pCpuState.val.ecx,
@@ -88,7 +80,7 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
                 pCpuState.val.esi
             )
         // Debug
-        else if interrupt = Int::DEBUG_DUMP_CPU_STATE or interrupt = Int::DEBUG_CALL
+        else if interrupt = Handler::INT_DEBUG_DUMP_CPU_STATE or interrupt = Handler::INT_DEBUG_CALL
             it.handlerDebug.handle(pCpuState, interrupt, errorCode)
         // Other
         else
@@ -101,6 +93,27 @@ deviceMouse blob<@DeviceMouse::DeviceMouse>
         ;
 
         ret pCpuState.val.eax
+    ;
+
+    registerIrqCallback fun: irq u32, callback ptr<fun>
+        // ignore cascading IRQ
+        if irq >= it.irqCallbacks.count or irq = 2: ret
+
+        // Register callback
+        it.irqCallbacks[irq] <- callback
+
+        // Unmask IRQ
+        port u16 <- if irq < 8
+            Handler::PIC1_DATA_PORT
+        else
+            irq <- irq - 8
+            Handler::PIC2_DATA_PORT
+        ;
+
+        mask u8 <- @BSys::in8(port)
+        mask <- mask & ~(1 << irq)
+
+        @BSys::out8(port, mask)
     ;
 ;
 
