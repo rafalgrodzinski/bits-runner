@@ -111,7 +111,12 @@
 
 // Memory
 @export memAlignedAlloc fun: size u32, alignment u32 -> a
-    ret @Memory::HeapManager::instance.allocateAligned({0}, size, alignment)
+    address a <- @Memory::HeapManager::instance.allocateAligned({0}, size, alignment)
+    if address != 0
+        //rep i u32, i < size, i <- i + 1: (address + i).ptr<u8>.val <- 0
+        rep i u32, i < size, i <- i + 1: address.ptr<data<u8>>.val[i] <- 0
+    ;
+    ret address
 ;
 
 @export memAlloc fun: size u32 -> a
