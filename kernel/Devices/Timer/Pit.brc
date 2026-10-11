@@ -14,7 +14,7 @@ Timer::Pit::CHANNEL_2 u8 <- 0b10_00_0000
 
 Timer::Pit::MODE_SQUARE_WAVE u8 <- 0b0000_011_0
 
-Timer::Pit::ACCESS_LOW_HIGH u8 <- 00_11_0000
+Timer::Pit::ACCESS_LOW_HIGH u8 <- 0b00_11_0000
 
 @export Timer::Pit::instance blob<Timer::Pit>
 
