@@ -472,7 +472,22 @@ interrupt_handler:
     test al, 0x80 ; check bit 7
     jz .int_handling_finished
 
-    .not_spurious:
+.not_spurious:
+
+    ; Acknowledge IRQ
+    cmp dword .interrupt, 0x20 ; < IRQ 0 ?
+    jb .skip_irq_ack
+    cmp dword .interrupt, 0x30 ; <= IRQ 15 ?
+    jae .skip_irq_ack
+    mov al, 0x20
+    cmp dword .interrupt, 0x28 ; < IRQ 8 ?
+    jb .skip_irq_ack_pic2
+    ; ack pic2
+    out PIC2_CMD_PORT, al
+.skip_irq_ack_pic2:
+    ; ack pic1
+    out PIC1_CMD_PORT, al
+.skip_irq_ack:
 
     ; push esp & ss depending on if we're coming from kernel or user mode
     test .cs, 011b
@@ -499,14 +514,6 @@ interrupt_handler:
 
     ; Store return value
     mov .eax, eax
-
-    ; Acknowledge interrupt
-    mov al, 0x20
-    out PIC1_CMD_PORT, al
-    cmp dword .interrupt, 0x28 ; < IRQ8 ?
-    jb .skip_ack_pic2
-    out PIC2_CMD_PORT, al
-.skip_ack_pic2:
 
     ; pop pushed arguments
     add esp, U32_SIZE * 5 ; pCpuState, .interrupt, .errorCode, ss, esp
