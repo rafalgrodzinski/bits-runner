@@ -3,6 +3,8 @@
 %define BIOS_SERVICE_BOOT_STORAGE_WRITE_SECTORS 0x04
 %define BIOS_SERVICE_BOOT_STORAGE_SECTORS_COUNT 0x03
 
+%define BIOS_SERVICE_INPUT_KEYBOARD_GET_SCAN_CODE_WAITING 0x10
+
 %define BIOS_SERVICE_VIDEO_VGA_SET_MODE 0x20
 %define BIOS_SERVICE_VIDEO_VESA_GET_INFO 0x21
 %define BIOS_SERVICE_VIDEO_VESA_GET_MODE_INFO 0x22
@@ -61,6 +63,13 @@ bios_service_32:
     call bios_service_boot_storage_sectors_count_32
     jmp .end
 .not_sectors_count:
+
+    ; Input Keyboard Get Scan Code Waiting
+    cmp eax, BIOS_SERVICE_INPUT_KEYBOARD_GET_SCAN_CODE_WAITING
+    jne .not_input_keyboard_get_scan_code_waiting
+    call bios_service_input_keyboard_get_scan_code_waiting_32
+    jmp .end
+.not_input_keyboard_get_scan_code_waiting
 
     ; Video VGA Set Mode
     cmp eax, BIOS_SERVICE_VIDEO_VGA_SET_MODE
@@ -177,6 +186,23 @@ bios_service_boot_storage_write_sectors_32:
 %undef .sectors_count
 %undef .source_lba_address
 %undef .args_count
+
+;
+; Wait for keyboard input
+; out
+;  eax: scan code
+[bits 32]
+bios_service_input_keyboard_get_scan_code_waiting_32:
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ah, 0x00
+    int 0x16
+    mov al, ah ; ah: scan code, al: ascii
+    mov ah, 0x00
+
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
 
 ;
 ; Get number of sectors of the boot storage

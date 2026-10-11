@@ -5,6 +5,8 @@ Service::BOOT_STORAGE_READ_SECTORS u32 <- 0x02
 Service::BOOT_STORAGE_WRITE_SECTORS u32 <- 0x04
 Service::GET_SECTORS_COUNT u32 <- 0x03
 
+Service::Input::KEYBOARD_GET_SCAN_CODE_WAITING u32 <- 0x10
+
 Service::Video::VGA_SET_MODE u32 <- 0x20
 Service::Video::VESA_GET_INFO u32 <- 0x21
 Service::Video::VESA_GET_MODE_INFO u32 <- 0x22
@@ -46,6 +48,11 @@ biosServiceCallRaw raw<"=r, m, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{mem
 
 @export bootStorageGetSectorsCount fun -> u32
     ret biosServiceCallRaw(aBiosService.u32, Service::GET_SECTORS_COUNT, 0, 0, 0)
+;
+
+// Input
+@export Input::keyboardGetScanCodeWaiting fun -> u8
+    ret biosServiceCallRaw(aBiosService.u32, Service::Input::KEYBOARD_GET_SCAN_CODE_WAITING, 0, 0, 0).u8
 ;
 
 // Video

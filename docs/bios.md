@@ -1,5 +1,17 @@
 # BIOS
 
+## Input Keyboard (int 0x16)
+#### `ah: 0x00`: Wait for keyboard input
+Out:
+- `ah`: Scan code
+- `al`: ASCII code
+
+#### `ah: 0x01`: Get keboard input without blocking
+Out:
+- `ah`: Scan code
+- `al`: ASCII code
+- `zf`: 0 if a key is pressed
+
 ## Storage (int 0x13)
 Storage read/write can be performed in CHS (Cylinder Head Sector) or LBA (Logical Block Addressing). Except for flopy disks (which can only be accessed using the CHS calls) the cylinder, head, and sector values don't have any physical correspondence to the actual drive.
 
