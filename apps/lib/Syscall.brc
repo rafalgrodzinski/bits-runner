@@ -142,12 +142,13 @@ Input::MOUSE_GET_STATE u32 <- 0x410
 ;
 
 @export Input::getAscii fun -> u32
-    ret syscallRaw(Input::KEYBOARD_GET_ASCII, 0, 0, 0, 0)
+    //ret syscallRaw(Input::KEYBOARD_GET_ASCII, 0, 0, 0, 0)
+    ret 0
 ;
 
 @export Input::getMouseState fun -> blob<MouseState>
     mouseState blob<MouseState>
-    syscallRaw(Input::MOUSE_GET_STATE, mouseState.adr.u32, 0, 0, 0)
+    //syscallRaw(Input::MOUSE_GET_STATE, mouseState.adr.u32, 0, 0, 0)
     ret mouseState
 ;
 
