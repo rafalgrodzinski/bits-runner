@@ -111,7 +111,16 @@ Dispatcher::tss blob<Tss>
 
         // Next process to run has been found
         it.currentProcessIndex <- nextProcessIndex
-        pNextProcess.val.run()
+
+        // Run the next process
+        if pNextProcess.val.state = Process::STATE_NOT_STARTED
+            pNextProcess.val.state <- Process::STATE_RUNNING
+            Dispatcher::tss.esp0 <- pNextProcess.val.esp0
+            Process::startRaw(pNextProcess.val.esp, pNextProcess.val.cr3, GDT_USER_DATA)
+        else
+            pNextProcess.val.state <- Process::STATE_RUNNING
+            Process::resumeRaw(pNextProcess.val.esp0, pNextProcess.val.cr3)
+        ;
     ;
 
     yield fun

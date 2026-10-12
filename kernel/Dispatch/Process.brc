@@ -25,17 +25,6 @@ resId u32
     resources blob<@B::Array, ptr<blob<Resource>>>
     sleepTimeout u32
 
-    run fun
-        if it.state = Process::STATE_NOT_STARTED
-            it.state <- Process::STATE_RUNNING
-            Dispatcher::tss.esp0 <- it.esp0
-            Process::startRaw(it.esp, it.cr3, GDT_USER_DATA)
-        else
-            it.state <- Process::STATE_RUNNING
-            Process::resumeRaw(it.esp0, it.cr3)
-        ;
-    ;
-
     registerPage fun: page u32
         it.pages.push(page)
     ;
