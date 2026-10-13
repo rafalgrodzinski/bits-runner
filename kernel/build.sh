@@ -87,6 +87,7 @@ SOURCES+=("${SCRIPT_DIR}/Input/Keyboard/KeyboardBios.brc")
 SOURCES+=("${SCRIPT_DIR}/Input/Keyboard/KeyboardPs2.brc")
 SOURCES+=("${SCRIPT_DIR}/Input/Mouse/Mouse.brc")
 SOURCES+=("${SCRIPT_DIR}/Input/Mouse/MouseNone.brc")
+SOURCES+=("${SCRIPT_DIR}/Input/Mouse/MouseBios.brc")
 SOURCES+=("${SCRIPT_DIR}/Input/Mouse/MousePs2.brc")
 SOURCES+=("${SCRIPT_DIR}/Input/Input.brc")
 

@@ -5,6 +5,8 @@
 
 %define BIOS_SERVICE_INPUT_KEYBOARD_GET_SCAN_CODE_WAITING 0x10
 %define BIOS_SERVICE_INPUT_KEYBOARD_GET_KEY 0x11
+%define BIOS_SERVICE_INPUT_MOUSE_INIT 0x12
+%define BIOS_SERVICE_INPUT_MOUSE_UPDATE 0x13
 
 %define BIOS_SERVICE_VIDEO_VGA_SET_MODE 0x20
 %define BIOS_SERVICE_VIDEO_VESA_GET_INFO 0x21
@@ -17,6 +19,7 @@
 %define BIOS_SERVICE_GPXS_MODE_320x200x8 0x13
 
 saved_eax: dd 0
+mouse_state: times 3 dd 0
 
 ;
 ; BIOS Services
@@ -70,14 +73,31 @@ bios_service_32:
     jne .not_input_keyboard_get_scan_code_waiting
     call bios_service_input_keyboard_get_scan_code_waiting_32
     jmp .end
-.not_input_keyboard_get_scan_code_waiting
+.not_input_keyboard_get_scan_code_waiting:
 
     ; Input Keyboard Get Key
     cmp eax, BIOS_SERVICE_INPUT_KEYBOARD_GET_KEY
     jne .not_input_keyboard_get_key
     call bios_service_input_keyboard_get_key_32
     jmp .end
-.not_input_keyboard_get_key
+.not_input_keyboard_get_key:
+
+    ; Initialize mouse
+    cmp eax, BIOS_SERVICE_INPUT_MOUSE_INIT
+    jne .not_input_mouse_init
+    call bios_service_input_mouse_init_32
+    jmp .end
+.not_input_mouse_init:
+
+    ; Update mouse
+    cmp eax, BIOS_SERVICE_INPUT_MOUSE_UPDATE
+    jne .not_input_mouse_update
+    ;xchg bx, bx
+    mov ecx, 1000
+.mouse_update_loop:
+    loop .mouse_update_loop
+    jmp .end
+.not_input_mouse_update:
 
     ; Video VGA Set Mode
     cmp eax, BIOS_SERVICE_VIDEO_VGA_SET_MODE
@@ -240,6 +260,68 @@ bios_service_input_keyboard_get_key_32:
     call switch_to_protected_mode_16
 [bits 32]
     ret
+
+;
+; Initialize mouse callback and return address with status
+; out
+;  eax: status address
+[bits 32]
+bios_service_input_mouse_init_32:
+    xchg bx, bx
+    call switch_to_v86_mode_32
+[bits 16]
+
+    ; Initialize
+    mov ax, 0xc205
+    mov bh, 3
+    int 0x15
+    jc .init_failed
+
+    ; Set callback
+    mov ax, 0xc207
+    mov bx, bios_service_mouse_callback_16
+    int 0x15
+    jc .init_failed
+
+    ; Enable
+    mov ax, 0xc200
+    mov bh, 0x01
+    int 0x15
+    jc .init_failed
+
+    mov eax, mouse_state
+    jmp .end
+
+.init_failed:
+    mov eax, 0x00
+.end:
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
+
+;
+; Callback for BIOS mouse interrupt
+%define .status [bp + 12]
+%define .delta_x [bp + 10]
+%define .delta_y [bp + 8]
+[bits 16]
+bios_service_mouse_callback_16:
+    push bp
+    mov bp, sp
+    push eax
+
+    xchg bx,bx
+
+    movzx eax, word .status
+    and eax, 0111b
+    mov [mouse_state], eax
+
+    pop eax
+    pop bp
+    retf
+%undef .delta_y
+%undef .delta_x
+%undef .status
 
 ;
 ; Get number of sectors of the boot storage

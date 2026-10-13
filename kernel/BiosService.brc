@@ -7,6 +7,8 @@ Service::GET_SECTORS_COUNT u32 <- 0x03
 
 Service::Input::KEYBOARD_GET_SCAN_CODE_WAITING u32 <- 0x10
 Service::Input::KEYBOARD_GET_KEY u32 <- 0x11
+Service::Input::MOUSE_INIT u32 <- 0x12
+Service::Input::MOUSE_UPDATE u32 <- 0x13
 
 Service::Video::VGA_SET_MODE u32 <- 0x20
 Service::Video::VESA_GET_INFO u32 <- 0x21
@@ -58,6 +60,14 @@ biosServiceCallRaw raw<"=r, m, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{mem
 
 @export Input::keyboardGetKey fun -> u16
     ret biosServiceCallRaw(aBiosService.u32, Service::Input::KEYBOARD_GET_KEY, 0, 0, 0).u16
+;
+
+@export Input::mouseInit fun -> a
+    ret biosServiceCallRaw(aBiosService.u32, Service::Input::MOUSE_INIT, 0, 0, 0).a
+;
+
+@export Input::mouseUpdate fun
+    biosServiceCallRaw(aBiosService.u32, Service::Input::MOUSE_UPDATE, 0, 0, 0)
 ;
 
 // Video

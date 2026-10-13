@@ -8,6 +8,20 @@
     arg blob<@B::String> <- @B::String("")
 
     rep
+        //@Syscall::Input::getAscii()
+        ms blob<@Syscall::MouseState> <- @Syscall::Input::getMouseState()
+
+        rep i u32, i < 5, i <- i + 1
+            if ms.buttonsState &? i
+                @B::String("T ").print()
+            else
+                @B::String("F ").print()
+            ;
+        ;
+        @B::String::println()
+    ;
+
+    rep
         @B::String("> ").printColor(@B::String::FOREGROUND_GREEN | @B::String::ATTRIB_BRIGHT)
 
         rep character != '\n'

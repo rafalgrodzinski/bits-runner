@@ -11,6 +11,7 @@
     keyboardNone blob<KeyboardNone>
 
     mousePs2 blob<MousePs2>
+    mouseBios blob<MouseBios>
     mouseNone blob<MouseNone>
 
     init fun
@@ -26,6 +27,8 @@
         // Init Mouse
         if it.mousePs2.init()
             it.primaryMouse <- {it.mousePs2.ptr}
+        else if it.mouseBios.init()
+            it.primaryMouse <- {it.mouseBios.ptr}
         else
             it.primaryMouse <- {it.mouseNone.ptr}
         ;

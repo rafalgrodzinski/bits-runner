@@ -1,0 +1,37 @@
+@module Input
+
+@import BiosService
+@import B
+
+@export MouseBios blob: Mouse
+    aStatus a
+
+    init fun -> bool
+        it.aStatus <- @BiosService::Input::mouseInit()
+        //@B::StringHexForU32(it.aStatus.u32).printlnColor(@B::String::FOREGROUND_GREEN)
+        ret it.aStatus != 0
+    ;
+
+    getButonsState fun -> u32
+        @BiosService::Input::mouseUpdate()
+        ret it.aStatus.ptr<data<u32>>.val[0]
+    ;
+
+    getDeltaX fun -> s32
+        @BiosService::Input::mouseUpdate()
+        x s32 <- it.aStatus.ptr<data<s32>>.val[1]
+        it.aStatus.ptr<data<u32>>.val[1] <- 0
+        ret x
+    ;
+
+    getDeltaY fun -> s32
+        @BiosService::Input::mouseUpdate()
+        y s32 <- it.aStatus.ptr<data<s32>>.val[2]
+        it.aStatus.ptr<data<u32>>.val[2] <- 0
+        ret y
+    ;
+
+    getDeltaZ fun -> s32
+        ret 0
+    ;
+;
