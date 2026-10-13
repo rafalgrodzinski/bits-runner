@@ -8,19 +8,16 @@
 
     init fun -> bool
         it.aStatus <- @BiosService::Input::mouseInit()
-        //@B::StringHexForU32(it.aStatus.u32).printlnColor(@B::String::FOREGROUND_GREEN)
         ret it.aStatus != 0
     ;
 
     getButonsState fun -> u32
         @BiosService::Input::mouseUpdate()
-        it.ps()
         ret it.aStatus.ptr<data<u32>>.val[0]
     ;
 
     getDeltaX fun -> s32
         @BiosService::Input::mouseUpdate()
-        it.ps()
         x s32 <- it.aStatus.ptr<data<s32>>.val[1]
         it.aStatus.ptr<data<u32>>.val[1] <- 0
         ret x
@@ -28,7 +25,6 @@
 
     getDeltaY fun -> s32
         @BiosService::Input::mouseUpdate()
-        it.ps()
         y s32 <- it.aStatus.ptr<data<s32>>.val[2]
         it.aStatus.ptr<data<u32>>.val[2] <- 0
         ret y
@@ -36,23 +32,5 @@
 
     getDeltaZ fun -> s32
         ret 0
-    ;
-
-    ps fun
-        rep i u32, i < 5, i <- i + 1
-            if it.aStatus.ptr<data<u32>>.val[0] &? i
-                @B::String("T ").print()
-            else
-                @B::String("F ").print()
-            ;
-        ;
-
-        @B::String(" ").print()
-        @B::StringForS32(it.aStatus.ptr<data<s32>>.val[1]).print()
-
-        @B::String(" ").print()
-        @B::StringForS32(it.aStatus.ptr<data<s32>>.val[2]).print()
-
-        @B::String::println()
     ;
 ;

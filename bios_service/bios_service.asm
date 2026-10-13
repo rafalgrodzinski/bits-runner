@@ -238,7 +238,7 @@ bios_service_input_keyboard_get_scan_code_waiting_32:
 bios_service_input_keyboard_get_key_32:
     call switch_to_v86_mode_32
 [bits 16]
-    mov cx, 100
+    mov cx, 1000
 .loop:
     mov ah, 0x01
     int 0x16
@@ -251,8 +251,7 @@ bios_service_input_keyboard_get_key_32:
 
 .no_key:
     xor eax, eax
-    dec cx
-    jnz .loop
+    loop .loop
 .end:
     call switch_to_protected_mode_16
 [bits 32]
@@ -264,10 +263,8 @@ bios_service_input_keyboard_get_key_32:
 ;  eax: status address
 [bits 32]
 bios_service_input_mouse_init_32:
-    xchg bx, bx
     call switch_to_v86_mode_32
 [bits 16]
-
     ; Initialize
     mov ax, 0xc205
     mov bh, 3
@@ -302,12 +299,12 @@ bios_service_input_mouse_init_32:
 bios_service_input_mouse_update_32:
     call switch_to_v86_mode_32
 [bits 16]
-    int 0x74
 
 .flushed:
-    mov cx, 1000
-.loop:
-    loop .loop
+    mov cx, 10000
+.wait:
+    in al, 0x80
+    loop .wait
 
     call switch_to_protected_mode_16
 [bits 32]
@@ -324,25 +321,23 @@ bios_service_mouse_callback_16:
     mov bp, sp
     push eax
 
-    xchg bx,bx
-
     movzx eax, word .status
     and eax, 0111b
-    mov [es:mouse_state], eax
+    mov [cs:mouse_state], eax
 
     movzx eax, word .delta_x
     test .status, 00010000b
     jz .x_not_negative
     or eax, 0xffff_ff00
 .x_not_negative:
-    mov [es:mouse_state + 4], eax
+    add [cs:mouse_state + 4], eax
 
     movzx eax, word .delta_y
     test .status, 00100000b
     jz .y_not_negative
     or eax, 0xffff_ff00
 .y_not_negative:
-    mov [es:mouse_state + 8], eax
+    add [cs:mouse_state + 8], eax
 
     pop eax
     pop bp

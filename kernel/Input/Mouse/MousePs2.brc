@@ -2,7 +2,6 @@
 
 @export MousePs2 blob: Mouse
     init fun -> bool
-        ret false
         DriverPs2::instance.init()
         ret DriverPs2::instance.isMousePresent
     ;
