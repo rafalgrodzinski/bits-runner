@@ -11,14 +11,14 @@
         //@Syscall::Input::getAscii()
         ms blob<@Syscall::MouseState> <- @Syscall::Input::getMouseState()
 
-        rep i u32, i < 5, i <- i + 1
+        /*rep i u32, i < 5, i <- i + 1
             if ms.buttonsState &? i
                 @B::String("T ").print()
             else
                 @B::String("F ").print()
             ;
         ;
-        @B::String::println()
+        @B::String::println()*/
     ;
 
     rep

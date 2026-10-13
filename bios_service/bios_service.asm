@@ -92,10 +92,7 @@ bios_service_32:
     ; Update mouse
     cmp eax, BIOS_SERVICE_INPUT_MOUSE_UPDATE
     jne .not_input_mouse_update
-    ;xchg bx, bx
-    mov ecx, 1000
-.mouse_update_loop:
-    loop .mouse_update_loop
+    call bios_service_input_mouse_update_32
     jmp .end
 .not_input_mouse_update:
 
@@ -241,8 +238,8 @@ bios_service_input_keyboard_get_scan_code_waiting_32:
 bios_service_input_keyboard_get_key_32:
     call switch_to_v86_mode_32
 [bits 16]
+    mov cx, 100
 .loop:
-    mov cx, 10
     mov ah, 0x01
     int 0x16
     jz .no_key
@@ -300,6 +297,23 @@ bios_service_input_mouse_init_32:
     ret
 
 ;
+; Run a bit in real mode so the mouse interrupt has a moment to arrive
+[bits 32]
+bios_service_input_mouse_update_32:
+    call switch_to_v86_mode_32
+[bits 16]
+    int 0x74
+
+.flushed:
+    mov cx, 1000
+.loop:
+    loop .loop
+
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
+
+;
 ; Callback for BIOS mouse interrupt
 %define .status [bp + 12]
 %define .delta_x [bp + 10]
@@ -314,7 +328,21 @@ bios_service_mouse_callback_16:
 
     movzx eax, word .status
     and eax, 0111b
-    mov [mouse_state], eax
+    mov [es:mouse_state], eax
+
+    movzx eax, word .delta_x
+    test .status, 00010000b
+    jz .x_not_negative
+    or eax, 0xffff_ff00
+.x_not_negative:
+    mov [es:mouse_state + 4], eax
+
+    movzx eax, word .delta_y
+    test .status, 00100000b
+    jz .y_not_negative
+    or eax, 0xffff_ff00
+.y_not_negative:
+    mov [es:mouse_state + 8], eax
 
     pop eax
     pop bp
