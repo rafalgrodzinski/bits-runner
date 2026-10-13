@@ -31,8 +31,6 @@ OBJS=(
     BSys.o
     BiosService.o
     Bus.o
-    DeviceKeyboard.o
-    DeviceMouse.o
     DrvCmos.o
     Devices.o
     Interrupt.o

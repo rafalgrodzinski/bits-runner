@@ -74,11 +74,6 @@ Dispatcher::tss blob<Tss>
     runNextProcess fun
         if it.processes.count = 0: ret
 
-        // preserve current kernel stack pointer
-        if it.currentProcessIndex < it.processes.count
-            it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.esp0 <- @BSys::getEsp()
-        ;
-
         shouldRun bool <- false
         nextProcessIndex u32 <- it.currentProcessIndex + 1 // start from the next process
         if nextProcessIndex >= it.processes.count: nextProcessIndex <- 0
@@ -110,6 +105,7 @@ Dispatcher::tss blob<Tss>
         ;
 
         // Next process to run has been found
+        oldProcessIndex u32 <- it.currentProcessIndex
         it.currentProcessIndex <- nextProcessIndex
 
         // Run the next process
@@ -118,6 +114,7 @@ Dispatcher::tss blob<Tss>
             Dispatcher::tss.esp0 <- pNextProcess.val.esp0
             Process::startRaw(pNextProcess.val.esp, pNextProcess.val.cr3, GDT_USER_DATA)
         else
+            it.processes.at(oldProcessIndex).ptr<blob<Process>>.val.esp0 <- @BSys::getEsp()
             pNextProcess.val.state <- Process::STATE_RUNNING
             Process::resumeRaw(pNextProcess.val.esp0, pNextProcess.val.cr3)
         ;

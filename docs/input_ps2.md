@@ -44,8 +44,10 @@ Ports:
 - `0x60` Data port
 
 Commands:
-- `0xae` enable primary PS/2 port
-- `0xa8` Enable secondary PS/2 port
+- `0xad` Disable primary port
+- `0xae` Enable primary port
+- `0xa7` Disable secondary port
+- `0xa8` Enable secondary port
 - `0xf3` Set sample rate
 - `0xd4` Send data to secondary PS/2 port
 - `0x20` Get status
