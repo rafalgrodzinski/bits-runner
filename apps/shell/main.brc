@@ -68,8 +68,6 @@
 
         character <- '\0'
         input.clear()
-
-        @Syscall::Process::sleep(10)
     ;
 ;
 
