@@ -221,6 +221,8 @@ bios_service_input_keyboard_get_scan_code_waiting_32:
 bios_service_input_keyboard_get_key_32:
     call switch_to_v86_mode_32
 [bits 16]
+.loop:
+    mov cx, 10
     mov ah, 0x01
     int 0x16
     jz .no_key
@@ -232,6 +234,8 @@ bios_service_input_keyboard_get_key_32:
 
 .no_key:
     xor eax, eax
+    dec cx
+    jnz .loop
 .end:
     call switch_to_protected_mode_16
 [bits 32]
