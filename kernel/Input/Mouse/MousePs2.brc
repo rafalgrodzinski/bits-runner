@@ -3,7 +3,7 @@
 @export MousePs2 blob: Mouse
     init fun -> bool
         DriverPs2::instance.init()
-        ret DriverPs2::instance.isKeyboardInitialized
+        ret DriverPs2::instance.isMousePresent
     ;
 
     getButonsState fun -> u32

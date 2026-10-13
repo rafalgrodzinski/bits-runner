@@ -3,7 +3,7 @@
 @export KeyboardPs2 blob: Keyboard
     init fun -> bool
         DriverPs2::instance.init()
-        ret DriverPs2::instance.isKeyboardInitialized
+        ret DriverPs2::instance.isKeyboardPresent
     ;
 
     getCharacter fun -> u8
