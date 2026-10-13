@@ -1,0 +1,13 @@
+@module Input
+
+@import BiosService
+
+@export KeyboardBios blob: Keyboard
+    init fun -> bool
+        ret true
+    ;
+
+    getCharacter fun -> u8
+        ret (@BiosService::Input::keyboardGetKey() & 0xff).u8
+    ;
+;

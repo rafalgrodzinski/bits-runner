@@ -6,16 +6,19 @@
     primaryKeyboard proto<Keyboard>
     primaryMouse proto<Mouse>
 
-    keyboardNone blob<KeyboardNone>
     keyboardPs2 blob<KeyboardPs2>
+    keyboardBios blob<KeyboardBios>
+    keyboardNone blob<KeyboardNone>
 
-    mouseNone blob<MouseNone>
     mousePs2 blob<MousePs2>
+    mouseNone blob<MouseNone>
 
     init fun
         // Init Keyboard
         if it.keyboardPs2.init()
             it.primaryKeyboard <- {it.keyboardPs2.ptr}
+        else if it.keyboardBios.init()
+            it.primaryKeyboard <- {it.keyboardBios.ptr}
         else
             it.primaryKeyboard <- {it.keyboardNone.ptr}
         ;

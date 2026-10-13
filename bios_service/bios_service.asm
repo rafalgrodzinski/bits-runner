@@ -4,6 +4,7 @@
 %define BIOS_SERVICE_BOOT_STORAGE_SECTORS_COUNT 0x03
 
 %define BIOS_SERVICE_INPUT_KEYBOARD_GET_SCAN_CODE_WAITING 0x10
+%define BIOS_SERVICE_INPUT_KEYBOARD_GET_KEY 0x11
 
 %define BIOS_SERVICE_VIDEO_VGA_SET_MODE 0x20
 %define BIOS_SERVICE_VIDEO_VESA_GET_INFO 0x21
@@ -70,6 +71,13 @@ bios_service_32:
     call bios_service_input_keyboard_get_scan_code_waiting_32
     jmp .end
 .not_input_keyboard_get_scan_code_waiting
+
+    ; Input Keyboard Get Key
+    cmp eax, BIOS_SERVICE_INPUT_KEYBOARD_GET_KEY
+    jne .not_input_keyboard_get_key
+    call bios_service_input_keyboard_get_key_32
+    jmp .end
+.not_input_keyboard_get_key
 
     ; Video VGA Set Mode
     cmp eax, BIOS_SERVICE_VIDEO_VGA_SET_MODE
@@ -200,6 +208,31 @@ bios_service_input_keyboard_get_scan_code_waiting_32:
     mov al, ah ; ah: scan code, al: ascii
     mov ah, 0x00
 
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
+
+;
+; Get current keyboard input without waiting
+; out
+;  ah: scan code
+;  al: ascii
+[bits 32]
+bios_service_input_keyboard_get_key_32:
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ah, 0x01
+    int 0x16
+    jz .no_key
+
+    mov ah, 0x00
+    int 0x16
+    movzx eax, ax
+    jmp .end
+
+.no_key:
+    xor eax, eax
+.end:
     call switch_to_protected_mode_16
 [bits 32]
     ret
