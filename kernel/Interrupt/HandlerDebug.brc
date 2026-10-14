@@ -8,7 +8,7 @@ HandlerDebug::DUMP_MEMORY u32 <- 0x02
 
 @export HandlerDebug blob
     handle fun: pCpuState ptr<blob<CpuState>>, interrupt u32, errorCode u32
-        if interrupt = Int::DEBUG_DUMP_CPU_STATE
+        if interrupt = Handler::INT_DEBUG_DUMP_CPU_STATE
             it.dumpCpuState(pCpuState)
         else if pCpuState.val.eax = HandlerDebug::DUMP_STACK
             it.dumpStack(pCpuState.val.esp.a, pCpuState.val.ebx)

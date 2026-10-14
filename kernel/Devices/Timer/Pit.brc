@@ -1,6 +1,7 @@
 @module Devices
 
 @import BSys
+@import Interrupt
 
 Timer::Pit::DATA_0_PORT u8 <- 0x40
 Timer::Pit::DATA_2_PORT u8 <- 0x42
@@ -8,10 +9,12 @@ Timer::Pit::CMD_PORT u8 <- 0x43
 
 Timer::Pit::FREQ u32 <- 1_193_182 // Hz
 
-Timer::Pit::CHANNEL_0 u8 <- 0b00_000000
-Timer::Pit::CHANNEL_2 u8 <- 0b10_000000
+Timer::Pit::CHANNEL_0 u8 <- 0b00_00_0000
+Timer::Pit::CHANNEL_2 u8 <- 0b10_00_0000
 
-Timer::Pit::MODE_SQUARE_WAVE u8 <- 0b011_0
+Timer::Pit::MODE_SQUARE_WAVE u8 <- 0b0000_011_0
+
+Timer::Pit::ACCESS_LOW_HIGH u8 <- 0b00_11_0000
 
 @export Timer::Pit::instance blob<Timer::Pit>
 
@@ -22,6 +25,9 @@ Timer::Pit::MODE_SQUARE_WAVE u8 <- 0b011_0
     callback1 ptr<fun>
 
     init fun
+        // Register timer IRQ handler
+        @Interrupt::Handler::instance.registerIrqCallback(0, Timer::Pit::irqCallback.ptr)
+
         // 100Hz or more doesn't work correctly on VirtualBox
         it.setTimer(Timer::Pit::CHANNEL_0, Timer::Pit::MODE_SQUARE_WAVE, 20)
     ;
@@ -36,7 +42,7 @@ Timer::Pit::MODE_SQUARE_WAVE u8 <- 0b011_0
             it.interval <- 1_000 / (Timer::Pit::FREQ / divider)
         ;
 
-        @BSys::out8(Timer::Pit::CMD_PORT, channel | mode)
+        @BSys::out8(Timer::Pit::CMD_PORT, channel | mode | Timer::Pit::ACCESS_LOW_HIGH)
 
         dataPort u8 <- if channel = Timer::Pit::CHANNEL_2: Timer::Pit::DATA_2_PORT else: Timer::Pit::DATA_0_PORT
         @BSys::out8(dataPort, (divider & 0xff).u8)
@@ -48,4 +54,8 @@ Timer::Pit::MODE_SQUARE_WAVE u8 <- 0b011_0
         if it.callback0.vadr != 0: it.callback0.val()
         if it.callback1.vadr != 0: it.callback1.val()
     ;
+;
+
+Timer::Pit::irqCallback fun
+    Timer::Pit::instance.handleInterrupt()
 ;

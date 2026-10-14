@@ -25,8 +25,9 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
 @export PagingManager::PAGE_TABLES_ADR a <- 0xffc0_0000
 @export PagingManager::PAGE_TABLES_DIRECTORY_ADR a <- 0xffff_f000
 
-@export PagingManager::FLAGS_RWP u32 <- 0b0011 // Read-Write, Present
-@export PagingManager::FLAGS_URWP u32 <- 0b0111 // User, Read-Write, Present
+@export PagingManager::FLAGS_RWP u32 <- 0b0000_0011 // Read-Write, Present
+@export PagingManager::FLAGS_URWP u32 <- 0b0000_0111 // User, Read-Write, Present
+@export PagingManager::FLAGS_CDRWP u32 <- 0b0001_0011 // Caching Disabled, Read-Write, Present
 
 @export PagingManager::instance blob<PagingManager>
 

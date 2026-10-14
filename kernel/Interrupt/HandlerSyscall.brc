@@ -9,62 +9,61 @@
 @import Storage
 @import Term
 @import Video
+@import Input
 
 // System
-Syscall::System::REBOOT u32 <- 0x000
-Syscall::System::GET_TIMESTAMP u32 <- 0x010
-Syscall::System::GET_INFO_PCI u32 <- 0x021
-Syscall::System::GRAB_RESOURCE u32 <- 0x030
-Syscall::System::RELEASE_RESOURCE u32 <- 0x031
+HandlerSyscall::System::REBOOT u32 <- 0x000
+HandlerSyscall::System::GET_TIMESTAMP u32 <- 0x010
+HandlerSyscall::System::GET_INFO_PCI u32 <- 0x021
+HandlerSyscall::System::GRAB_RESOURCE u32 <- 0x030
+HandlerSyscall::System::RELEASE_RESOURCE u32 <- 0x031
 
-Syscall::System::ResourceCategory::GET_STORAGE_ENTRY u32 <- 0x01
-Syscall::System::ResourceCategory::CREATE_STORAGE_ENTRY u32 <- 0x02
-Syscall::System::ResourceCategory::VIDEO_GET_SURFACE u32 <- 0x03
+HandlerSyscall::System::ResourceCategory::GET_STORAGE_ENTRY u32 <- 0x01
+HandlerSyscall::System::ResourceCategory::CREATE_STORAGE_ENTRY u32 <- 0x02
+HandlerSyscall::System::ResourceCategory::VIDEO_GET_SURFACE u32 <- 0x03
 
 // Memory
-Syscall::Memory::GET_INFO u32 <- 0x100
+HandlerSyscall::Memory::GET_INFO u32 <- 0x100
 
 // Process
-Syscall::Process::YIELD u32 <- 0x200
-Syscall::Process::SLEEP u32 <- 0x201
+HandlerSyscall::Process::YIELD u32 <- 0x200
+HandlerSyscall::Process::SLEEP u32 <- 0x201
 
 // Storage
-Syscall::Storage::GET_ENTRY_INFO u32 <- 0x300
-Syscall::Storage::DELETE_ENTRY u32 <- 0x301
-Syscall::Storage::READ_ENTRY u32 <- 0x302
-Syscall::Storage::WRITE_ENTRY u32 <- 0x303
+HandlerSyscall::Storage::GET_ENTRY_INFO u32 <- 0x300
+HandlerSyscall::Storage::DELETE_ENTRY u32 <- 0x301
+HandlerSyscall::Storage::READ_ENTRY u32 <- 0x302
+HandlerSyscall::Storage::WRITE_ENTRY u32 <- 0x303
 
 // Input
-Syscall::Input::KEYBOARD_GET_ASCII u32 <- 0x401
-Syscall::Input::MOUSE_GET_STATE u32 <- 0x410
+HandlerSyscall::Input::KEYBOARD_GET_CHARACTER u32 <- 0x401
+HandlerSyscall::Input::MOUSE_GET_STATE u32 <- 0x410
 
 // Terminal
-Syscall::Terminal::PRINT_CHARACTER u32 <- 0x501
+HandlerSyscall::Terminal::PRINT_CHARACTER u32 <- 0x501
 
 // Video
-Syscall::Video::GET_MODES_COUNT u32 <- 0x600
-Syscall::Video::GET_MODE_INFO u32 <- 0x601
+HandlerSyscall::Video::GET_MODES_COUNT u32 <- 0x600
+HandlerSyscall::Video::GET_MODE_INFO u32 <- 0x601
 
-Syscall::Video::COMMIT u32 <- 0x610
+HandlerSyscall::Video::COMMIT u32 <- 0x610
 
-Syscall::Video::CLEAR u32 <- 0x620
-Syscall::Video::DRAW_PIXEL u32 <- 0x621
-Syscall::Video::DRAW_LINE u32 <- 0x622
+HandlerSyscall::Video::CLEAR u32 <- 0x620
+HandlerSyscall::Video::DRAW_PIXEL u32 <- 0x621
+HandlerSyscall::Video::DRAW_LINE u32 <- 0x622
 
 // Audio
-Syscall::Audio::PLAY u32 <- 0x700
-Syscall::Audio::STOP u32 <- 0x701
+HandlerSyscall::Audio::PLAY u32 <- 0x700
+HandlerSyscall::Audio::STOP u32 <- 0x701
 
-@export SyscallHandler::instance blob<SyscallHandler>
-
-@export SyscallHandler blob
+@export HandlerSyscall blob
     handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32 -> u32
         // System
-        if eax = Syscall::System::REBOOT
+        if eax = HandlerSyscall::System::REBOOT
             @BiosService::reboot()
-        else if eax = Syscall::System::GET_TIMESTAMP
+        else if eax = HandlerSyscall::System::GET_TIMESTAMP
             ret @DrvCmos::getTimestamp()
-        else if eax = Syscall::System::GET_INFO_PCI
+        else if eax = HandlerSyscall::System::GET_INFO_PCI
             pInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
             pInfo.val[0] <- @Bus::devicesPciCount
             rep i u32, i < @Bus::devicesPciCount, i <- i + 1
@@ -77,7 +76,7 @@ Syscall::Audio::STOP u32 <- 0x701
                 pInfo.val[i * 7 + 6] <- @Bus::devicesPci[i].class.u32
                 pInfo.val[i * 7 + 7] <- @Bus::devicesPci[i].subclass.u32
             ;
-        else if eax = Syscall::System::GRAB_RESOURCE
+        else if eax = HandlerSyscall::System::GRAB_RESOURCE
             category u32 <- ebx
             arg0 u32 <- ecx
             arg1 u32 <- edx
@@ -85,7 +84,7 @@ Syscall::Audio::STOP u32 <- 0x701
             pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
             if pCurrentProcess.vadr = 0: ret 0
 
-            if category = Syscall::System::ResourceCategory::GET_STORAGE_ENTRY
+            if category = HandlerSyscall::System::ResourceCategory::GET_STORAGE_ENTRY
                 pPath ptr<blob<@B::String>> <- arg0.a.ptr<blob<@B::String>>
                 pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.getEntry(pPath.val)
                 if pEntry.vadr != 0
@@ -93,7 +92,7 @@ Syscall::Audio::STOP u32 <- 0x701
                 else
                     ret 0
                 ;
-            else if category = Syscall::System::ResourceCategory::CREATE_STORAGE_ENTRY
+            else if category = HandlerSyscall::System::ResourceCategory::CREATE_STORAGE_ENTRY
                 pPath ptr<blob<@B::String>> <- arg0.a.ptr<blob<@B::String>>
                 pEntry ptr<blob<@Storage::Entry>> <- @Storage::instance.bootFilesystem.createEntry(pPath.val, @Storage::Entry::Kind::FILE)
                 if pEntry.vadr != 0
@@ -101,7 +100,7 @@ Syscall::Audio::STOP u32 <- 0x701
                 else
                     ret 0
                 ;
-            else if category = Syscall::System::ResourceCategory::VIDEO_GET_SURFACE
+            else if category = HandlerSyscall::System::ResourceCategory::VIDEO_GET_SURFACE
                 modeId u32 <- arg0
 
                 // Try matching request mode id with the available ones
@@ -115,10 +114,10 @@ Syscall::Audio::STOP u32 <- 0x701
                 ;
                 ret 0
             ;
-        else if eax = Syscall::System::RELEASE_RESOURCE
+        else if eax = HandlerSyscall::System::RELEASE_RESOURCE
             // TODO
         // Memory
-        else if eax = Syscall::Memory::GET_INFO
+        else if eax = HandlerSyscall::Memory::GET_INFO
             pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
             pInfoMem.val[0] <- @Memory::PagingManager::instance.getInfoTotalSize()
             pInfoMem.val[1] <- @Memory::PagingManager::instance.getInfoTotalPages()
@@ -133,12 +132,12 @@ Syscall::Audio::STOP u32 <- 0x701
             pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
             pInfoMem.val[6] <- if pCurrentProcess.vadr != 0: pCurrentProcess.val.pages.count else: 0
         // Process
-        else if eax = Syscall::Process::YIELD
+        else if eax = HandlerSyscall::Process::YIELD
             @Dispatch::Dispatcher::instance.yield()
-        else if eax = Syscall::Process::SLEEP
+        else if eax = HandlerSyscall::Process::SLEEP
             @Dispatch::Dispatcher::instance.sleep(ebx)
         // Storage
-        else if eax = Syscall::Storage::GET_ENTRY_INFO
+        else if eax = HandlerSyscall::Storage::GET_ENTRY_INFO
             resourceId u32 <- ebx
             pEntryInfo ptr<data<u32>> <- ecx.a.ptr<data<u32>>
 
@@ -150,14 +149,14 @@ Syscall::Audio::STOP u32 <- 0x701
                                     else if pEntry.val.kind = @Storage::Entry::Kind::DIRECTORY: pEntry.val.getChildrenCount()
                                     else: 0
             ;
-        else if eax = Syscall::Storage::DELETE_ENTRY
+        else if eax = HandlerSyscall::Storage::DELETE_ENTRY
             resourceId u32 <- ebx
             pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
             pEntry ptr<blob<@Storage::Entry>> <- pCurrentProcess.val.resourceForResourceId(resourceId).ptr<blob<@Storage::Entry>>
             if pEntry.vadr != 0
                 pEntry.val.delete()
             ;
-        else if eax = Syscall::Storage::READ_ENTRY
+        else if eax = HandlerSyscall::Storage::READ_ENTRY
             resourceId u32 <- ebx
             startByte u32 <- ecx
             bytesCount u32 <- edx
@@ -167,7 +166,7 @@ Syscall::Audio::STOP u32 <- 0x701
             pEntry ptr<blob<@Storage::Entry>> <- pCurrentProcess.val.resourceForResourceId(resourceId).ptr<blob<@Storage::Entry>>
             if pEntry.vadr != 0: ret pEntry.val.read(startByte, bytesCount, targetAddress)
             ret 0
-        else if eax = Syscall::Storage::WRITE_ENTRY
+        else if eax = HandlerSyscall::Storage::WRITE_ENTRY
             resourceId u32 <- ebx
             startByte u32 <- ecx
             bytesCount u32 <- edx
@@ -178,23 +177,21 @@ Syscall::Audio::STOP u32 <- 0x701
             if pEntry.vadr != 0: ret pEntry.val.write(startByte, bytesCount, sourceAddress)
             ret 0
         // Input
-        else if eax = Syscall::Input::KEYBOARD_GET_ASCII
-            ascii u32 <- deviceKeyboard.getAscii()
-            deviceKeyboard.resetState()
-            ret ascii
-        else if eax = Syscall::Input::MOUSE_GET_STATE
+        else if eax = HandlerSyscall::Input::KEYBOARD_GET_CHARACTER
+            ret @Input::instance.primaryKeyboard.getCharacter()
+        else if eax = HandlerSyscall::Input::MOUSE_GET_STATE
             pMouseState ptr<data<s32>> <- ebx.a.ptr<data<s32>>
-            pMouseState.val[0] <- deviceMouse.getButtonsState()
-            pMouseState.val[1] <- deviceMouse.getDeltaX()
-            pMouseState.val[2] <- deviceMouse.getDeltaY()
-            deviceMouse.resetState()
+            pMouseState.val[0] <- @Input::instance.primaryMouse.getButonsState()
+            pMouseState.val[1] <- @Input::instance.primaryMouse.getDeltaX()
+            pMouseState.val[2] <- @Input::instance.primaryMouse.getDeltaY()
+            pMouseState.val[3] <- @Input::instance.primaryMouse.getDeltaZ()
         // Terminal
-        else if eax = Syscall::Terminal::PRINT_CHARACTER
+        else if eax = HandlerSyscall::Terminal::PRINT_CHARACTER
             @Term::printCharacter(ebx.u8, ecx.u8)
         // Video
-        else if eax = Syscall::Video::GET_MODES_COUNT
+        else if eax = HandlerSyscall::Video::GET_MODES_COUNT
             ret @Video::instance.primaryAdapter.getModes().count
-        else if eax = Syscall::Video::GET_MODE_INFO
+        else if eax = HandlerSyscall::Video::GET_MODE_INFO
             pModeInfo ptr<data<u32>> <- ebx.a.ptr<data<u32>>
 
             pMode ptr<blob<@Video::Mode>> <- @Video::instance.primaryAdapter.getModes().at(ecx).ptr<blob<@Video::Mode>>
@@ -202,13 +199,13 @@ Syscall::Audio::STOP u32 <- 0x701
             pModeInfo.val[1] <- pMode.val.width
             pModeInfo.val[2] <- pMode.val.height
             pModeInfo.val[3] <- pMode.val.bpp
-        else if eax = Syscall::Video::COMMIT
+        else if eax = HandlerSyscall::Video::COMMIT
             pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
             pSurface ptr<blob<@Video::Surface>> <- pCurrentProcess.val.resourceForResourceId(ebx).ptr<blob<@Video::Surface>>
             if pSurface.vadr = 0: ret 0
 
             pSurface.val.commit()
-        else if eax = Syscall::Video::CLEAR
+        else if eax = HandlerSyscall::Video::CLEAR
             pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
             pSurface ptr<blob<@Video::Surface>> <- pCurrentProcess.val.resourceForResourceId(ebx).ptr<blob<@Video::Surface>>
             if pSurface.vadr = 0: ret 0
@@ -218,7 +215,7 @@ Syscall::Audio::STOP u32 <- 0x701
             blue u8 <- ((ecx >> 0) & 0xff).u8
 
             pSurface.val.clear(red, green, blue)
-        else if eax = Syscall::Video::DRAW_PIXEL
+        else if eax = HandlerSyscall::Video::DRAW_PIXEL
             pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
             pSurface ptr<blob<@Video::Surface>> <- pCurrentProcess.val.resourceForResourceId(ebx).ptr<blob<@Video::Surface>>
             if pSurface.vadr = 0: ret 0
@@ -231,7 +228,7 @@ Syscall::Audio::STOP u32 <- 0x701
             blue u8 <- ((esi >> 0) & 0xff).u8
 
             pSurface.val.drawPixel(x, y, red, green, blue)
-        else if eax = Syscall::Video::DRAW_LINE
+        else if eax = HandlerSyscall::Video::DRAW_LINE
             pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
             pSurface ptr<blob<@Video::Surface>> <- pCurrentProcess.val.resourceForResourceId(ebx).ptr<blob<@Video::Surface>>
             if pSurface.vadr = 0: ret 0
@@ -247,9 +244,9 @@ Syscall::Audio::STOP u32 <- 0x701
 
             pSurface.val.drawLine(x1, y1, x2, y2, red, green, blue)
         // Audio
-        else if eax = Syscall::Audio::PLAY
+        else if eax = HandlerSyscall::Audio::PLAY
             @Devices::Audio::Speaker::instance.play(ebx, ecx)
-        else if eax = Syscall::Audio::STOP
+        else if eax = HandlerSyscall::Audio::STOP
             @Devices::Audio::Speaker::instance.stop()
         ;
 

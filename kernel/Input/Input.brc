@@ -1,0 +1,36 @@
+@module Input
+
+@export instance blob<Input>
+
+@export Input blob
+    primaryKeyboard proto<Keyboard>
+    primaryMouse proto<Mouse>
+
+    keyboardPs2 blob<KeyboardPs2>
+    keyboardBios blob<KeyboardBios>
+    keyboardNone blob<KeyboardNone>
+
+    mousePs2 blob<MousePs2>
+    mouseBios blob<MouseBios>
+    mouseNone blob<MouseNone>
+
+    init fun
+        // Init Keyboard
+        if it.keyboardPs2.init()
+            it.primaryKeyboard <- {it.keyboardPs2.ptr}
+        else if it.keyboardBios.init()
+            it.primaryKeyboard <- {it.keyboardBios.ptr}
+        else
+            it.primaryKeyboard <- {it.keyboardNone.ptr}
+        ;
+
+        // Init Mouse
+        if it.mousePs2.init()
+            it.primaryMouse <- {it.mousePs2.ptr}
+        else if it.mouseBios.init()
+            it.primaryMouse <- {it.mouseBios.ptr}
+        else
+            it.primaryMouse <- {it.mouseNone.ptr}
+        ;
+    ;
+;

@@ -3,6 +3,11 @@
 %define BIOS_SERVICE_BOOT_STORAGE_WRITE_SECTORS 0x04
 %define BIOS_SERVICE_BOOT_STORAGE_SECTORS_COUNT 0x03
 
+%define BIOS_SERVICE_INPUT_KEYBOARD_GET_SCAN_CODE_WAITING 0x10
+%define BIOS_SERVICE_INPUT_KEYBOARD_GET_KEY 0x11
+%define BIOS_SERVICE_INPUT_MOUSE_INIT 0x12
+%define BIOS_SERVICE_INPUT_MOUSE_UPDATE 0x13
+
 %define BIOS_SERVICE_VIDEO_VGA_SET_MODE 0x20
 %define BIOS_SERVICE_VIDEO_VESA_GET_INFO 0x21
 %define BIOS_SERVICE_VIDEO_VESA_GET_MODE_INFO 0x22
@@ -14,6 +19,7 @@
 %define BIOS_SERVICE_GPXS_MODE_320x200x8 0x13
 
 saved_eax: dd 0
+mouse_state: times 3 dd 0
 
 ;
 ; BIOS Services
@@ -61,6 +67,34 @@ bios_service_32:
     call bios_service_boot_storage_sectors_count_32
     jmp .end
 .not_sectors_count:
+
+    ; Input Keyboard Get Scan Code Waiting
+    cmp eax, BIOS_SERVICE_INPUT_KEYBOARD_GET_SCAN_CODE_WAITING
+    jne .not_input_keyboard_get_scan_code_waiting
+    call bios_service_input_keyboard_get_scan_code_waiting_32
+    jmp .end
+.not_input_keyboard_get_scan_code_waiting:
+
+    ; Input Keyboard Get Key
+    cmp eax, BIOS_SERVICE_INPUT_KEYBOARD_GET_KEY
+    jne .not_input_keyboard_get_key
+    call bios_service_input_keyboard_get_key_32
+    jmp .end
+.not_input_keyboard_get_key:
+
+    ; Initialize mouse
+    cmp eax, BIOS_SERVICE_INPUT_MOUSE_INIT
+    jne .not_input_mouse_init
+    call bios_service_input_mouse_init_32
+    jmp .end
+.not_input_mouse_init:
+
+    ; Update mouse
+    cmp eax, BIOS_SERVICE_INPUT_MOUSE_UPDATE
+    jne .not_input_mouse_update
+    call bios_service_input_mouse_update_32
+    jmp .end
+.not_input_mouse_update:
 
     ; Video VGA Set Mode
     cmp eax, BIOS_SERVICE_VIDEO_VGA_SET_MODE
@@ -177,6 +211,140 @@ bios_service_boot_storage_write_sectors_32:
 %undef .sectors_count
 %undef .source_lba_address
 %undef .args_count
+
+;
+; Wait for keyboard input
+; out
+;  eax: scan code
+[bits 32]
+bios_service_input_keyboard_get_scan_code_waiting_32:
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ah, 0x00
+    int 0x16
+    mov al, ah ; ah: scan code, al: ascii
+    mov ah, 0x00
+
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
+
+;
+; Get current keyboard input without waiting
+; out
+;  ah: scan code
+;  al: ascii
+[bits 32]
+bios_service_input_keyboard_get_key_32:
+    call switch_to_v86_mode_32
+[bits 16]
+    mov cx, 1000
+.loop:
+    mov ah, 0x01
+    int 0x16
+    jz .no_key
+
+    mov ah, 0x00
+    int 0x16
+    movzx eax, ax
+    jmp .end
+
+.no_key:
+    xor eax, eax
+    loop .loop
+.end:
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
+
+;
+; Initialize mouse callback and return address with status
+; out
+;  eax: status address
+[bits 32]
+bios_service_input_mouse_init_32:
+    call switch_to_v86_mode_32
+[bits 16]
+    ; Initialize
+    mov ax, 0xc205
+    mov bh, 3
+    int 0x15
+    jc .init_failed
+
+    ; Set callback
+    mov ax, 0xc207
+    mov bx, bios_service_mouse_callback_16
+    int 0x15
+    jc .init_failed
+
+    ; Enable
+    mov ax, 0xc200
+    mov bh, 0x01
+    int 0x15
+    jc .init_failed
+
+    mov eax, mouse_state
+    jmp .end
+
+.init_failed:
+    mov eax, 0x00
+.end:
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
+
+;
+; Run a bit in real mode so the mouse interrupt has a moment to arrive
+[bits 32]
+bios_service_input_mouse_update_32:
+    call switch_to_v86_mode_32
+[bits 16]
+
+.flushed:
+    mov cx, 10000
+.wait:
+    in al, 0x80
+    loop .wait
+
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
+
+;
+; Callback for BIOS mouse interrupt
+%define .status [bp + 12]
+%define .delta_x [bp + 10]
+%define .delta_y [bp + 8]
+[bits 16]
+bios_service_mouse_callback_16:
+    push bp
+    mov bp, sp
+    push eax
+
+    movzx eax, word .status
+    and eax, 0111b
+    mov [cs:mouse_state], eax
+
+    movzx eax, word .delta_x
+    test .status, 00010000b
+    jz .x_not_negative
+    or eax, 0xffff_ff00
+.x_not_negative:
+    add [cs:mouse_state + 4], eax
+
+    movzx eax, word .delta_y
+    test .status, 00100000b
+    jz .y_not_negative
+    or eax, 0xffff_ff00
+.y_not_negative:
+    add [cs:mouse_state + 8], eax
+
+    pop eax
+    pop bp
+    retf
+%undef .delta_y
+%undef .delta_x
+%undef .status
 
 ;
 ; Get number of sectors of the boot storage
