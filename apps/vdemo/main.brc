@@ -8,7 +8,7 @@ mode0 blob<@Syscall::Video::ModeInfo>
 mode1 blob<@Syscall::Video::ModeInfo>
 resourceId u32
 
-DEMOS_COUNT u32 <- 5
+DEMOS_COUNT u32 <- 6
 demoMode u32 <- 0
 
 ascii u32
@@ -92,6 +92,7 @@ readMouse fun
         else if demoMode = 2: demo_2()
         else if demoMode = 3: demo_3()
         else if demoMode = 4: demo_4()
+        else if demoMode = 5: demo_5()
     ;
 ;
 
@@ -115,6 +116,7 @@ demo_0 fun
                 r <- x * 255 / width
             ;
 
+            readKeyboard()
             @Syscall::Video::drawPixel(resourceId, x, y, r.u8, g.u8, b.u8)
         ;
     ;
@@ -126,6 +128,41 @@ demo_0 fun
 ;
 
 demo_1 fun
+    setMode(0)
+
+    @Syscall::Video::clear(resourceId, 0, 0, 0)
+    @Syscall::Video::commit(resourceId)
+
+    rep y u32, y < height, y <- y + 1
+        rep x u32, x < width, x <- x + 1
+            r u32
+            g u32
+            b u32
+
+            r <- (height - y) * 128 / height
+            if x >= width / 2   
+                r <- r + (width - x) * 128 / width
+            else
+                r <- r + x * 128 / width
+            ;
+
+            g <- (width - x) * 128 / width
+            g <- g + (y * 128) / height
+
+            b <- x * 128 / width
+            b <- b + (y * 128) / height
+
+            @Syscall::Video::drawPixel(resourceId, x, y, r.u8, g.u8, b.u8)
+        ;
+    ;
+    @Syscall::Video::commit(resourceId)
+
+    rep demoMode = 1
+        readKeyboard()
+    ;
+;
+
+demo_2 fun
     setMode(0)
 
     xPos s32 <- width.s32 / 2
@@ -141,7 +178,7 @@ demo_1 fun
     bgGreen u8 <- 28
     bgBlue u8 <- 177
 
-    rep demoMode = 1
+    rep demoMode = 2
         readKeyboard()
         readMouse()
 
@@ -194,7 +231,7 @@ demo_1 fun
     ;
 ;
 
-demo_2 fun
+demo_3 fun
     setMode(1)
 
     xPos s32 <- width.s32 / 2
@@ -208,7 +245,7 @@ demo_2 fun
     bgGreen u8 <- 133
     bgBlue u8 <- 233
 
-    rep demoMode = 2
+    rep demoMode = 3
         readKeyboard()
         readMouse()
 
@@ -261,7 +298,7 @@ demo_2 fun
     ;
 ;
 
-demo_3 fun
+demo_4 fun
     setMode(0)
 
     x1 s32 <- width.s32 / 2
@@ -276,7 +313,7 @@ demo_3 fun
 
     isFront bool <- true
 
-    rep demoMode = 3
+    rep demoMode = 4
         readKeyboard()
         readMouse()
 
@@ -333,7 +370,7 @@ demo_3 fun
     ;
 ;
 
-demo_4 fun
+demo_5 fun
     setMode(0)
 
     POINTS_COUNT u32 <- 5
@@ -347,7 +384,7 @@ demo_4 fun
     green u8 <- 33
     blue u8 <- 200
 
-    rep demoMode = 4
+    rep demoMode = 5
         readKeyboard()
         readMouse()
 
