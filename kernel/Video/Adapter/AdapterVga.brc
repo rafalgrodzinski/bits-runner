@@ -131,6 +131,20 @@ VGA_MODE_640x480x4 u32 <- 0x00
             // turn on byte mode
             @BSys::out8(CRTC_INDEX_PORT, 0x17)
             @BSys::out8(CRTC_DATA_PORT, 0xe3)
+
+            // Switch to RGB332 palette
+            @BSys::out8(0x03c6, 0xff) // Mask all registers
+            @BSys::out8(0x03c8, 0) // Start from index 0
+            rep i u32, i < 256, i <- i + 1
+                red u8 <- (i.u8 & 0b1110_0000) >> 5
+                green u8 <- (i.u8 & 0b0001_1100) >> 2
+                blue u8 <- i.u8 & 0b0000_0011
+
+                // Convert each component into 0..63 range
+                @BSys::out8(0x03c9, red * 9)
+                @BSys::out8(0x03c9, green * 9)
+                @BSys::out8(0x03c9, blue * 21)
+            ;
         else if pMode.val.id = VGA_MODE_640x480x4
             it.pBackPageBuffer <- it.pFirstPageBuffer
             @BiosService::Video::vgaSetMode(0x12)

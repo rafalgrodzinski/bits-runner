@@ -98,6 +98,36 @@ readMouse fun
 demo_0 fun
     setMode(0)
 
+    @Syscall::Video::clear(resourceId, 0, 0, 0)
+    @Syscall::Video::commit(resourceId)
+
+    rep y u32, y < height, y <- y + 1
+        rep x u32, x < width, x <- x + 1
+            r u32
+            g u32
+            b u32
+
+            if y >= height * 2 / 3
+                b <- x * 255 / width
+            else if y >= height / 3
+                g <- x * 255 / width
+            else
+                r <- x * 255 / width
+            ;
+
+            @Syscall::Video::drawPixel(resourceId, x, y, r.u8, g.u8, b.u8)
+        ;
+    ;
+    @Syscall::Video::commit(resourceId)
+
+    rep demoMode = 0
+        readKeyboard()
+    ;
+;
+
+demo_1 fun
+    setMode(0)
+
     xPos s32 <- width.s32 / 2
     yPos s32 <- width.s32 / 2
     xVel s32 <- 5
@@ -111,7 +141,7 @@ demo_0 fun
     bgGreen u8 <- 28
     bgBlue u8 <- 177
 
-    rep demoMode = 0
+    rep demoMode = 1
         readKeyboard()
         readMouse()
 
@@ -164,7 +194,7 @@ demo_0 fun
     ;
 ;
 
-demo_1 fun
+demo_2 fun
     setMode(1)
 
     xPos s32 <- width.s32 / 2
@@ -178,7 +208,7 @@ demo_1 fun
     bgGreen u8 <- 133
     bgBlue u8 <- 233
 
-    rep demoMode = 1
+    rep demoMode = 2
         readKeyboard()
         readMouse()
 
@@ -228,24 +258,6 @@ demo_1 fun
         ;
 
         @Syscall::Video::commit(resourceId)
-    ;
-;
-
-demo_2 fun
-    setMode(1)
-
-    rep iy u32 <- 0, iy < height, iy <- iy + 1
-        rep ix u32 <- 0, ix < width, ix <- ix + 1
-            red u8 <- ((ix / (width / 255)) + (iy / (height / 255) * 8)).u8
-            green u8 <- ((ix / (width / 255)) + (iy / (height / 255) * 8)).u8
-            blue u8 <- ((ix / (width / 255)) + (iy / (height / 255) * 8)).u8
-            @Syscall::Video::drawPixel(resourceId, ix, iy, red, green, blue)
-        ;
-    ;
-
-    rep demoMode = 2
-        readKeyboard()
-        readMouse()
     ;
 ;
 

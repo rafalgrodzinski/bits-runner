@@ -6,15 +6,18 @@
 - `0x03cf` GC Data
 
 - `0x03d4` CRTC Index
-- `0x03d5` CRTC Data
+- `0x03d5` CRTC Data 
 
 - `0x03c2` Misc Output
 
 - `0x03da` Input Status 1
 
-- `0x03c7 (u8)` Palette color index source select
-- `0x03c8 (u8)` Palette color index target select
-- `0x03c9 (u8)` Palette color red, green, and blue values (three reads/writes)
+```
+0x03c6 (u8): Palette mask
+0x03c7 (u8): Palette color index source select
+0x03c8 (u8): Palette color index target select
+0x03c9 (u8): Palette color data - red, green, and blue values (three reads/writes)
+```
 
 ## Registers
 - `0x00` Set/Reset Value
@@ -32,6 +35,8 @@ To read current color palette:
 - Write source color index byt to port `0x03c7`
 - Read a byte three times for red, green, and blue from port `0x03c9`
 - After three read, the source index is automatically incremented
+
+Each color component is a 6 bit value, so it can have a range of 0..63.
 
 ## Additional Resources
 - Free VGA Project [http://www.osdever.net/FreeVGA/home.htm](http://www.osdever.net/FreeVGA/home.htm)
