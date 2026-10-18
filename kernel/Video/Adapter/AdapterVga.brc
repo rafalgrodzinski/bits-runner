@@ -18,6 +18,7 @@ INPUT_STATUS_1_PORT u16 <- 0x03da
 SET_RESET_VALUE_REG u8 <- 0x00
 SET_RESET_REG u8 <- 0x01
 MAP_MASK_REG u8 <- 0x02
+DATA_ROTATE_REG u8 <- 0x03
 MODE_REG u8 <- 0x05
 BIT_MASK_REG u8 <- 0x08
 
@@ -25,8 +26,7 @@ VGA_MODE_320x240x8 u32 <- 0x01
 VGA_MODE_640x480x4 u32 <- 0x00
 
 @export AdapterVga blob: Adapter
-    pFirstPageBuffer ptr_volatile<data<u8>>
-    pSecondPageBuffer ptr_volatile<data<u8>>
+    pFrontPageBuffer ptr_volatile<data<u8>>
     pBackPageBuffer ptr_volatile<data<u8>>
 
     toPixel fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8 -> u8
@@ -81,11 +81,10 @@ VGA_MODE_640x480x4 u32 <- 0x00
         pSurface.val.pMode <- pMode
 
         // Setup adapter
-        it.pFirstPageBuffer <- { 0x0a0000 }
+        it.pFrontPageBuffer <- { 0x0a0000 }
 
         if pMode.val.id = VGA_MODE_320x240x8
-            it.pSecondPageBuffer <- {it.pFirstPageBuffer.vadr + pMode.val.width * pMode.val.height / 4}
-            it.pBackPageBuffer <- it.pSecondPageBuffer
+            it.pBackPageBuffer <- {it.pFrontPageBuffer.vadr + pMode.val.width * pMode.val.height / 4}
 
             // first setup it as linear 320x200
             @BiosService::Video::vgaSetMode(0x13)
@@ -146,16 +145,9 @@ VGA_MODE_640x480x4 u32 <- 0x00
                 @BSys::out8(0x03c9, blue * 21)
             ;
         else if pMode.val.id = VGA_MODE_640x480x4
-            it.pBackPageBuffer <- it.pFirstPageBuffer
+            // Allocate back buffer
+            it.pBackPageBuffer <- @BSys::memAlloc(pMode.val.width * pMode.val.height / 2).ptr_volatile<data<u8>>
             @BiosService::Video::vgaSetMode(0x12)
-
-            // switch to mode 0
-            @BSys::out8(GC_INDEX_PORT, MODE_REG)
-            @BSys::out8(GC_DATA_PORT, 0x00)
-
-            // enable set/reset on all planes
-            @BSys::out8(GC_INDEX_PORT, SET_RESET_REG)
-            @BSys::out8(GC_DATA_PORT, 0x0f)
         ;
 
         ret pSurface
@@ -163,19 +155,16 @@ VGA_MODE_640x480x4 u32 <- 0x00
 
     commit fun: pMode ptr<blob<Mode>>
         if pMode.val.id = VGA_MODE_320x240x8
-            // wait for current vsync to finish
-            rep @BSys::in8(INPUT_STATUS_1_PORT) &? 0x08:
-
+            // get offset to the new front buffer
             bufferOffset u32 <- 0
-
-            // swap back buffer
-            if it.pBackPageBuffer.vadr = it.pFirstPageBuffer.vadr
-                bufferOffset <- 0
-                it.pBackPageBuffer <- it.pSecondPageBuffer
-            else
-                bufferOffset <- (it.pSecondPageBuffer.vadr - it.pFirstPageBuffer.vadr).u32
-                it.pBackPageBuffer <- it.pFirstPageBuffer
+            if it.pBackPageBuffer.vadr > it.pFrontPageBuffer.vadr
+                bufferOffset <- (it.pBackPageBuffer.vadr - it.pFrontPageBuffer.vadr).u32
             ;
+
+            // swap front with back
+            temp ptr_volatile<data<u8>> <- it.pFrontPageBuffer
+            it.pFrontPageBuffer <- it.pBackPageBuffer
+            it.pBackPageBuffer <- temp
 
             @BSys::out8(CRTC_INDEX_PORT, 0x0c)
             @BSys::out8(CRTC_DATA_PORT, ((bufferOffset >> 8) & 0xff).u8)
@@ -186,13 +175,30 @@ VGA_MODE_640x480x4 u32 <- 0x00
             // wait for vsync to start
             rep not @BSys::in8(INPUT_STATUS_1_PORT) &? 0x08:
         else if pMode.val.id = VGA_MODE_640x480x4
-            /*
-            // wait for current vsync to finish
-            rep in8(INPUT_STATUS_1_PORT) &? 0x08:
+            @BSys::out8(GC_INDEX_PORT, SET_RESET_REG)
+            @BSys::out8(GC_DATA_PORT, 0x00)
             
+            @BSys::out8(GC_INDEX_PORT, DATA_ROTATE_REG)
+            @BSys::out8(GC_DATA_PORT, 0x00)
+
+            @BSys::out8(GC_INDEX_PORT, MODE_REG)
+            @BSys::out8(GC_DATA_PORT, 0x00)
+
+            @BSys::out8(GC_INDEX_PORT, BIT_MASK_REG)
+            @BSys::out8(GC_DATA_PORT, 0xff)
+            
+            rep planeIndex u32, planeIndex < 4, planeIndex <- planeIndex + 1
+                @BSys::out8(SC_INDEX_PORT, MAP_MASK_REG)
+                @BSys::out8(SC_DATA_PORT, 1 << planeIndex)
+
+                planeOffset u32 <- planeIndex * pMode.val.width * pMode.val.height / 8
+                rep valueIndex u32, valueIndex < pMode.val.width * pMode.val.height / 8, valueIndex <- valueIndex + 1
+                    it.pFrontPageBuffer.val[valueIndex] <- it.pBackPageBuffer.val[planeOffset + valueIndex]
+                ;
+            ;
+
             // wait for vsync to start
-            rep not in8(INPUT_STATUS_1_PORT) &? 0x08:
-            */
+            rep not @BSys::in8(INPUT_STATUS_1_PORT) &? 0x08:
         ;
     ;
 
@@ -208,29 +214,13 @@ VGA_MODE_640x480x4 u32 <- 0x00
                 it.pBackPageBuffer.val[i] <- pixel
             ;
         else if pMode.val.id = VGA_MODE_640x480x4
-            // switch to mode 3
-            @BSys::out8(GC_INDEX_PORT, MODE_REG)
-            @BSys::out8(GC_DATA_PORT, 0x03)
-
-            // set color as the set/reset value
-            @BSys::out8(GC_INDEX_PORT, SET_RESET_VALUE_REG)
-            @BSys::out8(GC_DATA_PORT, pixel)
-
-            // enable all planes
-            @BSys::out8(SC_INDEX_PORT, 0x02)
-            @BSys::out8(SC_DATA_PORT, 0x0f)
-
-            // enable all 8 pixels in each byte
-            @BSys::out8(GC_INDEX_PORT, 0x08)
-            @BSys::out8(GC_DATA_PORT, 0xff)
-
-            rep i u32 <- 0, i < pMode.val.width * pMode.val.height / 8, i <- i + 1
-                it.pBackPageBuffer.val[i] <- 0xff
+            rep planeIndex u32, planeIndex < 4, planeIndex <- planeIndex + 1
+                planeOffset u32 <- planeIndex * pMode.val.width * pMode.val.height / 8
+                value u8 <- if pixel &? (1 << planeIndex): 0xff else: 0x00
+                rep valueIndex u32, valueIndex < pMode.val.width * pMode.val.height / 8, valueIndex <- valueIndex + 1
+                    it.pBackPageBuffer.val[planeOffset + valueIndex] <- value
+                ;
             ;
-
-            // switch back to mode 0
-            @BSys::out8(GC_INDEX_PORT, MODE_REG)
-            @BSys::out8(GC_DATA_PORT, 0x00)
         ;
     ;
 
@@ -246,19 +236,20 @@ VGA_MODE_640x480x4 u32 <- 0x00
 
             it.pBackPageBuffer.val[offset] <- pixel
         else if pMode.val.id = VGA_MODE_640x480x4
-            offset u32 <- (y * pMode.val.width + x) / 8
+            valueOffset u32 <- (y * pMode.val.width + x) / 8
 
-            // set set/reset value to the specified color
-            @BSys::out8(GC_INDEX_PORT, SET_RESET_VALUE_REG)
-            @BSys::out8(GC_DATA_PORT, pixel)
+            rep planeIndex u32, planeIndex < 4, planeIndex <- planeIndex + 1
+                planeOffset u32 <- planeIndex * pMode.val.width * pMode.val.height / 8
+                shouldSet bool <- pixel &? (1 << planeIndex)
 
-            // mask out all the pixels other than the desired
-            @BSys::out8(GC_INDEX_PORT, BIT_MASK_REG)
-            @BSys::out8(GC_DATA_PORT, 0x80 >> (x % 8))
-
-            // first read the value to set latches (use updated values)
-            val u8 <- it.pBackPageBuffer.val[offset]
-            it.pBackPageBuffer.val[offset] <- val
+                value u8 <- it.pBackPageBuffer.val[planeOffset + valueOffset]
+                if shouldSet
+                    value <- value | (0b1000_0000 >> (x % 8))
+                else
+                    value <- value & ~(0b1000_0000 >> (x % 8))
+                ;
+                it.pBackPageBuffer.val[planeOffset + valueOffset] <- value
+            ;
         ;
     ;
 ;

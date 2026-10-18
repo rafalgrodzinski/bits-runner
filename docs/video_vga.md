@@ -23,6 +23,7 @@
 - `0x00` Set/Reset Value
 - `0x01` Enable Set/Reset
 - `0x02` Map Mask
+- `0x03` Data Rotate
 - `0x05` Mode
 
 ## Color palette

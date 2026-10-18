@@ -8,3 +8,4 @@ Changelist for [1.0.0-dev-22](https://github.com/rafalgrodzinski/bits-runner/pul
 - Fixed mouse bugs
 - Fixed paging bugs
 - RGB332 mode for 8bit color
+- Double buffering for VGA 640x480x4
