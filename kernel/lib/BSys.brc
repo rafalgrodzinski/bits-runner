@@ -141,6 +141,23 @@
     @Memory::HeapManager::instance.free(address)
 ;
 
+@export memCopy raw<"r, r, r, ~{esi}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/aSource a, /*$1*/aTarget a, /*$2*/size u32
+    mov esi, $0
+    mov edi, $1
+    mov ecx, $2
+    shr ecx, 2
+    cld
+    rep movsd
+;
+
+@export memSet raw<"r, r, r, ~{eax}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/value u8, /*$1*/aTarget a, /*$2*/size u32
+    mov al, $0
+    mov edi, $1
+    mov ecx, $2
+    cld
+    rep stosb
+;
+
 // Print
 printAttribute u8 <- 0x07
 

@@ -192,9 +192,7 @@ VGA_MODE_640x480x4 u32 <- 0x00
                 @BSys::out8(SC_DATA_PORT, 1 << planeIndex)
 
                 planeOffset u32 <- planeIndex * pMode.val.width * pMode.val.height / 8
-                rep valueIndex u32, valueIndex < pMode.val.width * pMode.val.height / 8, valueIndex <- valueIndex + 1
-                    it.pFrontPageBuffer.val[valueIndex] <- it.pBackPageBuffer.val[planeOffset + valueIndex]
-                ;
+                @BSys::memCopy(it.pBackPageBuffer.vadr + planeOffset, it.pFrontPageBuffer.vadr, pMode.val.width * pMode.val.height / 8)
             ;
 
             // wait for vsync to start
@@ -210,16 +208,12 @@ VGA_MODE_640x480x4 u32 <- 0x00
             @BSys::out8(SC_INDEX_PORT, MAP_MASK_REG)
             @BSys::out8(SC_DATA_PORT, 0x0f)
 
-            rep i u32 <- 0, i < pMode.val.width * pMode.val.height / 4, i <- i + 1
-                it.pBackPageBuffer.val[i] <- pixel
-            ;
+            @BSys::memSet(pixel, it.pBackPageBuffer.vadr, pMode.val.width * pMode.val.height / 4)
         else if pMode.val.id = VGA_MODE_640x480x4
             rep planeIndex u32, planeIndex < 4, planeIndex <- planeIndex + 1
                 planeOffset u32 <- planeIndex * pMode.val.width * pMode.val.height / 8
                 value u8 <- if pixel &? (1 << planeIndex): 0xff else: 0x00
-                rep valueIndex u32, valueIndex < pMode.val.width * pMode.val.height / 8, valueIndex <- valueIndex + 1
-                    it.pBackPageBuffer.val[planeOffset + valueIndex] <- value
-                ;
+                @BSys::memSet(value, it.pBackPageBuffer.vadr + planeOffset, pMode.val.width * pMode.val.height / 8)
             ;
         ;
     ;
