@@ -43,6 +43,13 @@ VESA Info Block
 - `ax`: `0x4f02`
 - `bx`: `<13-0>`: Mode Numer, `<14>`: Set for linear framebuffer, clear for bank switching, `<15>`: If clear, BIOS clears the screen
 
+### Get/set display start `0x4f07`
+- `ax`: `0x0407`
+- `bx`: `0x0000`: Set display start, `0x0001`: Get display start, `0x0080`: Set display start during VSync
+- `cx`: Start x pixel
+- `dx`: Start y pixel
+
 ## Additional Resources
 - "VBE Core Funcions": [https://www.phatcode.net/res/221/files/vbe20.pdf](https://www.phatcode.net/res/221/files/vbe20.pdf)
-- "VESA Tutorial" [https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial](https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial)
+- "VESA Tutorial": [https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial](https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial)
+- "VBE Core Functions": [https://web.archive.org/web/20081211174813/http://docs.ruudkoot.nl/vbe20.txt](https://web.archive.org/web/20081211174813/http://docs.ruudkoot.nl/vbe20.txt)
