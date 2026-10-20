@@ -155,7 +155,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
         pageSize u32 <- pMetadata.val.pitch * pMode.val.height
 
         // On device double buffering
-        if it.memoryBlocksCount >= (pageSize + 0x10_000 -1 ) / 0x5_000
+        if it.memoryBlocksCount >= (pageSize * 2 + 0x10_000 -1) / 0x10_000
             it.bufferMode <- AdapterVesa::BUFFER_MODE_DEVICE
             it.aBackPageBuffer <- it.aFrontPageBuffer + pageSize
             @Memory::PagingManager::instance.mapDirectMemory(it.aFrontPageBuffer, pageSize * 2)
@@ -176,8 +176,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             // get offset to the new front display area
             displayOffset u32
             if it.aBackPageBuffer > it.aFrontPageBuffer
-                //displayOffset <- pMetadata.val.pitch * pMode.val.height
-                displayOffset <- pMode.val.height
+                displayOffset <- pMetadata.val.pitch * pMode.val.height / 4
             ;
 
             // swap front with back
@@ -233,7 +232,9 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
 
 AdapterVesa::setDisplayStartRaw raw<"m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{esi}, ~{edi}, ~{memory}">: aFunctionsTable a, displayOffset u32
     mov esi, $0
-    add esi, 0x02
+    mov ax, [esi + 2]
+    movzx eax, ax
+    add esi, eax
 
     mov ecx, $1
     mov edx, ecx

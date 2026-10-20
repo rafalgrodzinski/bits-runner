@@ -571,9 +571,11 @@ bios_service_video_vesa_get_functions_table_32:
     mov bl, 0x00
     int 0x10
 
-    mov eax, es
+    mov ax, es
+    movzx eax, ax
     shl eax, 4
-    add ax, di
+    movzx edi, di
+    add eax, edi
 
     call switch_to_protected_mode_16
 [bits 32]
