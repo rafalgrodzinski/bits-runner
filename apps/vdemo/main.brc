@@ -49,7 +49,7 @@ readMouse fun
 
         if modeInfo.width = 320 and modeInfo.height = 240 and modeInfo.bpp = 8
             mode0 <- modeInfo
-        else if modeInfo.width = 640 and modeInfo.height = 480 and modeInfo.bpp = 16
+        else if modeInfo.width = 640 and modeInfo.height = 480 and modeInfo.bpp = 8
             mode0 <- modeInfo
         else if modeInfo.width = 800 and modeInfo.height = 600 and modeInfo.bpp >= 24
             mode1 <- modeInfo
@@ -60,7 +60,7 @@ readMouse fun
         ;
     ;
 
-    @B::String("").println()
+    @B::String::println()
 
     @B::StringHexForU32(mode0.id).print()
     @B::String(" ").print()
@@ -120,7 +120,7 @@ demo_0 fun
 ;
 
 demo_1 fun
-    setMode(0)
+    setMode(1)
 
     @Syscall::Video::clear(resourceId, 0, 0, 0)
     @Syscall::Video::commit(resourceId)

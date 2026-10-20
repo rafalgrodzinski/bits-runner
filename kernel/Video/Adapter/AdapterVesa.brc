@@ -110,7 +110,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             @BiosService::Video::vesaGetModeInfo(vesaModeInfo.adr, it.modeIds.at(i).u16)
 
             // Filter out weird color modes
-            if vesaModeInfo.bpp = 8 or vesaModeInfo.bpp = 16 or vesaModeInfo.bpp = 24 or vesaModeInfo.bpp = 32
+            if vesaModeInfo.bpp >= 8
                 pMode ptr<blob<Mode>> <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
 
                 pMode.val.id <- it.modeIds.at(i).u16
@@ -143,21 +143,6 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
                 @B::StringForU32(pMode.val.bpp).print()
                 @B::String(" ").print()
                 @B::StringForU32(it.memoryBlocksCount).println()
-
-                @B::String("R: ").print()
-                @B::StringForU32(pMetadata.val.redSize).print()
-                @B::String(" ").print()
-                @B::StringForU32(pMetadata.val.redPosition).print()
-
-                @B::String(" G: ").print()
-                @B::StringForU32(pMetadata.val.greenSize).print()
-                @B::String(" ").print()
-                @B::StringForU32(pMetadata.val.greenPosition).print()
-
-                @B::String(" B: ").print()
-                @B::StringForU32(pMetadata.val.blueSize).print()
-                @B::String(" ").print()
-                @B::StringForU32(pMetadata.val.bluePosition).println()
             ;
         ;
 
