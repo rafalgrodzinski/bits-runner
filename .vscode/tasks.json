@@ -12,7 +12,7 @@
             "presentation": {
                 "reveal": "silent",
                 "revealProblems": "onProblem",
-                "close": true,
+                "close": false,
                 "focus": true
             },
             "problemMatcher": ["$brc"],
@@ -24,7 +24,7 @@
             "presentation": {
                 "reveal": "silent",
                 "revealProblems": "onProblem",
-                "close": true,
+                "close": false,
                 "focus": true
             }
         }

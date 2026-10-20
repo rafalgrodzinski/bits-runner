@@ -11,7 +11,7 @@ VesaInfo blob
     oemStringPtr data<u16, 2>
     caps data<u8, 4>
     videoModePtr data<u16, 2>
-    totalMemory u16
+    memoryBlocksCount u16
     reserved data<u8, 492>
 ;
 
@@ -55,13 +55,15 @@ AdapterVesa::BUFFER_MODE_DEVICE u32 <- 0x00
 AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
 
 @export AdapterVesa blob: Adapter
-    memSize u32
+    memoryBlocksCount u32
     modeIds blob<@B::Array, u16>
     modes blob<@B::Array, ptr<blob<Mode>>>
 
     aFrontPageBuffer a
     aBackPageBuffer a
     bufferMode u32
+
+    aVesaFunctionsTable a
     
     init fun -> bool
         // Get adapter info
@@ -72,8 +74,8 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
         if vesaInfo.signature[0] != 'V' or vesaInfo.signature[1] != 'E' or vesaInfo.signature[2] != 'S' or vesaInfo.signature[3] != 'A': ret false
         if vesaInfo.version < 0x0200: ret false
 
-        // Framebuffer memory is provided in number of 64KiB blocks
-        it.memSize <- vesaInfo.totalMemory.u32 * 0x10_000
+        // Number of 64KiB blocks provided for framebuffer
+        it.memoryBlocksCount <- vesaInfo.memoryBlocksCount
 
         // Get list of mode ids
         pModeIds ptr<data<u16>> <- {vesaInfo.videoModePtr[1] * 0x10 + vesaInfo.videoModePtr[0]}
@@ -81,12 +83,16 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             it.modeIds.push(pModeIds.val[i])
         ;
 
+        // Get pointer to vesa functions table
+        it.aVesaFunctionsTable <- @BiosService::Video::vesaGetFunctionsTable()
+
         @B::StringForChar(vesaInfo.signature[0]).print()
         @B::StringForChar(vesaInfo.signature[1]).print()
         @B::StringForChar(vesaInfo.signature[2]).print()
         @B::StringForChar(vesaInfo.signature[3]).println()
         @B::StringHexForU32(vesaInfo.version).println()
-        @B::StringForU32(it.memSize).println()
+        @B::StringForU32(it.memoryBlocksCount).println()
+        @B::StringHexForU32(it.aVesaFunctionsTable.u32).println()
 
         @BSys::debugPause(0x01)
 
@@ -125,7 +131,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
                 @B::String("x").print()
                 @B::StringForU32(pMode.val.bpp).print()
                 @B::String(" ").print()
-                @B::StringForU32(it.memSize).println()
+                @B::StringForU32(it.memoryBlocksCount).println()
             ;
         ;
 
@@ -149,7 +155,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
         pageSize u32 <- pMetadata.val.pitch * pMode.val.height
 
         // On device double buffering
-        if it.memSize >= pageSize * 2
+        if it.memoryBlocksCount >= (pageSize + 0x10_000 -1 ) / 0x5_000
             it.bufferMode <- AdapterVesa::BUFFER_MODE_DEVICE
             it.aBackPageBuffer <- it.aFrontPageBuffer + pageSize
             @Memory::PagingManager::instance.mapDirectMemory(it.aFrontPageBuffer, pageSize * 2)
@@ -170,6 +176,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             // get offset to the new front display area
             displayOffset u32
             if it.aBackPageBuffer > it.aFrontPageBuffer
+                //displayOffset <- pMetadata.val.pitch * pMode.val.height
                 displayOffset <- pMode.val.height
             ;
 
@@ -179,7 +186,8 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             it.aBackPageBuffer <- temp
 
             // set new front buffer
-            @BiosService::Video::vesaSetDisplayStart(0, displayOffset)
+            //@BiosService::Video::vesaSetDisplayStart(0, displayOffset)
+            AdapterVesa::setDisplayStartRaw(it.aVesaFunctionsTable, displayOffset)
         else
             @BSys::memCopy(it.aBackPageBuffer, it.aFrontPageBuffer, pMetadata.val.pitch * pMode.val.height)
         ;
@@ -221,4 +229,18 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             pPixel.val[0] <- blue
         ;
     ;
+;
+
+AdapterVesa::setDisplayStartRaw raw<"m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{esi}, ~{edi}, ~{memory}">: aFunctionsTable a, displayOffset u32
+    mov esi, $0
+    add esi, 0x02
+
+    mov ecx, $1
+    mov edx, ecx
+    shr edx, 16
+    and ecx, 0xffff
+
+    mov eax, 0x4f07
+    mov ebx, 0x0000
+    call esi
 ;

@@ -49,6 +49,11 @@ VESA Info Block
 - `cx`: Start x pixel
 - `dx`: Start y pixel
 
+### Get Protected Mode Interface `0x4fah`
+- `ax`: `0x4f0a`
+- `bl`: `0x00`
+
+
 ## Additional Resources
 - "VBE Core Funcions": [https://www.phatcode.net/res/221/files/vbe20.pdf](https://www.phatcode.net/res/221/files/vbe20.pdf)
 - "VESA Tutorial": [https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial](https://wiki.osdev.org/User:Omarrx024/VESA_Tutorial)

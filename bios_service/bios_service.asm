@@ -13,6 +13,7 @@
 %define BIOS_SERVICE_VIDEO_VESA_GET_MODE_INFO 0x22
 %define BIOS_SERVICE_VIDEO_VESA_SET_MODE 0x23
 %define BIOS_SERVICE_VIDEO_VESA_SET_DISPLAY_START 0x24
+%define BIOS_SERVICE_VIDEO_VESA_GET_FUNCTIONS_TABLE 0x25
 
 %define BIOS_SERVICE_TEXT_MODE_80x25 0x00
 %define BIOS_SERVICE_TEXT_MODE_80x50 0x01
@@ -138,6 +139,13 @@ bios_service_32:
     call bios_service_video_vesa_set_display_start_32
     jmp .end
 .not_video_vesa_set_display_start:
+
+    ; Video VESA Get Functions Table
+    cmp eax, BIOS_SERVICE_VIDEO_VESA_GET_FUNCTIONS_TABLE
+    jne .not_video_vesa_get_functions_table
+    call bios_service_video_vesa_get_functions_table_32
+    jmp .end
+.not_video_vesa_get_functions_table:
 
 .end:
     cli
@@ -536,7 +544,7 @@ bios_service_video_vesa_set_display_start_32:
     call switch_to_v86_mode_32
 [bits 16]
     mov ax, 0x4f07
-    mov bx, 0x0080
+    mov bx, 0x0000
     mov ecx, .xOffset
     mov edx, .yOffset
     int 0x10
@@ -550,3 +558,24 @@ bios_service_video_vesa_set_display_start_32:
 %undef .yOffset
 %undef .xOffset
 %undef .args_count
+
+;
+; VESA Get functions table
+; out
+;  eax: functions table pointer
+[bits 32]
+bios_service_video_vesa_get_functions_table_32:
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f0a
+    mov bl, 0x00
+    int 0x10
+
+    mov eax, es
+    shl eax, 4
+    add ax, di
+
+    call switch_to_protected_mode_16
+[bits 32]
+
+    ret
