@@ -2,4 +2,5 @@
 
 Mode::Metadata::Vesa blob
     pitch u32
+    aFramebuffer a
 ;

@@ -3,6 +3,7 @@
 @import BiosService
 @import B
 @import Memory
+@import BSys
 
 VesaInfo blob
     signature data<u8, 4>
@@ -56,6 +57,8 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
 @export AdapterVesa blob: Adapter
     memSize u32
     modeIds blob<@B::Array, u16>
+    modes blob<@B::Array, ptr<blob<Mode>>>
+
     aFrontPageBuffer a
     aBackPageBuffer a
     bufferMode u32
@@ -70,7 +73,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
         if vesaInfo.version < 0x0200: ret false
 
         // Framebuffer memory is provided in number of 64KiB blocks
-        it.memSize <- vesaInfo.totalMemory * 0x10_000
+        it.memSize <- vesaInfo.totalMemory.u32 * 0x10_000
 
         // Get list of mode ids
         pModeIds ptr<data<u16>> <- {vesaInfo.videoModePtr[1] * 0x10 + vesaInfo.videoModePtr[0]}
@@ -78,11 +81,20 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             it.modeIds.push(pModeIds.val[i])
         ;
 
+        @B::StringForChar(vesaInfo.signature[0]).print()
+        @B::StringForChar(vesaInfo.signature[1]).print()
+        @B::StringForChar(vesaInfo.signature[2]).print()
+        @B::StringForChar(vesaInfo.signature[3]).println()
+        @B::StringHexForU32(vesaInfo.version).println()
+        @B::StringForU32(it.memSize).println()
+
+        @BSys::debugPause(0x01)
+
         ret true
     ;
 
     getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
-        modes blob<@B::Array, ptr<blob<Mode>>>
+        if it.modes.count > 0: ret it.modes
 
         // Get details for each of the modes
         rep i u32, i < it.modeIds.count, i <- i + 1
@@ -100,10 +112,10 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
 
                 pMetadata ptr<blob<Mode::Metadata::Vesa>> <- @BSys::memAlloc(blob<Mode::Metadata::Vesa>.size).ptr<blob<Mode::Metadata::Vesa>>
                 pMode.val.aMetadata <- pMetadata.vadr
-                it.aFrontPageBuffer <- vesaModeInfo.framebufferPtr.a
                 pMetadata.val.pitch <- vesaModeInfo.pitch
+                pMetadata.val.aFramebuffer <- vesaModeInfo.framebufferPtr.a
 
-                modes.push(pMode)
+                it.modes.push(pMode)
 
                 @B::StringHexForU32(pMode.val.id).print()
                 @B::String(" ").print()
@@ -117,7 +129,9 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             ;
         ;
 
-        ret modes
+        @BSys::debugPause(0x01)
+
+        ret it.modes
     ;
 
     getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
@@ -131,6 +145,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
         @BiosService::Video::vesaSetMode(pMode.val.id)
 
         // Setup double buffering
+        it.aFrontPageBuffer <- pMetadata.val.aFramebuffer
         pageSize u32 <- pMetadata.val.pitch * pMode.val.height
 
         // On device double buffering
@@ -152,10 +167,10 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
         pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
 
         if it.bufferMode = AdapterVesa::BUFFER_MODE_DEVICE
-            // get offset to the new front buffer
-            bufferOffset u32 <- 0
+            // get offset to the new front display area
+            displayOffset u32
             if it.aBackPageBuffer > it.aFrontPageBuffer
-                bufferOffset <- pMetadata.val.pitch * pMode.val.height
+                displayOffset <- pMetadata.val.pitch * pMode.val.height
             ;
 
             // swap front with back
@@ -164,7 +179,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             it.aBackPageBuffer <- temp
 
             // set new front buffer
-            @BiosService::Video::vesaSetDisplayStart(0, pMode.val.height)
+            @BiosService::Video::vesaSetDisplayStart(0, displayOffset)
         else
             @BSys::memCopy(it.aBackPageBuffer, it.aFrontPageBuffer, pMetadata.val.pitch * pMode.val.height)
         ;
