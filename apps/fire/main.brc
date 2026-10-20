@@ -1,0 +1,28 @@
+@import B
+@import Syscall
+
+selectedModeInfo blob<@Syscall::Video::ModeInfo>
+surfaceResourceId u32
+
+@export start fun
+    @B::String("FIRE!").println()
+
+    modesCount u32 <- @Syscall::Video::getModesCount()
+    rep i u32, i < modesCount, i <- i + 1
+        modeInfo blob<@Syscall::Video::ModeInfo> <- @Syscall::Video::getModeInfo(i)
+
+        if selectedModeInfo.bpp != 24 and modeInfo.bpp = 24
+            selectedModeInfo <- modeInfo
+        else if selectedModeInfo.id = 0
+            selectedModeInfo <- modeInfo
+        ;
+    ;
+
+    surfaceResourceId <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::VIDEO_GET_SURFACE, selectedModeInfo.id, 0)
+
+    @Syscall::Video::clear(surfaceResourceId, 0x00, 0x00, 0x00)
+    @Syscall::Video::commit(surfaceResourceId)
+
+    rep
+    ;
+;
