@@ -155,7 +155,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
         pageSize u32 <- pMetadata.val.pitch * pMode.val.height
 
         // On device double buffering
-        if it.memoryBlocksCount >= (pageSize * 2 + 0x10_000 -1) / 0x10_000
+        if it.aVesaFunctionsTable != 0 and it.memoryBlocksCount >= (pageSize * 2 + 0x10_000 -1) / 0x10_000
             it.bufferMode <- AdapterVesa::BUFFER_MODE_DEVICE
             it.aBackPageBuffer <- it.aFrontPageBuffer + pageSize
             @Memory::PagingManager::instance.mapDirectMemory(it.aFrontPageBuffer, pageSize * 2)
@@ -185,7 +185,6 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             it.aBackPageBuffer <- temp
 
             // set new front buffer
-            //@BiosService::Video::vesaSetDisplayStart(0, displayOffset)
             AdapterVesa::setDisplayStartRaw(it.aVesaFunctionsTable, displayOffset)
         else
             @BSys::memCopy(it.aBackPageBuffer, it.aFrontPageBuffer, pMetadata.val.pitch * pMode.val.height)
