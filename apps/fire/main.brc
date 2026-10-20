@@ -4,6 +4,18 @@
 selectedModeInfo blob<@Syscall::Video::ModeInfo>
 surfaceResourceId u32
 
+heatMap data<u8, 40_000>
+heatWidth u32 <- 200
+heatHeight u32 <- 200
+heat u8 <- 200
+
+randNext u32
+rand fun -> u32
+    if randNext = 0: randNext <- @Syscall::System::getTimestamp()
+    randNext <- randNext * 1103515245 + 12345
+    ret (randNext / 65536) % 32768
+;
+
 @export start fun
     @B::String("FIRE!").println()
 
@@ -20,9 +32,58 @@ surfaceResourceId u32
 
     surfaceResourceId <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::VIDEO_GET_SURFACE, selectedModeInfo.id, 0)
 
-    @Syscall::Video::clear(surfaceResourceId, 0x00, 0x00, 0x00)
-    @Syscall::Video::commit(surfaceResourceId)
-
     rep
+        @Syscall::Video::clear(surfaceResourceId, 0x00, 0x0, 0x00)
+
+        rep x u32 <- 5, x < heatWidth - 5, x <- x + 1
+            heatMap[(heatHeight - 1) * heatWidth + x] <- heat + (rand() % 16).u8
+        ;
+
+        rep y u32 <- 1, y < heatHeight - 1, y <- y + 1
+            rep x u32 <- 1, x < heatWidth - 1, x <- x + 1
+                value s32 <- heatMap[y * heatWidth + x] +
+                    heatMap[ (y+1) * heatWidth + x] +
+                    heatMap[y * heatWidth + x + 1] +
+                    heatMap[y * heatWidth + x - 1]
+                value <- value / 4
+                if value > 0: value <- value + (rand() % 8).s32 - 4
+                heatMap[y * heatWidth + x] <- value.u8
+            ;
+        ;
+
+        whiteThreshold u8 <- 200
+        yellowThreshold u8 <- 100
+
+        rep y u32, y < heatHeight, y <- y + 1
+            rep x u32 <- (selectedModeInfo.width - heatWidth) / 2, x < (selectedModeInfo.width - heatWidth) / 2 + selectedModeInfo.width, x <- x + 1
+                heatX u32 <- x * heatWidth / selectedModeInfo.width
+                heatY u32 <- y * heatHeight / selectedModeInfo.height
+
+                value u8 <- heatMap[heatY * heatWidth + heatX]
+
+                r u32
+                g u32
+                b u32
+
+                if value > whiteThreshold
+                    r <- 255
+                    g <- 255
+                    b <- value
+                else if value > yellowThreshold
+                    r <- 255
+                    g <- value.u32 * 255 / (255 - whiteThreshold)
+                    b <- 0
+                else
+                    r <- value.u32 * 255 / (255 - yellowThreshold)
+                    g <- 0
+                    b <- 0
+                ;
+
+                @Syscall::Video::drawPixel(surfaceResourceId, x, y, r.u8, g.u8, b.u8)
+            ;
+        ;
+
+        @Syscall::Video::commit(surfaceResourceId)
+        @Syscall::Process::sleep(10)
     ;
 ;
