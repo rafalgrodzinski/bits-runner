@@ -36,12 +36,12 @@ VesaModeInfo blob
     u8 // bankSize
     u8 // imagePages
     u8 // reserved
-    u8 // redMask
-    u8 // redPosition
-    u8 // greenMask
-    u8 // greenPosition
-    u8 // blueMask
-    u8 // bluePosition
+    redSize u8
+    redPosition u8
+    greenSize u8
+    greenPosition u8
+    blueSize u8
+    bluePosition u8
     u8 // reserved
     u8 // reserved
     u8 // directColorAttributes
@@ -120,8 +120,17 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
 
                 pMetadata ptr<blob<Mode::Metadata::Vesa>> <- @BSys::memAlloc(blob<Mode::Metadata::Vesa>.size).ptr<blob<Mode::Metadata::Vesa>>
                 pMode.val.aMetadata <- pMetadata.vadr
-                pMetadata.val.pitch <- vesaModeInfo.pitch
                 pMetadata.val.aFramebuffer <- vesaModeInfo.framebufferPtr.a
+                pMetadata.val.pitch <- vesaModeInfo.pitch
+
+                pMetadata.val.redSize <- vesaModeInfo.redSize
+                pMetadata.val.redPosition <- vesaModeInfo.redPosition
+
+                pMetadata.val.greenSize <- vesaModeInfo.greenSize
+                pMetadata.val.greenPosition <- vesaModeInfo.greenPosition
+
+                pMetadata.val.blueSize <- vesaModeInfo.blueSize
+                pMetadata.val.bluePosition <- vesaModeInfo.bluePosition
 
                 it.modes.push(pMode)
 
@@ -134,6 +143,21 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
                 @B::StringForU32(pMode.val.bpp).print()
                 @B::String(" ").print()
                 @B::StringForU32(it.memoryBlocksCount).println()
+
+                @B::String("R: ").print()
+                @B::StringForU32(pMetadata.val.redSize).print()
+                @B::String(" ").print()
+                @B::StringForU32(pMetadata.val.redPosition).print()
+
+                @B::String(" G: ").print()
+                @B::StringForU32(pMetadata.val.greenSize).print()
+                @B::String(" ").print()
+                @B::StringForU32(pMetadata.val.greenPosition).print()
+
+                @B::String(" B: ").print()
+                @B::StringForU32(pMetadata.val.blueSize).print()
+                @B::String(" ").print()
+                @B::StringForU32(pMetadata.val.bluePosition).println()
             ;
         ;
 
@@ -150,33 +174,22 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
 
         // Setup adapter
         pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
-        @B::String("Setting mode ").print()
-        @B::StringHexForU32(pMode.val.id).print()
-        @B::String(" @ ").print()
-        @B::StringHexForU32(pMetadata.val.aFramebuffer.u32).println()
-        @BSys::debugPause(0x01)
         @BiosService::Video::vesaSetMode(pMode.val.id)
 
         // Setup double buffering
         it.aFrontPageBuffer <- AdapterVesa::FRAMEBUFFER_ADR
-        //it.aFrontPageBuffer <- pMetadata.val.aFramebuffer
         pageSize u32 <- pMetadata.val.pitch * pMode.val.height
 
-        //@B::String("Mapping memory").println()
-        //@BSys::debugPause(0x01)
-
         // On device double buffering
-        if it.aVesaFunctionsTable != 0 and it.memoryBlocksCount >= (pageSize * 2 + 0x10_000 -1) / 0x10_000
+        if it.aVesaFunctionsTable != 0 and it.memoryBlocksCount >= (pageSize * 2 + 0x10_000 - 1) / 0x10_000
             it.bufferMode <- AdapterVesa::BUFFER_MODE_DEVICE
             it.aBackPageBuffer <- it.aFrontPageBuffer + pageSize
             @Memory::PagingManager::instance.mapMemory(it.aFrontPageBuffer, pMetadata.val.aFramebuffer, pageSize * 2)
-            //@Memory::PagingManager::instance.mapDirectMemory(it.aFrontPageBuffer, pageSize * 2)
         // In RAM double buffering
         else
             it.bufferMode <- AdapterVesa::BUFFER_MODE_RAM
             it.aBackPageBuffer <- @BSys::memAlloc(pageSize)
             @Memory::PagingManager::instance.mapMemory(it.aFrontPageBuffer, pMetadata.val.aFramebuffer, pageSize)
-            //@Memory::PagingManager::instance.mapDirectMemory(it.aFrontPageBuffer, pageSize)
         ;
 
         // Set palette for RGB332 in case of 8 bit color
@@ -232,7 +245,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
 
     drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
         pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
-        offset u32 <- y * pMetadata.val.pitch + (x * (pMode.val.bpp / 8))
+        offset u32 <- y * pMetadata.val.pitch + (x * ((pMode.val.bpp + 7) / 8))
 
         // 8 bit color (RGB332)
         if pMode.val.bpp = 8
@@ -242,20 +255,26 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             pixel <- pixel | ((green & 0b1110_0000) >> 3)
             pixel <- pixel | ((blue & 0b1100_0000) >> 6)
             pPixel.val <- pixel
-        // 16 bit color (RGB565)
-        else if pMode.val.bpp = 16
+        // 15/16 bit color
+        else if pMode.val.bpp = 15 or pMode.val.bpp = 16
             pPixel ptr<u16> <- {it.aBackPageBuffer + offset}
             pixel u16
-            pixel <- pixel | ((red.u16 & 0b11111000) << 8)
-            pixel <- pixel | ((green.u16 & 0b11111100) << 3)
-            pixel <- pixel | ((blue.u16 & 0b11111000) >> 3)
+            pixel <- pixel | (red.u16 >> (8 - pMetadata.val.redSize)) << pMetadata.val.redPosition
+            pixel <- pixel | (green.u16 >> (8 - pMetadata.val.greenSize)) << pMetadata.val.greenPosition
+            pixel <- pixel | (blue.u16 >> (8 - pMetadata.val.blueSize)) << pMetadata.val.bluePosition
             pPixel.val <- pixel
-        // 24 bit color (RGB888)
+        // 24/32 bit color
         else
             pPixel ptr<data<u8>> <- {it.aBackPageBuffer + offset}
-            pPixel.val[2] <- red
-            pPixel.val[1] <- green
-            pPixel.val[0] <- blue
+            pixel u32
+            pixel <- pixel | ((red.u32 >> (8 - pMetadata.val.redSize)) << pMetadata.val.redPosition)
+            pixel <- pixel | ((green.u32 >> (8 - pMetadata.val.greenSize)) << pMetadata.val.greenPosition)
+            pixel <- pixel | ((blue.u32 >> (8 - pMetadata.val.blueSize)) << pMetadata.val.bluePosition)
+
+            pPixel.val[0] <- ((pixel >> 0) & 0xff).u8
+            pPixel.val[1] <- ((pixel >> 8) & 0xff).u8
+            pPixel.val[2] <- ((pixel >> 16) & 0xff).u8
+            if (pMode.val.bpp = 32): pPixel.val[3] <- ((pixel >> 24) & 0xff).u8
         ;
     ;
 ;

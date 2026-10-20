@@ -76,7 +76,7 @@
     mov $0, eax
 ;
 
-@export disableInterrupts raw<"=r, ~{eax}"> -> bool
+@export disableInterrupts raw<"=r, ~{eax}, ~{flags}"> -> bool
     mov $0, 0
 
     pushfd
@@ -89,7 +89,7 @@
     cli
 ;
 
-@export enableInterrupts raw
+@export enableInterrupts raw<"~{flags}">
     sti
 ;
 

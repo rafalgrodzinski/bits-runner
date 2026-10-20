@@ -1,6 +1,15 @@
 @module Video
 
 Mode::Metadata::Vesa blob
-    pitch u32
     aFramebuffer a
+    pitch u32
+
+    redSize u8
+    redPosition u8
+
+    greenSize u8
+    greenPosition u8
+
+    blueSize u8
+    bluePosition u8
 ;
