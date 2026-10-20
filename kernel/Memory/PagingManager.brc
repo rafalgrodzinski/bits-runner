@@ -151,6 +151,24 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         PagingManager::flushTlbRaw()
     ;
 
+    mapMemory fun: aSource a, aTarget a, size u32
+        memOffset u32 <- aTarget.u32 % it.pMemoryLayout.val.pageSize
+        startPage u32 <- aTarget.u32 / it.pMemoryLayout.val.pageSize
+        pagesCount u32 <- (memOffset + size + it.pMemoryLayout.val.pageSize - 1) / it.pMemoryLayout.val.pageSize
+
+        @BSys::disableInterrupts()
+
+        rep i u32, i < pagesCount, i <- i + 1
+            it.registerPageForLinearAddress(
+                startPage + i,
+                PagingManager::PAGE_DIRECT_MAPPING,
+                aSource.u32 + i * it.pMemoryLayout.val.pageSize
+            )
+        ;
+
+        @BSys::enableInterrupts()
+    ;
+
     mapDirectMemory fun: aMem a, memSize u32
         memOffset u32 <- aMem.u32 % it.pMemoryLayout.val.pageSize
         startPage u32 <- aMem.u32 / it.pMemoryLayout.val.pageSize

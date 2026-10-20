@@ -51,6 +51,8 @@ VesaModeInfo blob
     data<u8, 206> // reserved
 ;
 
+AdapterVesa::FRAMEBUFFER_ADR a <- 0xe000_0000
+
 AdapterVesa::BUFFER_MODE_DEVICE u32 <- 0x00
 AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
 
@@ -148,22 +150,33 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
 
         // Setup adapter
         pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
+        @B::String("Setting mode ").print()
+        @B::StringHexForU32(pMode.val.id).print()
+        @B::String(" @ ").print()
+        @B::StringHexForU32(pMetadata.val.aFramebuffer.u32).println()
+        @BSys::debugPause(0x01)
         @BiosService::Video::vesaSetMode(pMode.val.id)
 
         // Setup double buffering
-        it.aFrontPageBuffer <- pMetadata.val.aFramebuffer
+        it.aFrontPageBuffer <- AdapterVesa::FRAMEBUFFER_ADR
+        //it.aFrontPageBuffer <- pMetadata.val.aFramebuffer
         pageSize u32 <- pMetadata.val.pitch * pMode.val.height
+
+        //@B::String("Mapping memory").println()
+        //@BSys::debugPause(0x01)
 
         // On device double buffering
         if it.aVesaFunctionsTable != 0 and it.memoryBlocksCount >= (pageSize * 2 + 0x10_000 -1) / 0x10_000
             it.bufferMode <- AdapterVesa::BUFFER_MODE_DEVICE
             it.aBackPageBuffer <- it.aFrontPageBuffer + pageSize
-            @Memory::PagingManager::instance.mapDirectMemory(it.aFrontPageBuffer, pageSize * 2)
+            @Memory::PagingManager::instance.mapMemory(it.aFrontPageBuffer, pMetadata.val.aFramebuffer, pageSize * 2)
+            //@Memory::PagingManager::instance.mapDirectMemory(it.aFrontPageBuffer, pageSize * 2)
         // In RAM double buffering
         else
             it.bufferMode <- AdapterVesa::BUFFER_MODE_RAM
             it.aBackPageBuffer <- @BSys::memAlloc(pageSize)
-            @Memory::PagingManager::instance.mapDirectMemory(it.aFrontPageBuffer, pageSize)
+            @Memory::PagingManager::instance.mapMemory(it.aFrontPageBuffer, pMetadata.val.aFramebuffer, pageSize)
+            //@Memory::PagingManager::instance.mapDirectMemory(it.aFrontPageBuffer, pageSize)
         ;
 
         // Set palette for RGB332 in case of 8 bit color
