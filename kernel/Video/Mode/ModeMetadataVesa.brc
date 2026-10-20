@@ -1,6 +1,5 @@
 @module Video
 
 Mode::Metadata::Vesa blob
-    aFramebuffer a
     pitch u32
 ;

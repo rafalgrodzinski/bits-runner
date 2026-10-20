@@ -29,6 +29,10 @@ VGA_MODE_640x480x4 u32 <- 0x00
     pFrontPageBuffer ptr_volatile<data<u8>>
     pBackPageBuffer ptr_volatile<data<u8>>
 
+    init fun -> bool
+        ret true
+    ;
+
     toPixel fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8 -> u8
         pixel u8
 

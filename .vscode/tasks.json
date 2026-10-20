@@ -14,7 +14,8 @@
                 "revealProblems": "onProblem",
                 "close": true,
                 "focus": true
-            }
+            },
+            "problemMatcher": ["$brc"],
         },
         {
             "label": "Stop in VirtualBox",

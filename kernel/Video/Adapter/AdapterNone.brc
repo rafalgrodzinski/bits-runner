@@ -1,0 +1,21 @@
+@module Video
+
+@export AdapterNone blob: Adapter
+    getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
+        modes blob<@B::Array, ptr<blob<Mode>>>
+        ret modes
+    ;
+
+    getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
+        ret {0}
+    ;
+
+    commit fun: pMode ptr<blob<Mode>>
+    ;
+
+    clear fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8
+    ;
+
+    drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
+    ;
+;

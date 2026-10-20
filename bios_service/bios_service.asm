@@ -12,6 +12,7 @@
 %define BIOS_SERVICE_VIDEO_VESA_GET_INFO 0x21
 %define BIOS_SERVICE_VIDEO_VESA_GET_MODE_INFO 0x22
 %define BIOS_SERVICE_VIDEO_VESA_SET_MODE 0x23
+%define BIOS_SERVICE_VIDEO_VESA_SET_DISPLAY_START 0x24
 
 %define BIOS_SERVICE_TEXT_MODE_80x25 0x00
 %define BIOS_SERVICE_TEXT_MODE_80x50 0x01
@@ -128,6 +129,15 @@ bios_service_32:
     call bios_service_video_vesa_set_mode_32
     jmp .end
 .not_video_vesa_set_mode:
+
+    ; Video VESA Set Display Start
+    cmp eax, BIOS_SERVICE_VIDEO_VESA_SET_DISPLAY_START
+    jne .not_video_vesa_set_display_start
+    push ebx ; .xOffset
+    push ecx ; .yOffset
+    call bios_service_video_vesa_set_display_start_32
+    jmp .end
+.not_video_vesa_set_display_start:
 
 .end:
     cli
@@ -508,4 +518,35 @@ bios_service_video_vesa_set_mode_32:
     pop ebp
     ret U32_SIZE * .args_count
 %undef .mode
+%undef .args_count
+
+;
+; VESA Set Display Start
+; in
+;  .xOffset
+;  .yOffset
+%define .args_count 2
+%define .xOffset [ebp + 8]
+%define .yOffset [ebp + 12]
+[bits 32]
+bios_service_video_vesa_set_display_start_32:
+    push ebp
+    mov ebp, esp
+
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x0407
+    mov bx, 0x0080
+    mov ecx, .xOffset
+    mov edx, .yOffset
+    int 0x10
+
+    call switch_to_protected_mode_16
+[bits 32]
+
+    mov esp, ebp
+    pop ebp
+    ret U32_SIZE * .args_count
+%undef .yOffset
+%undef .xOffset
 %undef .args_count

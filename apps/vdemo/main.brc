@@ -58,14 +58,6 @@ readMouse fun
         else if mode1.id = 0
             mode1 <- modeInfo
         ;
-
-        @B::StringHexForU32(modeInfo.id).print()
-        @B::String(" ").print()
-        @B::StringForU32(modeInfo.width).print()
-        @B::String("x").print()
-        @B::StringForU32(modeInfo.height).print()
-        @B::String("x").print()
-        @B::StringForU32(modeInfo.bpp).println()
     ;
 
     @B::String("").println()
