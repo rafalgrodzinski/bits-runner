@@ -166,6 +166,24 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             @Memory::PagingManager::instance.mapDirectMemory(it.aFrontPageBuffer, pageSize)
         ;
 
+        // Set palette for RGB332
+        if pMode.val.bpp = 8
+            palette data<u8, 256 * 3>
+
+            rep i u32, i < 256, i <- i + 1
+                red u8 <- (i.u8 & 0b1110_0000) >> 5
+                green u8 <- (i.u8 & 0b0001_1100) >> 2
+                blue u8 <- i.u8 & 0b0000_0011
+
+                // Convert each component into 0..63 range
+                palette[i * 3 + 0] <- red * 9
+                palette[i * 3 + 1] <- green * 9
+                palette[i * 3 + 2] <- blue * 21
+            ;
+
+            @BiosService::Video::vesaSetPalette(palette.adr)
+        ;
+
         ret pSurface
     ;
 

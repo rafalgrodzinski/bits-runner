@@ -14,6 +14,7 @@
 %define BIOS_SERVICE_VIDEO_VESA_SET_MODE 0x23
 %define BIOS_SERVICE_VIDEO_VESA_SET_DISPLAY_START 0x24
 %define BIOS_SERVICE_VIDEO_VESA_GET_FUNCTIONS_TABLE 0x25
+%define BIOS_SERVICE_VIDEO_VESA_SET_PALETTE 0x26
 
 %define BIOS_SERVICE_TEXT_MODE_80x25 0x00
 %define BIOS_SERVICE_TEXT_MODE_80x50 0x01
@@ -146,6 +147,14 @@ bios_service_32:
     call bios_service_video_vesa_get_functions_table_32
     jmp .end
 .not_video_vesa_get_functions_table:
+
+    ; Video VESA Set Palette
+    cmp eax, BIOS_SERVICE_VIDEO_VESA_SET_PALETTE
+    jne .not_video_vesa_set_palette
+    push ebx ; .palette_adr
+    call bios_service_video_vesa_set_palette_32
+    jmp .end
+.not_video_vesa_set_palette:
 
 .end:
     cli
@@ -588,3 +597,38 @@ bios_service_video_vesa_get_functions_table_32:
 [bits 32]
 
     ret
+
+;
+; VESA Set Palette
+; in
+;  .palette_adr
+%define .args_count 1
+%define .palette_adr [ebp + 8]
+[bits 32]
+bios_service_video_vesa_set_palette_32:
+    push ebp
+    mov ebp, esp
+
+    ; Coppy data to local buffer
+    mov ecx, 256 * 3
+    mov esi, .palette_adr
+    mov edi, buffer
+    rep movsb
+
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f09
+    mov bl, 0x00
+    mov cx, 0xff
+    mov dx, 0x00
+    mov di, buffer
+    int 0x10
+
+    call switch_to_protected_mode_16
+[bits 32]
+
+    mov esp, ebp
+    pop ebp
+    ret U32_SIZE * .args_count
+%undef .palette_adr
+%undef .args_count

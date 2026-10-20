@@ -16,6 +16,7 @@ Service::Video::VESA_GET_MODE_INFO u32 <- 0x22
 Service::Video::VESA_SET_MODE u32 <- 0x23
 Service::Video::VESA_SET_DISPLAY_START u32 <- 0x24
 Service::Video::VESA_GET_FUNCTIONS_TABLE u32 <- 0x25
+Service::Video::VESA_SET_PALETTE u32 <- 0x26
 
 @export VIDEO_MODE_TEXT_80x25 u32 <- 0x00
 @export VIDEO_MODE_TEXT_80x50 u32 <- 0x01
@@ -95,4 +96,8 @@ biosServiceCallRaw raw<"=r, m, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{mem
 
 @export Video::vesaGetFunctionsTable fun -> a
     ret biosServiceCallRaw(aBiosService.u32, Service::Video::VESA_GET_FUNCTIONS_TABLE, 0, 0, 0).a
+;
+
+@export Video::vesaSetPalette fun: aPalette a
+    biosServiceCallRaw(aBiosService.u32, Service::Video::VESA_SET_PALETTE, aPalette.u32, 0, 0)
 ;
