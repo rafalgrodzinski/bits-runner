@@ -507,8 +507,8 @@ bios_service_video_vesa_set_mode_32:
 [bits 16]
     mov ax, 0x4f02
     mov bx, .mode
-    ;and bx, 0x3fff ; Clear two top bits
-    ;or bx, 0x4000 ; Set bit 14 to enable linear frame buffer
+    and bx, 0x3fff ; Clear two top bits
+    or bx, 0x4000 ; Set bit 14 to enable linear frame buffer
     int 0x10
 
     call switch_to_protected_mode_16
@@ -535,7 +535,7 @@ bios_service_video_vesa_set_display_start_32:
 
     call switch_to_v86_mode_32
 [bits 16]
-    mov ax, 0x0407
+    mov ax, 0x4f07
     mov bx, 0x0080
     mov ecx, .xOffset
     mov edx, .yOffset

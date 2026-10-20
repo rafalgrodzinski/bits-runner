@@ -44,7 +44,7 @@ VESA Info Block
 - `bx`: `<13-0>`: Mode Numer, `<14>`: Set for linear framebuffer, clear for bank switching, `<15>`: If clear, BIOS clears the screen
 
 ### Get/set display start `0x4f07`
-- `ax`: `0x0407`
+- `ax`: `0x4f07`
 - `bx`: `0x0000`: Set display start, `0x0001`: Get display start, `0x0080`: Set display start during VSync
 - `cx`: Start x pixel
 - `dx`: Start y pixel

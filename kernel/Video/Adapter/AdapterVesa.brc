@@ -170,7 +170,7 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
             // get offset to the new front display area
             displayOffset u32
             if it.aBackPageBuffer > it.aFrontPageBuffer
-                displayOffset <- pMetadata.val.pitch * pMode.val.height
+                displayOffset <- pMode.val.height
             ;
 
             // swap front with back
