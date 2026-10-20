@@ -609,8 +609,8 @@ bios_service_video_vesa_set_palette_32:
     push ebp
     mov ebp, esp
 
-    ; Coppy data to local buffer
-    mov ecx, 256 * 3
+    ; Copy and set first half of the palette
+    mov ecx, 0x200
     mov esi, .palette_adr
     mov edi, buffer
     rep movsb
@@ -619,8 +619,27 @@ bios_service_video_vesa_set_palette_32:
 [bits 16]
     mov ax, 0x4f09
     mov bl, 0x00
-    mov cx, 0xff
-    mov dx, 0x00
+    mov cx, 0x80 ; first 128 colors
+    mov dx, 0x00 ; starting at index 0
+    mov di, buffer
+    int 0x10
+
+    call switch_to_protected_mode_16
+[bits 32]
+
+    ; Then do the same for the second half
+    mov ecx, 0x200
+    mov esi, .palette_adr
+    add esi, 0x200
+    mov edi, buffer
+    rep movsb
+
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f09
+    mov bl, 0x00
+    mov cx, 0x80 ; second 128 colors
+    mov dx, 0x80 ; starting at index 128
     mov di, buffer
     int 0x10
 
