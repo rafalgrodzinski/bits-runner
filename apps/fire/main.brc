@@ -47,7 +47,7 @@ rand fun -> u32
         rep y u32 <- 1, y < heatHeight - 1, y <- y + 1
             rep x u32 <- 1, x < heatWidth - 1, x <- x + 1
                 value s32 <- heatMap[y * heatWidth + x].s32 +
-                    heatMap[ (y+1) * heatWidth + x].s32 +
+                    heatMap[(y+1) * heatWidth + x].s32 +
                     heatMap[y * heatWidth + x + 1].s32 +
                     heatMap[y * heatWidth + x - 1].s32
                 value <- value / 4
