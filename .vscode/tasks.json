@@ -8,12 +8,25 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem",
+                "close": false,
+                "focus": true
+            },
+            "problemMatcher": ["$brc"],
         },
         {
             "label": "Stop in VirtualBox",
             "type": "shell",
-            "command": "VBoxManage controlvm \"Bits Runner\" poweroff"
+            "command": "VBoxManage controlvm \"Bits Runner\" poweroff",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem",
+                "close": false,
+                "focus": true
+            }
         }
     ]
 }

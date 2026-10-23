@@ -7,16 +7,18 @@
 @export Video blob
     primaryAdapter proto<Adapter>
 
-    adapterVga blob<AdapterVga>
-    adapterVesa blob<AdapterVesa>
     adapterSvga2 blob<AdapterSvga2>
+    adapterVesa blob<AdapterVesa>
+    adapterVga blob<AdapterVga>
+    adapterNone blob<AdapterNone>
 
     init fun
-        it.primaryAdapter <- {it.adapterVga.ptr}
-        //it.primaryAdapter <- {it.adapterVesa.ptr}
-        /*rep i u32, i < @Bus::devicesPciCount, i <- i + 1
-            it.adapterSvga2.init(@Bus::devicesPci[i])
+        if it.adapterVesa.init()
+            it.primaryAdapter <- {it.adapterVesa.ptr}
+        else if it.adapterVga.init()
+            it.primaryAdapter <- {it.adapterVga.ptr}
+        else
+            it.primaryAdapter <- {it.adapterNone.ptr}
         ;
-        it.primaryAdapter <- {it.adapterSvga2.ptr}*/
     ;
 ;

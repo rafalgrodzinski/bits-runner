@@ -8,7 +8,7 @@ mode0 blob<@Syscall::Video::ModeInfo>
 mode1 blob<@Syscall::Video::ModeInfo>
 resourceId u32
 
-DEMOS_COUNT u32 <- 5
+DEMOS_COUNT u32 <- 6
 demoMode u32 <- 0
 
 ascii u32
@@ -40,8 +40,6 @@ readMouse fun
 ;
 
 @export start fun
-    @B::String("vdemo.bin >").println()
-
     selectedModeInfo blob<@Syscall::Video::ModeInfo>
     modesCount u32 <- @Syscall::Video::getModesCount()
     rep i u32, i < modesCount, i <- i + 1
@@ -49,7 +47,7 @@ readMouse fun
 
         if modeInfo.width = 320 and modeInfo.height = 240 and modeInfo.bpp = 8
             mode0 <- modeInfo
-        else if modeInfo.width = 640 and modeInfo.height = 480 and modeInfo.bpp = 16
+        else if modeInfo.width = 640 and modeInfo.height = 480 and modeInfo.bpp = 8
             mode0 <- modeInfo
         else if modeInfo.width = 800 and modeInfo.height = 600 and modeInfo.bpp >= 24
             mode1 <- modeInfo
@@ -58,33 +56,7 @@ readMouse fun
         else if mode1.id = 0
             mode1 <- modeInfo
         ;
-
-        @B::StringHexForU32(modeInfo.id).print()
-        @B::String(" ").print()
-        @B::StringForU32(modeInfo.width).print()
-        @B::String("x").print()
-        @B::StringForU32(modeInfo.height).print()
-        @B::String("x").print()
-        @B::StringForU32(modeInfo.bpp).println()
     ;
-
-    @B::String("").println()
-
-    @B::StringHexForU32(mode0.id).print()
-    @B::String(" ").print()
-    @B::StringForU32(mode0.width).print()
-    @B::String("x").print()
-    @B::StringForU32(mode0.height).print()
-    @B::String("x").print()
-    @B::StringForU32(mode0.bpp).println()
-
-    @B::StringHexForU32(mode1.id).print()
-    @B::String(" ").print()
-    @B::StringForU32(mode1.width).print()
-    @B::String("x").print()
-    @B::StringForU32(mode1.height).print()
-    @B::String("x").print()
-    @B::StringForU32(mode1.bpp).println()
 
     rep
              if demoMode = 0: demo_0()
@@ -92,10 +64,77 @@ readMouse fun
         else if demoMode = 2: demo_2()
         else if demoMode = 3: demo_3()
         else if demoMode = 4: demo_4()
+        else if demoMode = 5: demo_5()
     ;
 ;
 
 demo_0 fun
+    setMode(0)
+
+    @Syscall::Video::clear(resourceId, 0, 0, 0)
+    @Syscall::Video::commit(resourceId)
+
+    rep y u32, y < height, y <- y + 1
+        rep x u32, x < width, x <- x + 1
+            r u32
+            g u32
+            b u32
+
+            if y >= height * 2 / 3
+                b <- x * 255 / width
+            else if y >= height / 3
+                g <- x * 255 / width
+            else
+                r <- x * 255 / width
+            ;
+
+            readKeyboard()
+            @Syscall::Video::drawPixel(resourceId, x, y, r.u8, g.u8, b.u8)
+        ;
+    ;
+    @Syscall::Video::commit(resourceId)
+
+    rep demoMode = 0
+        readKeyboard()
+    ;
+;
+
+demo_1 fun
+    setMode(1)
+
+    @Syscall::Video::clear(resourceId, 0, 0, 0)
+    @Syscall::Video::commit(resourceId)
+
+    rep y u32, y < height, y <- y + 1
+        rep x u32, x < width, x <- x + 1
+            r u32
+            g u32
+            b u32
+
+            r <- (height - y) * 128 / height
+            if x >= width / 2   
+                r <- r + (width - x) * 128 / width
+            else
+                r <- r + x * 128 / width
+            ;
+
+            g <- (width - x) * 128 / width
+            g <- g + (y * 128) / height
+
+            b <- x * 128 / width
+            b <- b + (y * 128) / height
+
+            @Syscall::Video::drawPixel(resourceId, x, y, r.u8, g.u8, b.u8)
+        ;
+    ;
+    @Syscall::Video::commit(resourceId)
+
+    rep demoMode = 1
+        readKeyboard()
+    ;
+;
+
+demo_2 fun
     setMode(0)
 
     xPos s32 <- width.s32 / 2
@@ -111,7 +150,7 @@ demo_0 fun
     bgGreen u8 <- 28
     bgBlue u8 <- 177
 
-    rep demoMode = 0
+    rep demoMode = 2
         readKeyboard()
         readMouse()
 
@@ -164,7 +203,7 @@ demo_0 fun
     ;
 ;
 
-demo_1 fun
+demo_3 fun
     setMode(1)
 
     xPos s32 <- width.s32 / 2
@@ -178,7 +217,7 @@ demo_1 fun
     bgGreen u8 <- 133
     bgBlue u8 <- 233
 
-    rep demoMode = 1
+    rep demoMode = 3
         readKeyboard()
         readMouse()
 
@@ -231,25 +270,7 @@ demo_1 fun
     ;
 ;
 
-demo_2 fun
-    setMode(1)
-
-    rep iy u32 <- 0, iy < height, iy <- iy + 1
-        rep ix u32 <- 0, ix < width, ix <- ix + 1
-            red u8 <- ((ix / (width / 255)) + (iy / (height / 255) * 8)).u8
-            green u8 <- ((ix / (width / 255)) + (iy / (height / 255) * 8)).u8
-            blue u8 <- ((ix / (width / 255)) + (iy / (height / 255) * 8)).u8
-            @Syscall::Video::drawPixel(resourceId, ix, iy, red, green, blue)
-        ;
-    ;
-
-    rep demoMode = 2
-        readKeyboard()
-        readMouse()
-    ;
-;
-
-demo_3 fun
+demo_4 fun
     setMode(0)
 
     x1 s32 <- width.s32 / 2
@@ -264,7 +285,7 @@ demo_3 fun
 
     isFront bool <- true
 
-    rep demoMode = 3
+    rep demoMode = 4
         readKeyboard()
         readMouse()
 
@@ -321,7 +342,7 @@ demo_3 fun
     ;
 ;
 
-demo_4 fun
+demo_5 fun
     setMode(0)
 
     POINTS_COUNT u32 <- 5
@@ -335,7 +356,7 @@ demo_4 fun
     green u8 <- 33
     blue u8 <- 200
 
-    rep demoMode = 4
+    rep demoMode = 5
         readKeyboard()
         readMouse()
 

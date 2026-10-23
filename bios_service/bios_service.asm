@@ -3,10 +3,18 @@
 %define BIOS_SERVICE_BOOT_STORAGE_WRITE_SECTORS 0x04
 %define BIOS_SERVICE_BOOT_STORAGE_SECTORS_COUNT 0x03
 
+%define BIOS_SERVICE_INPUT_KEYBOARD_GET_SCAN_CODE_WAITING 0x10
+%define BIOS_SERVICE_INPUT_KEYBOARD_GET_KEY 0x11
+%define BIOS_SERVICE_INPUT_MOUSE_INIT 0x12
+%define BIOS_SERVICE_INPUT_MOUSE_UPDATE 0x13
+
 %define BIOS_SERVICE_VIDEO_VGA_SET_MODE 0x20
 %define BIOS_SERVICE_VIDEO_VESA_GET_INFO 0x21
 %define BIOS_SERVICE_VIDEO_VESA_GET_MODE_INFO 0x22
 %define BIOS_SERVICE_VIDEO_VESA_SET_MODE 0x23
+%define BIOS_SERVICE_VIDEO_VESA_SET_DISPLAY_START 0x24
+%define BIOS_SERVICE_VIDEO_VESA_GET_FUNCTIONS_TABLE 0x25
+%define BIOS_SERVICE_VIDEO_VESA_SET_PALETTE 0x26
 
 %define BIOS_SERVICE_TEXT_MODE_80x25 0x00
 %define BIOS_SERVICE_TEXT_MODE_80x50 0x01
@@ -14,6 +22,7 @@
 %define BIOS_SERVICE_GPXS_MODE_320x200x8 0x13
 
 saved_eax: dd 0
+mouse_state: times 3 dd 0
 
 ;
 ; BIOS Services
@@ -62,6 +71,34 @@ bios_service_32:
     jmp .end
 .not_sectors_count:
 
+    ; Input Keyboard Get Scan Code Waiting
+    cmp eax, BIOS_SERVICE_INPUT_KEYBOARD_GET_SCAN_CODE_WAITING
+    jne .not_input_keyboard_get_scan_code_waiting
+    call bios_service_input_keyboard_get_scan_code_waiting_32
+    jmp .end
+.not_input_keyboard_get_scan_code_waiting:
+
+    ; Input Keyboard Get Key
+    cmp eax, BIOS_SERVICE_INPUT_KEYBOARD_GET_KEY
+    jne .not_input_keyboard_get_key
+    call bios_service_input_keyboard_get_key_32
+    jmp .end
+.not_input_keyboard_get_key:
+
+    ; Initialize mouse
+    cmp eax, BIOS_SERVICE_INPUT_MOUSE_INIT
+    jne .not_input_mouse_init
+    call bios_service_input_mouse_init_32
+    jmp .end
+.not_input_mouse_init:
+
+    ; Update mouse
+    cmp eax, BIOS_SERVICE_INPUT_MOUSE_UPDATE
+    jne .not_input_mouse_update
+    call bios_service_input_mouse_update_32
+    jmp .end
+.not_input_mouse_update:
+
     ; Video VGA Set Mode
     cmp eax, BIOS_SERVICE_VIDEO_VGA_SET_MODE
     jne .not_video_vga_set_mode
@@ -94,6 +131,30 @@ bios_service_32:
     call bios_service_video_vesa_set_mode_32
     jmp .end
 .not_video_vesa_set_mode:
+
+    ; Video VESA Set Display Start
+    cmp eax, BIOS_SERVICE_VIDEO_VESA_SET_DISPLAY_START
+    jne .not_video_vesa_set_display_start
+    push ebx ; .xOffset
+    push ecx ; .yOffset
+    call bios_service_video_vesa_set_display_start_32
+    jmp .end
+.not_video_vesa_set_display_start:
+
+    ; Video VESA Get Functions Table
+    cmp eax, BIOS_SERVICE_VIDEO_VESA_GET_FUNCTIONS_TABLE
+    jne .not_video_vesa_get_functions_table
+    call bios_service_video_vesa_get_functions_table_32
+    jmp .end
+.not_video_vesa_get_functions_table:
+
+    ; Video VESA Set Palette
+    cmp eax, BIOS_SERVICE_VIDEO_VESA_SET_PALETTE
+    jne .not_video_vesa_set_palette
+    push ebx ; .palette_adr
+    call bios_service_video_vesa_set_palette_32
+    jmp .end
+.not_video_vesa_set_palette:
 
 .end:
     cli
@@ -177,6 +238,140 @@ bios_service_boot_storage_write_sectors_32:
 %undef .sectors_count
 %undef .source_lba_address
 %undef .args_count
+
+;
+; Wait for keyboard input
+; out
+;  eax: scan code
+[bits 32]
+bios_service_input_keyboard_get_scan_code_waiting_32:
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ah, 0x00
+    int 0x16
+    mov al, ah ; ah: scan code, al: ascii
+    mov ah, 0x00
+
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
+
+;
+; Get current keyboard input without waiting
+; out
+;  ah: scan code
+;  al: ascii
+[bits 32]
+bios_service_input_keyboard_get_key_32:
+    call switch_to_v86_mode_32
+[bits 16]
+    mov cx, 1000
+.loop:
+    mov ah, 0x01
+    int 0x16
+    jz .no_key
+
+    mov ah, 0x00
+    int 0x16
+    movzx eax, ax
+    jmp .end
+
+.no_key:
+    xor eax, eax
+    loop .loop
+.end:
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
+
+;
+; Initialize mouse callback and return address with status
+; out
+;  eax: status address
+[bits 32]
+bios_service_input_mouse_init_32:
+    call switch_to_v86_mode_32
+[bits 16]
+    ; Initialize
+    mov ax, 0xc205
+    mov bh, 3
+    int 0x15
+    jc .init_failed
+
+    ; Set callback
+    mov ax, 0xc207
+    mov bx, bios_service_mouse_callback_16
+    int 0x15
+    jc .init_failed
+
+    ; Enable
+    mov ax, 0xc200
+    mov bh, 0x01
+    int 0x15
+    jc .init_failed
+
+    mov eax, mouse_state
+    jmp .end
+
+.init_failed:
+    mov eax, 0x00
+.end:
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
+
+;
+; Run a bit in real mode so the mouse interrupt has a moment to arrive
+[bits 32]
+bios_service_input_mouse_update_32:
+    call switch_to_v86_mode_32
+[bits 16]
+
+.flushed:
+    mov cx, 10000
+.wait:
+    in al, 0x80
+    loop .wait
+
+    call switch_to_protected_mode_16
+[bits 32]
+    ret
+
+;
+; Callback for BIOS mouse interrupt
+%define .status [bp + 12]
+%define .delta_x [bp + 10]
+%define .delta_y [bp + 8]
+[bits 16]
+bios_service_mouse_callback_16:
+    push bp
+    mov bp, sp
+    push eax
+
+    movzx eax, word .status
+    and eax, 0111b
+    mov [cs:mouse_state], eax
+
+    movzx eax, word .delta_x
+    test .status, 00010000b
+    jz .x_not_negative
+    or eax, 0xffff_ff00
+.x_not_negative:
+    add [cs:mouse_state + 4], eax
+
+    movzx eax, word .delta_y
+    test .status, 00100000b
+    jz .y_not_negative
+    or eax, 0xffff_ff00
+.y_not_negative:
+    add [cs:mouse_state + 8], eax
+
+    pop eax
+    pop bp
+    retf
+%undef .delta_y
+%undef .delta_x
+%undef .status
 
 ;
 ; Get number of sectors of the boot storage
@@ -329,8 +524,8 @@ bios_service_video_vesa_set_mode_32:
 [bits 16]
     mov ax, 0x4f02
     mov bx, .mode
-    ;and bx, 0x3fff ; Clear two top bits
-    ;or bx, 0x4000 ; Set bit 14 to enable linear frame buffer
+    and bx, 0x3fff ; Clear two top bits
+    or bx, 0x4000 ; Set bit 14 to enable linear frame buffer
     int 0x10
 
     call switch_to_protected_mode_16
@@ -340,4 +535,119 @@ bios_service_video_vesa_set_mode_32:
     pop ebp
     ret U32_SIZE * .args_count
 %undef .mode
+%undef .args_count
+
+;
+; VESA Set Display Start
+; in
+;  .xOffset
+;  .yOffset
+%define .args_count 2
+%define .xOffset [ebp + 8]
+%define .yOffset [ebp + 12]
+[bits 32]
+bios_service_video_vesa_set_display_start_32:
+    push ebp
+    mov ebp, esp
+
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f07
+    mov bx, 0x0000
+    mov ecx, .xOffset
+    mov edx, .yOffset
+    int 0x10
+
+    call switch_to_protected_mode_16
+[bits 32]
+
+    mov esp, ebp
+    pop ebp
+    ret U32_SIZE * .args_count
+%undef .yOffset
+%undef .xOffset
+%undef .args_count
+
+;
+; VESA Get functions table
+; out
+;  eax: functions table pointer
+[bits 32]
+bios_service_video_vesa_get_functions_table_32:
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f0a
+    mov bl, 0x00
+    int 0x10
+
+    cmp ax, 0x004f
+    je .supported
+    mov eax, 0x00
+    jmp .end
+
+.supported:
+    mov ax, es
+    movzx eax, ax
+    shl eax, 4
+    movzx edi, di
+    add eax, edi
+
+.end:
+    call switch_to_protected_mode_16
+[bits 32]
+
+    ret
+
+;
+; VESA Set Palette
+; in
+;  .palette_adr
+%define .args_count 1
+%define .palette_adr [ebp + 8]
+[bits 32]
+bios_service_video_vesa_set_palette_32:
+    push ebp
+    mov ebp, esp
+
+    ; Copy and set first half of the palette
+    mov ecx, 0x200
+    mov esi, .palette_adr
+    mov edi, buffer
+    rep movsb
+
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f09
+    mov bl, 0x00
+    mov cx, 0x80 ; first 128 colors
+    mov dx, 0x00 ; starting at index 0
+    mov di, buffer
+    int 0x10
+
+    call switch_to_protected_mode_16
+[bits 32]
+
+    ; Then do the same for the second half
+    mov ecx, 0x200
+    mov esi, .palette_adr
+    add esi, 0x200
+    mov edi, buffer
+    rep movsb
+
+    call switch_to_v86_mode_32
+[bits 16]
+    mov ax, 0x4f09
+    mov bl, 0x00
+    mov cx, 0x80 ; second 128 colors
+    mov dx, 0x80 ; starting at index 128
+    mov di, buffer
+    int 0x10
+
+    call switch_to_protected_mode_16
+[bits 32]
+
+    mov esp, ebp
+    pop ebp
+    ret U32_SIZE * .args_count
+%undef .palette_adr
 %undef .args_count

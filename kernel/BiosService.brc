@@ -5,10 +5,18 @@ Service::BOOT_STORAGE_READ_SECTORS u32 <- 0x02
 Service::BOOT_STORAGE_WRITE_SECTORS u32 <- 0x04
 Service::GET_SECTORS_COUNT u32 <- 0x03
 
+Service::Input::KEYBOARD_GET_SCAN_CODE_WAITING u32 <- 0x10
+Service::Input::KEYBOARD_GET_KEY u32 <- 0x11
+Service::Input::MOUSE_INIT u32 <- 0x12
+Service::Input::MOUSE_UPDATE u32 <- 0x13
+
 Service::Video::VGA_SET_MODE u32 <- 0x20
 Service::Video::VESA_GET_INFO u32 <- 0x21
 Service::Video::VESA_GET_MODE_INFO u32 <- 0x22
 Service::Video::VESA_SET_MODE u32 <- 0x23
+Service::Video::VESA_SET_DISPLAY_START u32 <- 0x24
+Service::Video::VESA_GET_FUNCTIONS_TABLE u32 <- 0x25
+Service::Video::VESA_SET_PALETTE u32 <- 0x26
 
 @export VIDEO_MODE_TEXT_80x25 u32 <- 0x00
 @export VIDEO_MODE_TEXT_80x50 u32 <- 0x01
@@ -48,6 +56,23 @@ biosServiceCallRaw raw<"=r, m, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{mem
     ret biosServiceCallRaw(aBiosService.u32, Service::GET_SECTORS_COUNT, 0, 0, 0)
 ;
 
+// Input
+@export Input::keyboardGetScanCodeWaiting fun -> u8
+    ret biosServiceCallRaw(aBiosService.u32, Service::Input::KEYBOARD_GET_SCAN_CODE_WAITING, 0, 0, 0).u8
+;
+
+@export Input::keyboardGetKey fun -> u16
+    ret biosServiceCallRaw(aBiosService.u32, Service::Input::KEYBOARD_GET_KEY, 0, 0, 0).u16
+;
+
+@export Input::mouseInit fun -> a
+    ret biosServiceCallRaw(aBiosService.u32, Service::Input::MOUSE_INIT, 0, 0, 0).a
+;
+
+@export Input::mouseUpdate fun
+    biosServiceCallRaw(aBiosService.u32, Service::Input::MOUSE_UPDATE, 0, 0, 0)
+;
+
 // Video
 @export Video::vgaSetMode fun: videoMode u32
     biosServiceCallRaw(aBiosService.u32, Service::Video::VGA_SET_MODE, videoMode, 0, 0)
@@ -63,4 +88,16 @@ biosServiceCallRaw raw<"=r, m, m, m, m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{mem
 
 @export Video::vesaSetMode fun: mode u32
     biosServiceCallRaw(aBiosService.u32, Service::Video::VESA_SET_MODE, mode, 0, 0)
+;
+
+@export Video::vesaSetDisplayStart fun: xOffset u32, yOffset u32
+    biosServiceCallRaw(aBiosService.u32, Service::Video::VESA_SET_DISPLAY_START, xOffset, yOffset, 0)
+;
+
+@export Video::vesaGetFunctionsTable fun -> a
+    ret biosServiceCallRaw(aBiosService.u32, Service::Video::VESA_GET_FUNCTIONS_TABLE, 0, 0, 0).a
+;
+
+@export Video::vesaSetPalette fun: aPalette a
+    biosServiceCallRaw(aBiosService.u32, Service::Video::VESA_SET_PALETTE, aPalette.u32, 0, 0)
 ;

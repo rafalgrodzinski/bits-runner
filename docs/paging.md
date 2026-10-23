@@ -15,6 +15,21 @@ Set `cr3` to 4096 bytes aligned (only bit 31-12 set) physical address of page di
 
 Set bit 31 - PG (Paging) in `cr0`.
 
+### `cr3`
+```
+31
+⋮ Physical address of the page tables directory
+12
+11
+⋮ Unused
+5
+4 PCD (Set to disable caching)
+3 PWT (Set to enable Write-through caching)
+2
+⋮ Unused
+0
+```
+
 ## Invalidate TLB
 ```
 mov eax, cr3

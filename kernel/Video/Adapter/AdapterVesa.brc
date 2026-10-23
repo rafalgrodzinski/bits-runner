@@ -3,6 +3,7 @@
 @import BiosService
 @import B
 @import Memory
+@import BSys
 
 VesaInfo blob
     signature data<u8, 4>
@@ -10,7 +11,7 @@ VesaInfo blob
     oemStringPtr data<u16, 2>
     caps data<u8, 4>
     videoModePtr data<u16, 2>
-    totalMemory u16
+    memoryBlocksCount u16
     reserved data<u8, 492>
 ;
 
@@ -35,12 +36,12 @@ VesaModeInfo blob
     u8 // bankSize
     u8 // imagePages
     u8 // reserved
-    u8 // redMask
-    u8 // redPosition
-    u8 // greenMask
-    u8 // greenPosition
-    u8 // blueMask
-    u8 // bluePosition
+    redSize u8
+    redPosition u8
+    greenSize u8
+    greenPosition u8
+    blueSize u8
+    bluePosition u8
     u8 // reserved
     u8 // reserved
     u8 // directColorAttributes
@@ -50,33 +51,59 @@ VesaModeInfo blob
     data<u8, 206> // reserved
 ;
 
+AdapterVesa::FRAMEBUFFER_ADR a <- 0xe000_0000
+
+AdapterVesa::BUFFER_MODE_DEVICE u32 <- 0x00
+AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
+
 @export AdapterVesa blob: Adapter
-    //
-    // MARK: proto<Adapter>
-    //
+    memoryBlocksCount u32
+    modeIds blob<@B::Array, u16>
+    modes blob<@B::Array, ptr<blob<Mode>>>
 
-    getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
-        modes blob<@B::Array, ptr<blob<Mode>>>
+    aFrontPageBuffer a
+    aBackPageBuffer a
+    bufferMode u32
 
-        // First get and copy the list of modes
+    aVesaFunctionsTable a
+    
+    init fun -> bool
+        // Get adapter info
         vesaInfo blob_pack<VesaInfo>
         @BiosService::Video::vesaGetInfo(vesaInfo.adr)
+
+        // Verify signature and version
+        if vesaInfo.signature[0] != 'V' or vesaInfo.signature[1] != 'E' or vesaInfo.signature[2] != 'S' or vesaInfo.signature[3] != 'A': ret false
+        if vesaInfo.version < 0x0200: ret false
+
+        // Number of 64KiB blocks provided for framebuffer
+        it.memoryBlocksCount <- vesaInfo.memoryBlocksCount
+
+        // Get list of mode ids
         pModeIds ptr<data<u16>> <- {vesaInfo.videoModePtr[1] * 0x10 + vesaInfo.videoModePtr[0]}
-        modeIds blob<@B::Array, u16>
         rep i u32, pModeIds.val[i] < 0xffff, i <- i + 1
-            modeIds.push(pModeIds.val[i])
+            it.modeIds.push(pModeIds.val[i])
         ;
 
-        // Then get details for each of the modes
-        rep i u32, i < modeIds.count, i <- i + 1
+        // Get pointer to vesa functions table
+        it.aVesaFunctionsTable <- @BiosService::Video::vesaGetFunctionsTable()
+
+        ret true
+    ;
+
+    getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
+        if it.modes.count > 0: ret it.modes
+
+        // Get details for each of the modes
+        rep i u32, i < it.modeIds.count, i <- i + 1
             vesaModeInfo blob_pack<VesaModeInfo>
-            @BiosService::Video::vesaGetModeInfo(vesaModeInfo.adr, modeIds.at(i).u16)
+            @BiosService::Video::vesaGetModeInfo(vesaModeInfo.adr, it.modeIds.at(i).u16)
 
             // Filter out weird color modes
-            if vesaModeInfo.bpp = 8 or vesaModeInfo.bpp = 16 or vesaModeInfo.bpp = 24 or vesaModeInfo.bpp = 32
+            if vesaModeInfo.bpp >= 8
                 pMode ptr<blob<Mode>> <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
 
-                pMode.val.id <- modeIds.at(i).u16
+                pMode.val.id <- it.modeIds.at(i).u16
                 pMode.val.width <- vesaModeInfo.width
                 pMode.val.height <- vesaModeInfo.height
                 pMode.val.bpp <- vesaModeInfo.bpp
@@ -86,11 +113,20 @@ VesaModeInfo blob
                 pMetadata.val.aFramebuffer <- vesaModeInfo.framebufferPtr.a
                 pMetadata.val.pitch <- vesaModeInfo.pitch
 
-                modes.push(pMode)
+                pMetadata.val.redSize <- vesaModeInfo.redSize
+                pMetadata.val.redPosition <- vesaModeInfo.redPosition
+
+                pMetadata.val.greenSize <- vesaModeInfo.greenSize
+                pMetadata.val.greenPosition <- vesaModeInfo.greenPosition
+
+                pMetadata.val.blueSize <- vesaModeInfo.blueSize
+                pMetadata.val.bluePosition <- vesaModeInfo.bluePosition
+
+                it.modes.push(pMode)
             ;
         ;
 
-        ret modes
+        ret it.modes
     ;
 
     getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
@@ -102,12 +138,64 @@ VesaModeInfo blob
         // Setup adapter
         pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
         @BiosService::Video::vesaSetMode(pMode.val.id)
-        @Memory::PagingManager::instance.mapDirectMemory(pMetadata.val.aFramebuffer, pMetadata.val.pitch * pMode.val.height)
+
+        // Setup double buffering
+        it.aFrontPageBuffer <- AdapterVesa::FRAMEBUFFER_ADR
+        pageSize u32 <- pMetadata.val.pitch * pMode.val.height
+
+        // On device double buffering
+        if it.aVesaFunctionsTable != 0 and it.memoryBlocksCount >= (pageSize * 2 + 0x10_000 - 1) / 0x10_000
+            it.bufferMode <- AdapterVesa::BUFFER_MODE_DEVICE
+            it.aBackPageBuffer <- it.aFrontPageBuffer + pageSize
+            @Memory::PagingManager::instance.mapMemory(it.aFrontPageBuffer, pMetadata.val.aFramebuffer, pageSize * 2)
+        // In RAM double buffering
+        else
+            it.bufferMode <- AdapterVesa::BUFFER_MODE_RAM
+            it.aBackPageBuffer <- @BSys::memAlloc(pageSize)
+            @Memory::PagingManager::instance.mapMemory(it.aFrontPageBuffer, pMetadata.val.aFramebuffer, pageSize)
+        ;
+
+        // Set palette for RGB332 in case of 8 bit color
+        if pMode.val.bpp = 8
+            palette data<u8, 1024>
+
+            rep i u32, i < 256, i <- i + 1
+                red u8 <- (i.u8 & 0b1110_0000) >> 5
+                green u8 <- (i.u8 & 0b0001_1100) >> 2
+                blue u8 <- i.u8 & 0b0000_0011
+
+                // Convert each component into 0..63 range
+                palette[i * 4 + 0] <- blue * 21
+                palette[i * 4 + 1] <- green * 9
+                palette[i * 4 + 2] <- red * 9
+            ;
+
+            @BiosService::Video::vesaSetPalette(palette.adr)
+        ;
 
         ret pSurface
     ;
 
     commit fun: pMode ptr<blob<Mode>>
+        pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
+
+        if it.bufferMode = AdapterVesa::BUFFER_MODE_DEVICE
+            // get offset to the new front display area
+            displayOffset u32
+            if it.aBackPageBuffer > it.aFrontPageBuffer
+                displayOffset <- pMetadata.val.pitch * pMode.val.height / 4
+            ;
+
+            // swap front with back
+            temp a <- it.aFrontPageBuffer
+            it.aFrontPageBuffer <- it.aBackPageBuffer
+            it.aBackPageBuffer <- temp
+
+            // set new front buffer
+            AdapterVesa::setDisplayStartRaw(it.aVesaFunctionsTable, displayOffset)
+        else
+            @BSys::memCopy(it.aBackPageBuffer, it.aFrontPageBuffer, pMetadata.val.pitch * pMode.val.height)
+        ;
     ;
 
     clear fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8
@@ -120,30 +208,52 @@ VesaModeInfo blob
 
     drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
         pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
-        offset u32 <- y * pMetadata.val.pitch + (x * (pMode.val.bpp / 8))
+        offset u32 <- y * pMetadata.val.pitch + (x * ((pMode.val.bpp + 7) / 8))
 
-        // 8 bit color
+        // 8 bit color (RGB332)
         if pMode.val.bpp = 8
-            pPixel ptr<u8> <- {pMetadata.val.aFramebuffer + offset}
+            pPixel ptr<u8> <- {it.aBackPageBuffer + offset}
             pixel u8
             pixel <- pixel | (red & 0b1110_0000)
             pixel <- pixel | ((green & 0b1110_0000) >> 3)
             pixel <- pixel | ((blue & 0b1100_0000) >> 6)
             pPixel.val <- pixel
-        // 16 bit color
-        else if pMode.val.bpp = 16
-            pPixel ptr<u16> <- {pMetadata.val.aFramebuffer + offset}
+        // 15/16 bit color
+        else if pMode.val.bpp = 15 or pMode.val.bpp = 16
+            pPixel ptr<u16> <- {it.aBackPageBuffer + offset}
             pixel u16
-            pixel <- pixel | ((red.u16 & 0b11111000) << 8)
-            pixel <- pixel | ((green.u16 & 0b11111100) << 3)
-            pixel <- pixel | ((blue.u16 & 0b11111000) >> 3)
+            pixel <- pixel | (red.u16 >> (8 - pMetadata.val.redSize)) << pMetadata.val.redPosition
+            pixel <- pixel | (green.u16 >> (8 - pMetadata.val.greenSize)) << pMetadata.val.greenPosition
+            pixel <- pixel | (blue.u16 >> (8 - pMetadata.val.blueSize)) << pMetadata.val.bluePosition
             pPixel.val <- pixel
-        // 24 bit color
+        // 24/32 bit color
         else
-            pPixel ptr<data<u8>> <- {pMetadata.val.aFramebuffer + offset}
-            pPixel.val[2] <- red
-            pPixel.val[1] <- green
-            pPixel.val[0] <- blue
+            pPixel ptr<data<u8>> <- {it.aBackPageBuffer + offset}
+            pixel u32
+            pixel <- pixel | ((red.u32 >> (8 - pMetadata.val.redSize)) << pMetadata.val.redPosition)
+            pixel <- pixel | ((green.u32 >> (8 - pMetadata.val.greenSize)) << pMetadata.val.greenPosition)
+            pixel <- pixel | ((blue.u32 >> (8 - pMetadata.val.blueSize)) << pMetadata.val.bluePosition)
+
+            pPixel.val[0] <- ((pixel >> 0) & 0xff).u8
+            pPixel.val[1] <- ((pixel >> 8) & 0xff).u8
+            pPixel.val[2] <- ((pixel >> 16) & 0xff).u8
+            if (pMode.val.bpp = 32): pPixel.val[3] <- ((pixel >> 24) & 0xff).u8
         ;
     ;
+;
+
+AdapterVesa::setDisplayStartRaw raw<"m, m, ~{eax}, ~{ebx}, ~{ecx}, ~{edx}, ~{esi}, ~{edi}, ~{memory}">: aFunctionsTable a, displayOffset u32
+    mov esi, $0
+    mov ax, [esi + 2]
+    movzx eax, ax
+    add esi, eax
+
+    mov ecx, $1
+    mov edx, ecx
+    shr edx, 16
+    and ecx, 0xffff
+
+    mov eax, 0x4f07
+    mov ebx, 0x0000
+    call esi
 ;

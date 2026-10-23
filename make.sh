@@ -47,6 +47,13 @@ check "Failed to build vdemo"
 
 echo
 
+## fire
+echo "🛠️ Building fire..."
+./apps/fire/build.sh
+check "Failed to build fire"
+
+echo
+
 ## count
 echo "🛠️ Building count..."
 ./apps/count/build.sh
@@ -90,6 +97,7 @@ cp vdemo.bin "${FDD_MOUNT_POINT}/apps/" &&
 cp count.bin "${FDD_MOUNT_POINT}/apps/" &&
 cp cyan.bin "${FDD_MOUNT_POINT}/apps/" &&
 cp magenta.bin "${FDD_MOUNT_POINT}/apps/" &&
+cp fire.bin "${FDD_MOUNT_POINT}/apps/" &&
 
 hdiutil eject "${FDD_MOUNT_POINT}"
 check "Failed to create FDD image"
@@ -129,6 +137,7 @@ cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp count.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp cyan.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp magenta.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp fire.bin "${HDD_MOUNT_POINT}/apps/" &&
 
 hdiutil eject "${DISK_HDD}" &&
 check "Failed to create HDD image"
@@ -145,6 +154,7 @@ cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp count.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp cyan.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp magenta.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp fire.bin "${HDD_MOUNT_POINT}/apps/" &&
 
 hdiutil eject "${DISK_HDD}" &&
 check "Failed to create HDD image"

@@ -1,0 +1,19 @@
+@module Input
+
+@import BiosService
+
+@export KeyboardBios blob: Keyboard
+    init fun -> bool
+        ret true
+    ;
+
+    getCharacter fun -> u8
+        char u8 <- (@BiosService::Input::keyboardGetKey() & 0xff).u8
+
+        if char = 0x0d or char = 0x0a: ret '\n' // enter
+        else if char = 0x09: ret '\t' // tab
+        else if char = 0x1b: ret 0 // esc
+
+        ret char
+    ;
+;
