@@ -40,8 +40,6 @@ readMouse fun
 ;
 
 @export start fun
-    @B::String("vdemo.bin >").println()
-
     selectedModeInfo blob<@Syscall::Video::ModeInfo>
     modesCount u32 <- @Syscall::Video::getModesCount()
     rep i u32, i < modesCount, i <- i + 1
@@ -59,24 +57,6 @@ readMouse fun
             mode1 <- modeInfo
         ;
     ;
-
-    @B::String::println()
-
-    @B::StringHexForU32(mode0.id).print()
-    @B::String(" ").print()
-    @B::StringForU32(mode0.width).print()
-    @B::String("x").print()
-    @B::StringForU32(mode0.height).print()
-    @B::String("x").print()
-    @B::StringForU32(mode0.bpp).println()
-
-    @B::StringHexForU32(mode1.id).print()
-    @B::String(" ").print()
-    @B::StringForU32(mode1.width).print()
-    @B::String("x").print()
-    @B::StringForU32(mode1.height).print()
-    @B::String("x").print()
-    @B::StringForU32(mode1.bpp).println()
 
     rep
              if demoMode = 0: demo_0()

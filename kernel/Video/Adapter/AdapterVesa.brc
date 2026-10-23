@@ -88,16 +88,6 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
         // Get pointer to vesa functions table
         it.aVesaFunctionsTable <- @BiosService::Video::vesaGetFunctionsTable()
 
-        @B::StringForChar(vesaInfo.signature[0]).print()
-        @B::StringForChar(vesaInfo.signature[1]).print()
-        @B::StringForChar(vesaInfo.signature[2]).print()
-        @B::StringForChar(vesaInfo.signature[3]).println()
-        @B::StringHexForU32(vesaInfo.version).println()
-        @B::StringForU32(it.memoryBlocksCount).println()
-        @B::StringHexForU32(it.aVesaFunctionsTable.u32).println()
-
-        @BSys::debugPause(0x01)
-
         ret true
     ;
 
@@ -133,20 +123,8 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
                 pMetadata.val.bluePosition <- vesaModeInfo.bluePosition
 
                 it.modes.push(pMode)
-
-                @B::StringHexForU32(pMode.val.id).print()
-                @B::String(" ").print()
-                @B::StringForU32(pMode.val.width).print()
-                @B::String("x").print()
-                @B::StringForU32(pMode.val.height).print()
-                @B::String("x").print()
-                @B::StringForU32(pMode.val.bpp).print()
-                @B::String(" ").print()
-                @B::StringForU32(it.memoryBlocksCount).println()
             ;
         ;
-
-        @BSys::debugPause(0x01)
 
         ret it.modes
     ;

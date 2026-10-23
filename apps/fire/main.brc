@@ -22,8 +22,6 @@ rand fun -> u32
 ;
 
 @export start fun
-    @B::String("FIRE!").println()
-
     modesCount u32 <- @Syscall::Video::getModesCount()
     rep i u32, i < modesCount, i <- i + 1
         modeInfo blob<@Syscall::Video::ModeInfo> <- @Syscall::Video::getModeInfo(i)
