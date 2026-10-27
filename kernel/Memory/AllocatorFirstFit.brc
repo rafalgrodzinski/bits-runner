@@ -1,0 +1,13 @@
+@module Memory
+
+@export Allocator::FirstFit blob
+    init fun: aHeap a, heapSize u32, reservedSize u32
+    ;
+
+    alloc fun: size u32, alignment u32, shouldClear bool -> a
+        ret 0.a
+    ;
+
+    free fun: adr a
+    ;
+;

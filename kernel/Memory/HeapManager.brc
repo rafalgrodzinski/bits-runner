@@ -2,30 +2,25 @@
 
 @export heap u32 // marks start of the kernel heap, set by linker in kernel.ld
 
-// TODO: Remove @export (necessary because of blob instance in HeapManager)
-@export HeapLayout blob
-    pHeapStart ptr<u8>
-    heapSize u32
-    allocatedBytes u32
-;
-
 @export HeapManager::instance blob<HeapManager>
 
 @export HeapManager blob
-    heapLayout blob<HeapLayout>
+    allocator blob<Allocator::FirstFit>
 
     init fun
-        it.heapLayout.pHeapStart <- { heap.adr }
-
         pMemoryLayout ptr<blob<MemoryLayout>> <- PagingManager::instance.pMemoryLayout
         kernelImagePagesCount u32 <- (pMemoryLayout.val.kernelImageSize + pMemoryLayout.val.pageSize - 1) / pMemoryLayout.val.pageSize
-        it.heapLayout.heapSize <- (PagingManager::instance.kernelPagesCount - kernelImagePagesCount) * pMemoryLayout.val.pageSize
 
-        it.heapLayout.allocatedBytes <- 0x1000 * 4 + blob<MemoryLayout>.size + pMemoryLayout.val.pagesCount
+        it.allocator.init(
+            heap.adr,
+            (PagingManager::instance.kernelPagesCount - kernelImagePagesCount) * pMemoryLayout.val.pageSize,
+            0x1000 * 4 + blob<MemoryLayout>.size + pMemoryLayout.val.pagesCount
+        )
     ;
 
-    allocateAligned fun: pProcess ptr<blob<@Dispatch::Process>>, size u32, alignment u32 -> a
-        address a
+    allocAligned fun: pProcess ptr<blob<@Dispatch::Process>>, size u32, shouldClear bool, alignment u32 -> a
+        ret it.allocator.alloc(size, alignment, shouldClear)
+        /*address a
 
         fillerSize u32 <- if alignment > 1: (alignment - ((it.heapLayout.pHeapStart.vadr.u32 + it.heapLayout.allocatedBytes) % alignment)) % alignment else: 0
 
@@ -50,20 +45,22 @@
         ;
 
         ret address
+        */
     ;
 
-    free fun: address a
+    free fun: adr a
+        it.allocator.free(adr)
     ;
 
     getInfoHeapStart fun -> u32
-        ret it.heapLayout.pHeapStart.vadr.u32
+        ret 0//it.heapLayout.pHeapStart.vadr.u32
     ;
 
     getInfoHeapSize fun -> u32
-        ret it.heapLayout.heapSize
+        ret 0//it.heapLayout.heapSize
     ;
 
     getInfoAllocatedBytes fun -> u32
-        ret it.heapLayout.allocatedBytes
+        ret 0//it.heapLayout.allocatedBytes
     ;
 ;
