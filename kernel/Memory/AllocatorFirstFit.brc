@@ -1,10 +1,68 @@
 @module Memory
+@import B
+
+Allocator::FirstFit::ALIGNMENT u32 <- 4
+Allocator::FirstFit::ALIGNMENT_MASK u32 <- 0xffff_fffc
+
+@export Allocator::FirstFit::Frame blob
+    isFree bool
+    frameSize u32
+    pNextFrame ptr<blob<Allocator::FirstFit::Frame>>
+;
 
 @export Allocator::FirstFit blob
+    aHeap a
+    heapSize u32
+    allocatedSize u32
+    pFirstFrame ptr<blob<Allocator::FirstFit::Frame>>
+
     init fun: aHeap a, heapSize u32, reservedSize u32
+        it.aHeap <- aHeap
+        it.heapSize <- heapSize
+
+        reservedSize
+
+        it.pFirstFrame <- {aHeap + reservedSize}.ptr<blob<Allocator::FirstFit::Frame>>
+        it.pFirstFrame.val.isFree <- true
+        it.pFirstFrame.val.frameSize <- heapSize - reservedSize
+        it.pFirstFrame.val.pNextFrame <- {0}.ptr<blob<Allocator::FirstFit::Frame>>
     ;
 
     alloc fun: size u32, alignment u32, shouldClear bool -> a
+        // Round up required size to multiples of alignment
+        requiredSize u32 <- (size + Allocator::FirstFit::ALIGNMENT - 1) & Allocator::FirstFit::ALIGNMENT_MASK
+        // And make some space for the frame info
+        requiredSize <- requiredSize + blob<Allocator::FirstFit::Frame>.size
+
+        // Find an empty frame that matches the size
+        pCurrentFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.pFirstFrame
+        rep (not pCurrentFrame.val.isFree or pCurrentFrame.val.frameSize < requiredSize) and pCurrentFrame.val.pNextFrame.vadr != 0
+            @B::StringHexForU32(pCurrentFrame.vadr.u32).printColor(@B::String::FOREGROUND_CYAN)
+            @B::String(" ").print()
+            @B::StringForU32(pCurrentFrame.val.frameSize).printColor(@B::String::FOREGROUND_CYAN)
+            if pCurrentFrame.val.isFree
+                @B::String("F").printColor(@B::String::FOREGROUND_CYAN)
+            ;
+            @B::String::println()
+
+            pCurrentFrame <- pCurrentFrame.val.pNextFrame
+        ;
+
+        @B::StringHexForU32(pCurrentFrame.vadr.u32).printColor(@B::String::FOREGROUND_MAGENTA)
+        @B::String(" ").print()
+        @B::StringForU32(pCurrentFrame.val.frameSize).printColor(@B::String::FOREGROUND_MAGENTA)
+        if pCurrentFrame.val.isFree
+            @B::String(" F").printColor(@B::String::FOREGROUND_MAGENTA)
+        ;
+        @B::String::println()
+
+        // If found, split if necessary
+        if pCurrentFrame.val.isFree and pCurrentFrame.val.frameSize >= requiredSize
+
+        // If not found, allocated additional space
+        else
+        ;
+
         ret 0.a
     ;
 

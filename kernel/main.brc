@@ -29,7 +29,21 @@ busPci blob<@Bus::BusPci>
     @Interrupt::Handler::instance.init()
     @Term::init(@Term::MODE_80x50)
 
-    @B::String("Initializing Bits Runner...").println()
+    @B::StringHexForU32(@Memory::HeapManager::instance.allocator.aHeap.u32).print()
+    @B::String(" ").print()
+    @B::StringHexForU32(@Memory::HeapManager::instance.allocator.pFirstFrame.vadr.u32).println()
+
+    @B::StringForU32(@Memory::HeapManager::instance.allocator.heapSize).print()
+    @B::String(" ").print()
+    @B::StringForU32(@Memory::HeapManager::instance.allocator.allocatedSize).println()
+
+    @B::String::println()
+
+    @Memory::HeapManager::instance.allocator.alloc(1024, 0, false)
+
+    rep:
+
+    /*@B::String("Initializing Bits Runner...").println()
     @Devices::Timer::Pit::instance.init()
     //busPci.scan()
     @Storage::instance.init(biosBootDriveNumber, bootPartitionFirstSector)
@@ -51,5 +65,5 @@ busPci blob<@Bus::BusPci>
     @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, pEntry.val.fileSize)
     @BSys::memFree(pEntry.vadr)
 
-    @Dispatch::Dispatcher::instance.start()
+    @Dispatch::Dispatcher::instance.start()*/
 ;
