@@ -103,6 +103,18 @@ SOURCES+=("${SCRIPT_DIR}/Video/Adapter/AdapterSvga2.brc")
 SOURCES+=("${SCRIPT_DIR}/Video/Adapter/AdapterVesa.brc")
 SOURCES+=("${SCRIPT_DIR}/Video/Adapter/AdapterVga.brc")
 
+#echo -n "\"args\": ["
+#for FLAG in "${FLAGS[@]}"; do
+#    echo -n "\"${FLAG}\", "
+#done
+#
+#for SOURCE in "${SOURCES[@]}"; do
+#    echo -n "\"${SOURCE}\", "
+#done
+#echo -e "\b\b],"
+#
+#exit 1
+
 # build the source
 brb ${FLAGS[@]} ${SOURCES[@]}
 check
