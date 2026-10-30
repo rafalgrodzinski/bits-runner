@@ -60,6 +60,7 @@ for SOURCES_DIR in "${SOURCES_DIRS[@]}"; do
     -type d -name Storage -prune -o \
     -type d -name Video -prune -o \
     -type d -name Input -prune -o \
+    -type d -name Memory -prune -o \
     -name *.brc ! -name Speaker.brc ! -name Pit.brc -print | sort`
     for FILE in ${FILES}; do
         # and add them to the list
@@ -67,7 +68,14 @@ for SOURCES_DIR in "${SOURCES_DIRS[@]}"; do
     done
 done
 
-# Storage files need to be specifically ordered
+# Files need to be specifically ordered
+
+# Memory
+SOURCES+=("${SCRIPT_DIR}/Memory/PagingManager.brc")
+SOURCES+=("${SCRIPT_DIR}/Memory/HeapManager.brc")
+SOURCES+=("${SCRIPT_DIR}/Memory/AllocatorFirstFit.brc")
+
+# Storage 
 SOURCES+=("${SCRIPT_DIR}/Storage/Storage.brc")
 SOURCES+=("${SCRIPT_DIR}/Storage/Device/Device.brc")
 SOURCES+=("${SCRIPT_DIR}/Storage/Device/DeviceBios.brc")

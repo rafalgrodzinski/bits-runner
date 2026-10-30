@@ -1,4 +1,5 @@
 @module Memory
+
 @import B
 
 Allocator::FirstFit::ALIGNMENT u32 <- 4
@@ -7,7 +8,6 @@ Allocator::FirstFit::ALIGNMENT_MASK u32 <- 0xffff_fffc
 @export Allocator::FirstFit::Frame blob
     isFree bool
     frameSize u32
-    pNextFrame ptr<blob<Allocator::FirstFit::Frame>>
 ;
 
 @export Allocator::FirstFit blob
@@ -20,50 +20,124 @@ Allocator::FirstFit::ALIGNMENT_MASK u32 <- 0xffff_fffc
         it.aHeap <- aHeap
         it.heapSize <- heapSize
 
-        reservedSize
-
         it.pFirstFrame <- {aHeap + reservedSize}.ptr<blob<Allocator::FirstFit::Frame>>
         it.pFirstFrame.val.isFree <- true
-        it.pFirstFrame.val.frameSize <- heapSize - reservedSize
-        it.pFirstFrame.val.pNextFrame <- {0}.ptr<blob<Allocator::FirstFit::Frame>>
+        it.pFirstFrame.val.frameSize <- heapSize - reservedSize - blob<Allocator::FirstFit::Frame>.size
+    ;
+
+    getNextFrame fun: pFrame ptr<blob<Allocator::FirstFit::Frame>> -> ptr<blob<Allocator::FirstFit::Frame>>
+        // Check if it's the last frame
+        if pFrame.vadr + blob<Allocator::FirstFit::Frame>.size + pFrame.val.frameSize >= it.aHeap + it.heapSize: ret {0}.ptr<blob<Allocator::FirstFit::Frame>>
+
+        ret {pFrame.vadr + blob<Allocator::FirstFit::Frame>.size + pFrame.val.frameSize}.ptr<blob<Allocator::FirstFit::Frame>>
     ;
 
     alloc fun: size u32, alignment u32, shouldClear bool -> a
-        // Round up required size to multiples of alignment
-        requiredSize u32 <- (size + Allocator::FirstFit::ALIGNMENT - 1) & Allocator::FirstFit::ALIGNMENT_MASK
-        // And make some space for the frame info
-        requiredSize <- requiredSize + blob<Allocator::FirstFit::Frame>.size
+        // Round up requested size to multiples of alignment
+        requiredFrameSize u32 <- (size + Allocator::FirstFit::ALIGNMENT - 1) & Allocator::FirstFit::ALIGNMENT_MASK
+
+        @B::String("aHeap: ").print()
+        @B::StringHexForU32(it.aHeap.u32).print()
+        @B::String(", heapSize: ").print()
+        @B::StringForU32(it.heapSize).print()
+        @B::String(", req size: ").print()
+        @B::StringForU32(size).print()
+        @B::String(", adjusted: ").print()
+        @B::StringForU32(requiredFrameSize).println()
 
         // Find an empty frame that matches the size
         pCurrentFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.pFirstFrame
-        rep (not pCurrentFrame.val.isFree or pCurrentFrame.val.frameSize < requiredSize) and pCurrentFrame.val.pNextFrame.vadr != 0
+        rep (not pCurrentFrame.val.isFree or pCurrentFrame.val.frameSize < requiredFrameSize) and it.getNextFrame(pCurrentFrame).vadr != 0
+
+            @B::String("pCurrentFrame: ").printColor(@B::String::FOREGROUND_CYAN)
             @B::StringHexForU32(pCurrentFrame.vadr.u32).printColor(@B::String::FOREGROUND_CYAN)
-            @B::String(" ").print()
+            @B::String(", frameSize: ").printColor(@B::String::FOREGROUND_CYAN)
             @B::StringForU32(pCurrentFrame.val.frameSize).printColor(@B::String::FOREGROUND_CYAN)
-            if pCurrentFrame.val.isFree
-                @B::String("F").printColor(@B::String::FOREGROUND_CYAN)
-            ;
+            if pCurrentFrame.val.isFree: @B::String("F").printColor(@B::String::FOREGROUND_CYAN)
             @B::String::println()
 
-            pCurrentFrame <- pCurrentFrame.val.pNextFrame
+            // Go to the next frame
+            pCurrentFrame <- it.getNextFrame(pCurrentFrame)
+            //@BSys::debugPause(0x01)
         ;
 
+        @B::String("Found pCurrentFrame: ").printColor(@B::String::FOREGROUND_MAGENTA)
         @B::StringHexForU32(pCurrentFrame.vadr.u32).printColor(@B::String::FOREGROUND_MAGENTA)
-        @B::String(" ").print()
+        @B::String(", frameSize: ").printColor(@B::String::FOREGROUND_MAGENTA)
         @B::StringForU32(pCurrentFrame.val.frameSize).printColor(@B::String::FOREGROUND_MAGENTA)
-        if pCurrentFrame.val.isFree
-            @B::String(" F").printColor(@B::String::FOREGROUND_MAGENTA)
-        ;
+        if pCurrentFrame.val.isFree: @B::String(" F").printColor(@B::String::FOREGROUND_MAGENTA)
         @B::String::println()
 
-        // If found, split if necessary
-        if pCurrentFrame.val.isFree and pCurrentFrame.val.frameSize >= requiredSize
 
-        // If not found, allocated additional space
-        else
+        // Check if found frame is big enough of if we need to allocate more heap memory
+        frameSize u32 <- if pCurrentFrame.val.isFree: pCurrentFrame.val.frameSize else: 0
+        if frameSize < requiredFrameSize
+            // If we're expanding a frame, account for just the extra space, otherwise we need space for the fame info too
+            requiredAllocationSize u32 <- if pCurrentFrame.val.isFree: requiredFrameSize - frameSize else: requiredFrameSize + blob<Allocator::FirstFit::Frame>.size
+
+            @B::String("requiredAlloc: ").printColor(@B::String::FOREGROUND_GREEN)
+            @B::StringForU32(requiredAllocationSize).printColor(@B::String::FOREGROUND_GREEN)
+
+            allocatedSize u32 <- PagingManager::instance.allocateKernelPages(
+                {0},
+                PagingManager::PAGE_KERNEL,
+                requiredAllocationSize,
+                (it.aHeap + it.heapSize).u32
+            )
+
+            @B::String(", allocated: ").printColor(@B::String::FOREGROUND_GREEN)
+            @B::StringForU32(allocatedSize).printColor(@B::String::FOREGROUND_GREEN)
+            @B::String(", ").printColor(@B::String::FOREGROUND_GREEN)
+
+            // If allocation failed, bail
+            if allocatedSize = 0: ret 0.a
+
+            // Expand the heap
+            it.heapSize <- it.heapSize + allocatedSize
+
+            // If a free frame has been found, make it bigger
+            if pCurrentFrame.val.isFree
+                pCurrentFrame.val.frameSize <- frameSize + allocatedSize
+            // If no free frame has been found, append a new one
+            else
+                pCurrentFrame <- it.getNextFrame(pCurrentFrame)
+                pCurrentFrame.val.frameSize <- allocatedSize - blob<Allocator::FirstFit::Frame>.size
+            ;
         ;
 
-        ret 0.a
+        @B::String("frame: ").printColor(@B::String::FOREGROUND_GREEN)
+        @B::StringHexForU32(pCurrentFrame.vadr.u32).printColor(@B::String::FOREGROUND_GREEN)
+        @B::String(", frameSize: ").printColor(@B::String::FOREGROUND_GREEN)
+        @B::StringForU32(pCurrentFrame.val.frameSize).printlnColor(@B::String::FOREGROUND_GREEN)
+
+        // Split frame if it's too big (frame contents + next frame header)
+        if pCurrentFrame.val.frameSize > (requiredFrameSize + blob<Allocator::FirstFit::Frame>.size)
+            pNextFrame ptr<blob<Allocator::FirstFit::Frame>> <- {
+                pCurrentFrame.vadr +
+                blob<Allocator::FirstFit::Frame>.size +
+                requiredFrameSize
+            }.ptr<blob<Allocator::FirstFit::Frame>>
+            pNextFrame.val.isFree <- true
+            pNextFrame.val.frameSize <-  pCurrentFrame.val.frameSize - requiredFrameSize - blob<Allocator::FirstFit::Frame>.size
+
+            @B::String("split frame: ").printColor(@B::String::FOREGROUND_RED)
+            @B::StringHexForU32(pNextFrame.vadr.u32).printColor(@B::String::FOREGROUND_RED)
+            @B::String(", frameSize: ").printColor(@B::String::FOREGROUND_RED)
+            @B::StringForU32(pNextFrame.val.frameSize).printlnColor(@B::String::FOREGROUND_RED)
+
+            pCurrentFrame.val.frameSize <- requiredFrameSize
+        ;
+
+        @B::String("alloc frame: ").printColor(@B::String::FOREGROUND_BLUE)
+        @B::StringHexForU32(pCurrentFrame.vadr.u32).printColor(@B::String::FOREGROUND_BLUE)
+        @B::String(", frameSize: ").printColor(@B::String::FOREGROUND_BLUE)
+        @B::StringForU32(pCurrentFrame.val.frameSize).printlnColor(@B::String::FOREGROUND_BLUE)
+        @B::String::println()
+
+        // Mark the frame as in use
+        pCurrentFrame.val.isFree <- false
+        // And the return the address skiping the header
+        ret pCurrentFrame.vadr + blob<Allocator::FirstFit::Frame>.size
     ;
 
     free fun: adr a
