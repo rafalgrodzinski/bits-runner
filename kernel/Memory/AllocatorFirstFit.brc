@@ -32,6 +32,10 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
 
         ret {pFrame.vadr + blob<Allocator::FirstFit::Frame>.size + pFrame.val.frameSize}.ptr<blob<Allocator::FirstFit::Frame>>
     ;*/
+
+    getPreviousFrame fun: pFrame ptr<blob<Allocator::FirstFit::Frame>> -> ptr<blob<Allocator::FirstFit::Frame>>
+    ;
+
     getFrameSize fun: pFrame ptr<blob<Allocator::FirstFit::Frame>> -> u32
         // If it's the last frame
         ret if pFrame.val.pNextFrame.vadr = 0: it.aHeap.u32 + it.heapSize - pFrame.vadr.u32 - blob<Allocator::FirstFit::Frame>.size
@@ -182,6 +186,11 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
         @B::StringHexForU32(pCurrentFrame.vadr.u32).printColor(@B::String::FOREGROUND_BLUE)
         @B::String(", frameSize: ").printColor(@B::String::FOREGROUND_BLUE)
         @B::StringForU32(it.getFrameSize(pCurrentFrame)).printlnColor(@B::String::FOREGROUND_BLUE)
+
+        // Create a frame in the filler area if required
+        if fillerSize > 0
+        ;
+        
         @B::String::println()
 
         // Mark the frame as in use
