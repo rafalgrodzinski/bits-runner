@@ -31,7 +31,10 @@ busPci blob<@Bus::BusPci>
 
     @Memory::HeapManager::instance.allocator.alloc(2024, 0, false)
     @Memory::HeapManager::instance.allocator.alloc(2024, 0, false)
-    @Memory::HeapManager::instance.allocator.alloc(173, 0, false)
+    @Memory::HeapManager::instance.allocator.alloc(153, 0, false)
+    @Memory::HeapManager::instance.allocator.alloc(1200, 4096, false)
+
+    rep:
 
     @B::String("Initializing Bits Runner...").println()
     @Devices::Timer::Pit::instance.init()
