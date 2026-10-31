@@ -114,7 +114,7 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
         frameSize u32 <- if pCurrentFrame.val.isFree: it.getFrameSize(pCurrentFrame) else: 0
         if requiredFrameSize + fillerSize > frameSize or not doesHeaderFit
             // If we're expanding a frame, account for just the extra space, otherwise we need space for the fame info too
-            requiredAllocationSize u32 <- if pCurrentFrame.val.isFree: requiredFrameSize - frameSize else: requiredFrameSize + blob<Allocator::FirstFit::Frame>.size
+            requiredAllocationSize u32 <- if pCurrentFrame.val.isFree: requiredFrameSize + fillerSize - frameSize else: requiredFrameSize + fillerSize + blob<Allocator::FirstFit::Frame>.size
 
             @B::String("requiredAlloc: ").printColor(@B::String::FOREGROUND_GREEN)
             @B::StringForU32(requiredAllocationSize).printColor(@B::String::FOREGROUND_GREEN)
@@ -135,13 +135,15 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
 
             // If a free frame has been found, adjust its location
             if pCurrentFrame.val.isFree
+                @B::String(", adjust free, ").printColor(@B::String::FOREGROUND_GREEN)
                 //pCurrentFrame.val.frameSize <- frameSize + allocatedSize
                 pNextFrame ptr<blob<Allocator::FirstFit::Frame>> <- pCurrentFrame.val.pNextFrame
                 pCurrentFrame <- {pCurrentFrame.vadr + fillerSize}.ptr<blob<Allocator::FirstFit::Frame>>
                 pCurrentFrame.val.pNextFrame <- pNextFrame
             // If no free frame has been found, append a new one
             else
-                pCurrentFrame.val.pNextFrame <- {it.aHeap + it.heapSize}.ptr<blob<Allocator::FirstFit::Frame>>
+               @B::String("adjust new, ").printColor(@B::String::FOREGROUND_GREEN)
+                pCurrentFrame.val.pNextFrame <- {it.aHeap + it.heapSize + fillerSize}.ptr<blob<Allocator::FirstFit::Frame>>
                 pCurrentFrame <- pCurrentFrame.val.pNextFrame
                 //pCurrentFrame.val.frameSize <- allocatedSize - blob<Allocator::FirstFit::Frame>.size
                 pCurrentFrame.val.pNextFrame <- {0}.ptr<blob<Allocator::FirstFit::Frame>>
