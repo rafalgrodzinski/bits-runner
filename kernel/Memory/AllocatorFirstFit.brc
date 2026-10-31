@@ -127,6 +127,8 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
         @B::StringForU32(fillerSize).printColor(@B::String::FOREGROUND_MAGENTA)
         @B::String::println()
 
+        pPrevioudFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.getPreviousFrame(pCurrentFrame)
+
         // Check if we need to allocate more heap memory
         frameSize u32 <- if pCurrentFrame.val.isFree: it.getFrameSize(pCurrentFrame) else: 0
         if requiredFrameSize + fillerSize > frameSize or not doesHeaderFit
