@@ -34,6 +34,19 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
     ;*/
 
     getPreviousFrame fun: pFrame ptr<blob<Allocator::FirstFit::Frame>> -> ptr<blob<Allocator::FirstFit::Frame>>
+        pCurrentFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.pFirstFrame
+
+        isFinished bool
+        rep not isFinished
+            if pCurrentFrame.vadr = 0.a
+               isFinished <- true
+            else if pCurrentFrame.val.pNextFrame.vadr = pFrame.vadr
+                isFinished <- true
+            else
+                pCurrentFrame <- pCurrentFrame.val.pNextFrame
+            ;
+
+        ret pCurrentFrame
     ;
 
     getFrameSize fun: pFrame ptr<blob<Allocator::FirstFit::Frame>> -> u32
