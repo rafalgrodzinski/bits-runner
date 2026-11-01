@@ -22,10 +22,10 @@ busPci blob<@Bus::BusPci>
     biosBootDriveNumber u32 <- @BSys::getEdx()
 
     // Initialize subsystems
-    @BiosService::init(biosServiceAdr)
-    @Dispatch::Dispatcher::instance.init(gdtTssAdr)
     @Memory::PagingManager::instance.init()
     @Memory::HeapManager::instance.init()
+    @BiosService::init(biosServiceAdr)
+    @Dispatch::Dispatcher::instance.init(gdtTssAdr)
     @Interrupt::Handler::instance.init()
     @Term::init(@Term::MODE_80x50)
 

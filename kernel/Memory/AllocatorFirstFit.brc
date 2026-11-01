@@ -29,6 +29,8 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
     ;
 
     alloc fun: size u32, alignment u32, shouldClear bool -> a
+        if size = 0: ret 0
+
         // Round up requested size to multiples of frame alignment
         requiredFrameSize u32 <- (size + Allocator::FirstFit::FRAME_ALIGNMENT - 1) & Allocator::FirstFit::FRAME_ALIGNMENT_MASK
         /*
@@ -233,6 +235,8 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
     ;
 
     free fun: adr a
+        if adr = 0: ret
+
         // First mark as free
         pFrame ptr<blob<Allocator::FirstFit::Frame>> <- {adr - blob<Allocator::FirstFit::Frame>.size}
         pFrame.val.isFree <- true
