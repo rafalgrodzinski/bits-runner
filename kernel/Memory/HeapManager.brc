@@ -27,14 +27,14 @@
     ;
 
     getInfoHeapStart fun -> u32
-        ret 0//it.heapLayout.pHeapStart.vadr.u32
+        ret it.allocator.aHeap.u32
     ;
 
     getInfoHeapSize fun -> u32
-        ret 0//it.heapLayout.heapSize
+        ret it.allocator.heapSize
     ;
 
     getInfoAllocatedBytes fun -> u32
-        ret 0//it.heapLayout.allocatedBytes
+        ret it.allocator.getUsedSize()
     ;
 ;

@@ -197,13 +197,13 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
 
             // required entry in the path not found
             if not isNextEntryFound
-                @BSys::memFree(pCurrentEntry.vadr)
-                @BSys::memFree(aBuffer)
+                //@BSys::memFree(pCurrentEntry.vadr)
+                //@BSys::memFree(aBuffer)
                 ret {0}
             ;
         ;
 
-        @BSys::memFree(aBuffer)
+        //@BSys::memFree(aBuffer)
 
         ret pCurrentEntry
     ;
@@ -270,7 +270,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                 else if pFoundEntry.val.kind = Entry::Kind::FILE or pFoundEntry.val.kind = Entry::Kind::DIRECTORY
                     // If such entry already exists, return null
                     if pFoundEntry.val.name.isEqual(entryName)
-                        @BSys::memFree(pFoundEntry.vadr)
+                        //@BSys::memFree(pFoundEntry.vadr)
                         ret {0}
                     ;
                 ;
@@ -342,7 +342,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                 rep i u32, i < firstClusterBytesCount, i <- i + 1
                     targetAddress.ptr<data<u8>>.val[i] <- aBuffer.ptr<data<u8>>.val[firstClusterBytesOffset + i]
                 ;
-                @BSys::memFree(aBuffer)
+                //@BSys::memFree(aBuffer)
                 bytesCopied <- firstClusterBytesCount
             // Handle copying remainder of less than a cluster size
             else if bytesCount - bytesCopied < it.bytesPerCluster
@@ -352,7 +352,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                 rep i u32, i < lastClusterBytesCount, i <- i + 1
                     targetAddress.ptr<data<u8>>.val[bytesCopied + i] <- aBuffer.ptr<data<u8>>.val[i]
                 ;
-                @BSys::memFree(aBuffer)
+                //@BSys::memFree(aBuffer)
                 bytesCopied <- bytesCopied + lastClusterBytesCount
             // Copy a full cluster
             else
@@ -451,7 +451,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                 ;
                 // Write back a full sector
                 it.area.writeSectors(targetSector, it.fatSectorsPerCluster, aBuffer)
-                @BSys::memFree(aBuffer)
+                //@BSys::memFree(aBuffer)
 
                 bytesWritten <- firstClusterBytesCount
             // Handle writing a remainder that is less than a full cluster
@@ -471,7 +471,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                 ;
                 // Write back a full sector
                 it.area.writeSectors(targetSector, it.fatSectorsPerCluster, aBuffer)
-                @BSys::memFree(aBuffer)
+                //@BSys::memFree(aBuffer)
 
                 bytesWritten <- bytesWritten + lastClusterBytesCount
             // Write a full cluster
@@ -708,7 +708,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                     rep i u32, i < it.bytesPerCluster, i <- i + 1: aBuffer.ptr<data<u8>>.val[i] <- 0
                     targetSector u32 <- it.sectorForCluster(clusterIndex)
                     it.area.writeSectors(targetSector, it.fatSectorsPerCluster, aBuffer)
-                    @BSys::memFree(aBuffer)
+                    //@BSys::memFree(aBuffer)
                 ;
 
                 ret clusterIndex
@@ -813,6 +813,6 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
 
         // Write back updated dir entry sector
         it.area.writeSectors(pMetadata.val.dirEntrySector, 1, aBuffer)
-        @BSys::memFree(aBuffer)
+        //@BSys::memFree(aBuffer)
     ;
 ;
