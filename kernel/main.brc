@@ -29,12 +29,19 @@ busPci blob<@Bus::BusPci>
     @Interrupt::Handler::instance.init()
     @Term::init(@Term::MODE_80x50)
 
-    @Memory::HeapManager::instance.allocator.alloc(2024, 0, false)
+    /*@Memory::HeapManager::instance.allocator.alloc(2024, 0, false)
     @Memory::HeapManager::instance.allocator.alloc(2024, 0, false)
     @Memory::HeapManager::instance.allocator.alloc(153, 0, false)
-    @Memory::HeapManager::instance.allocator.alloc(1200, 4096, false)
+    @Memory::HeapManager::instance.allocator.alloc(1024, 7, false)
+    @Memory::HeapManager::instance.allocator.alloc(1024, 13, false)
+    @Memory::HeapManager::instance.allocator.alloc(8, 0, false)*/
+    /*@Memory::HeapManager::instance.allocator.alloc(4096, 4096, false)
+        @Memory::HeapManager::instance.allocator.debugPrintFrames()
+    @Memory::HeapManager::instance.allocator.alloc(4096, 7, false)
 
-    rep:
+    @Memory::HeapManager::instance.allocator.debugPrintFrames()
+
+    rep:*/
 
     @B::String("Initializing Bits Runner...").println()
     @Devices::Timer::Pit::instance.init()
@@ -45,8 +52,6 @@ busPci blob<@Bus::BusPci>
     
     @B::String("All ready, welcome to Bits Runner!\n").printlnColor(@B::String::FOREGROUND_GREEN)
 
-    @BSys::debugPause(0x01)
-
     // Load apps
     pEntry ptr<blob<@Storage::Entry>>
     aFileBuffer a
@@ -55,14 +60,10 @@ busPci blob<@Bus::BusPci>
     pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
     //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/VDEMO.BIN"))
     //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/FIRE.BIN"))
-    @BSys::debugPause(0x01)
     aFileBuffer <- @BSys::memAlloc(pEntry.val.fileSize)
     pEntry.val.read(0, pEntry.val.fileSize, aFileBuffer)
-    @BSys::debugPause(0x01)
     @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, pEntry.val.fileSize)
     @BSys::memFree(pEntry.vadr)
-
-    @BSys::debugPause(0x01)
 
     @Dispatch::Dispatcher::instance.start()
 ;

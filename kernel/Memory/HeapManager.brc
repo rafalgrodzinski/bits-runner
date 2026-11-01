@@ -20,32 +20,6 @@
 
     allocAligned fun: pProcess ptr<blob<@Dispatch::Process>>, size u32, shouldClear bool, alignment u32 -> a
         ret it.allocator.alloc(size, alignment, shouldClear)
-        /*address a
-
-        fillerSize u32 <- if alignment > 1: (alignment - ((it.heapLayout.pHeapStart.vadr.u32 + it.heapLayout.allocatedBytes) % alignment)) % alignment else: 0
-
-        if (it.heapLayout.heapSize - it.heapLayout.allocatedBytes) >= (size + fillerSize)
-            address <- it.heapLayout.pHeapStart.vadr + it.heapLayout.allocatedBytes + fillerSize
-            it.heapLayout.allocatedBytes <- it.heapLayout.allocatedBytes + size + fillerSize
-        else
-            requiredSize u32 <- (size + fillerSize) - (it.heapLayout.heapSize - it.heapLayout.allocatedBytes)
-            allocatedSize u32 <- PagingManager::instance.allocateKernelPages(
-                pProcess,
-                PagingManager::PAGE_KERNEL,
-                requiredSize,
-                (it.heapLayout.pHeapStart.vadr + it.heapLayout.heapSize).u32
-            )
-            if allocatedSize > 0
-                // filler size has to be recalculated because the heap layout could have changed when allocating pages
-                fillerSize <- if alignment > 1: (alignment - ((it.heapLayout.pHeapStart.vadr.u32 + it.heapLayout.allocatedBytes) % alignment)) % alignment else: 0
-                it.heapLayout.heapSize <- it.heapLayout.heapSize + allocatedSize
-                address <- it.heapLayout.pHeapStart.vadr + it.heapLayout.allocatedBytes + fillerSize
-                it.heapLayout.allocatedBytes <- it.heapLayout.allocatedBytes + size + fillerSize
-            ;
-        ;
-
-        ret address
-        */
     ;
 
     free fun: adr a
