@@ -21,7 +21,7 @@ busPci blob<@Bus::BusPci>
     bootPartitionFirstSector u32 <- @BSys::getEcx()
     biosBootDriveNumber u32 <- @BSys::getEdx()
 
-    // Initialize subsystems
+    // Initialize core subsystem
     @Memory::PagingManager::instance.init()
     @Memory::HeapManager::instance.init()
     @BiosService::init(biosServiceAdr)
