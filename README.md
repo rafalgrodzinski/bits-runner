@@ -38,7 +38,7 @@ It's preemptive, multi tasking, with user mode and high resolution graphics. It 
 - [🧩 Features](README.md#-features)
 - [💾 How to run](README.md#-how-to-run)
 - [🛠️ How to build](README.md#-how-to-build)
-- [🔗 Further resources](README.md#-further-resources)
+- [🔗 More info](README.md#-more-info)
 
 ## 🧩 Features
 ### Already working
@@ -70,13 +70,29 @@ Building works on macOS. Support for Linux may be added at a later point.
 
 Make sure you have [nasm](https://github.com/netwide-assembler/nasm) and [BRC](https://github.com/rafalgrodzinski/bits-runner-builder) installed and in your run path. Execute `./make.sh`, which will produce `fdd.img` and `hdd.img`, which are correspondigly FAT12 formatted floppy disk image and a hard drive image with two partitions, one FAT12 and one FAT16. `./create_images.sh` will in addition convert the `hdd.img` into formats that can be used by different virual machines.
 
-## Further resources
-- [Extra Information](docs/extra.md)
-- [Paging](docs/paging.md)
-- [PS/2 Input](docs/ps2_input.md)
-- [VGA](docs/vga.md)
-- [VMWare SVGA II](docs/vmware_svga_ii.md)
+## More info
+Unique thing about OS development is that it touches almost every topic related to software (or even hardware) engineering. Every feature requires you to learn and understand many different topics such as how CPUs work (virtual memory, interrupts, registers, etc), protocols used by various devices (PS/2 mice, PCI devices, video buffers), algorithms (you need to implement everything, sorting, allocators, hash maps, etc), or even how data is stored (file systems, file formats). Basically, it's a never ending learning process. I'm trying to (a bit chaotically) record my findings, catalog information sources or just keep track of things for further use. Maybe you'll find it useful either for your own projects or just out of curiousity. All the various documents are under `docs/` folder.
+
+- [BIOS calls](docs/bios.md)
+
+- [Interrupts](docs/cpu_interrupts.md)
+- [CPU registers](docs/cpu_registers.md)
+
+- [Input PS/2](docs/input_ps2.md)
+
+- [Virtual(Paged) memory](docs/memory_paging.md)
+- [Heap management](docs/memory_alloc.md)
+
+- [FAT 12/16](docs/storage_fat.md)
+
+- [PCI](docs/pci.md)
 - [Timers](docs/timers.md)
+
+- [Video VGA](docs/video_vga.md)
+- [Video VESA](docs/video_vesa.md)
+- [Video VMWare SVGA II](docs/video_svga2.md)
+
+- [Extra Information](docs/extra.md)
 
 ### Notes
 The HDD image uses [MBiRa](https://github.com/alexfru/MBiRa) as the MBR boot manager.
