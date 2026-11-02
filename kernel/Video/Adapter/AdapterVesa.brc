@@ -56,6 +56,27 @@ AdapterVesa::FRAMEBUFFER_ADR a <- 0xe000_0000
 AdapterVesa::BUFFER_MODE_DEVICE u32 <- 0x00
 AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
 
+compModes fun: modeA boxed<ptr<blob<Mode>>>, modeB boxed<ptr<blob<Mode>>> -> enum<@B::Array::ComparisonResult>
+    widthA u32 <- modeA.ptr<blob<Mode>>.val.width
+    heightA u32 <- modeA.ptr<blob<Mode>>.val.height
+    bppA u32 <- modeA.ptr<blob<Mode>>.val.bpp
+
+    widthB u32 <- modeB.ptr<blob<Mode>>.val.width
+    heightB u32 <- modeB.ptr<blob<Mode>>.val.height
+    bppB u32 <- modeB.ptr<blob<Mode>>.val.bpp
+
+    if widthA > widthB: ret {}.enum<@B::Array::ComparisonResult>::Decreasing
+    else if widthA < widthB: ret {}.enum<@B::Array::ComparisonResult>::Increasing
+
+    if heightA > heightB: ret {}.enum<@B::Array::ComparisonResult>::Decreasing
+    else if heightA < heightB: ret {}.enum<@B::Array::ComparisonResult>::Increasing
+
+    if bppA > bppB: ret {}.enum<@B::Array::ComparisonResult>::Decreasing
+    else if bppA < bppB: ret {}.enum<@B::Array::ComparisonResult>::Increasing
+
+    ret {}.enum<@B::Array::ComparisonResult>::Equal
+;
+
 @export AdapterVesa blob: Adapter
     memoryBlocksCount u32
     modeIds blob<@B::Array, u16>
@@ -125,6 +146,8 @@ AdapterVesa::BUFFER_MODE_RAM u32 <- 0x01
                 it.modes.push(pMode)
             ;
         ;
+
+        it.modes.sort(compModes.ptr)
 
         ret it.modes
     ;

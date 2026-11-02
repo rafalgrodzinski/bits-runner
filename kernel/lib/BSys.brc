@@ -124,21 +124,16 @@
 ;
 
 // Memory
-@export memAlignedAlloc fun: size u32, alignment u32 -> a
-    address a <- @Memory::HeapManager::instance.allocateAligned({0}, size, alignment)
-    if address != 0
-        //rep i u32, i < size, i <- i + 1: (address + i).ptr<u8>.val <- 0
-        rep i u32, i < size, i <- i + 1: address.ptr<data<u8>>.val[i] <- 0
-    ;
-    ret address
+@export memAllocAligned fun: size u32, shouldClear bool, alignment u32 -> a
+    ret @Memory::HeapManager::instance.allocAligned({0}, size, shouldClear, alignment)
 ;
 
 @export memAlloc fun: size u32 -> a
-    ret memAlignedAlloc(size, 0)
+    ret memAllocAligned(size, false, 0)
 ;
 
-@export memFree fun: address a
-    @Memory::HeapManager::instance.free(address)
+@export memFree fun: adr a
+    @Memory::HeapManager::instance.free(adr)
 ;
 
 @export memCopy raw<"r, r, r, ~{esi}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/aSource a, /*$1*/aTarget a, /*$2*/size u32

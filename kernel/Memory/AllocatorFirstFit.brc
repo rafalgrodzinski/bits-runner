@@ -1,0 +1,225 @@
+@module Memory
+
+@import BSys
+@import B
+
+Allocator::FirstFit::FRAME_ALIGNMENT u32 <- 4
+Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
+
+@export Allocator::FirstFit::Frame blob
+    isFree bool
+    pNextFrame ptr<blob<Allocator::FirstFit::Frame>>
+;
+
+@export Allocator::FirstFit blob
+    aHeap a
+    heapSize u32
+    pFirstFrame ptr<blob<Allocator::FirstFit::Frame>>
+    usedSize u32
+
+    init fun: aHeap a, heapSize u32, reservedSize u32
+        it.aHeap <- aHeap
+        it.heapSize <- heapSize
+
+        it.pFirstFrame <- {aHeap + reservedSize}
+        it.pFirstFrame.val.isFree <- true
+        it.pFirstFrame.val.pNextFrame <- {0}
+
+        // Used by the first frame header
+        it.usedSize <- blob<Allocator::FirstFit::Frame>.size
+    ;
+
+    alloc fun: size u32, alignment u32, shouldClear bool -> a
+        if size = 0: ret 0
+
+        // Round up requested size to multiples of frame alignment
+        requiredFrameSize u32 <- (size + Allocator::FirstFit::FRAME_ALIGNMENT - 1) & Allocator::FirstFit::FRAME_ALIGNMENT_MASK
+
+        // Find an empty frame that matches the size
+        pCurrentFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.pFirstFrame
+        isFound bool
+        rep not isFound and pCurrentFrame.val.pNextFrame.vadr != 0
+            // Figure out how many bytes we need to skip to fulfill alignment requirements
+            fillerSize u32
+            if pCurrentFrame.val.isFree and alignment > 1
+                fillerSize <- (alignment - ((pCurrentFrame.vadr + blob<Allocator::FirstFit::Frame>.size) % alignment)) % alignment
+
+                // Make sure we have enough space for the frame header
+                if fillerSize < blob<Allocator::FirstFit::Frame>.size
+                    fillerSize <- fillerSize + ((blob<Allocator::FirstFit::Frame>.size + alignment - 1) / alignment) * alignment
+                ;
+            ;
+
+            // If sizes are good, we found the frame
+            if pCurrentFrame.val.isFree and it.getFrameSize(pCurrentFrame) >= (fillerSize + requiredFrameSize)
+                isFound <- true
+            // Otherwise try the next frame
+            else
+                pCurrentFrame <- pCurrentFrame.val.pNextFrame
+            ;
+        ;
+
+        // Figure out how many bytes we need to skip to fulfill alignment requirements for the found frame
+        fillerSize u32
+        if alignment > 1
+            if pCurrentFrame.val.isFree
+                fillerSize <- (alignment - ((pCurrentFrame.vadr + blob<Allocator::FirstFit::Frame>.size) % alignment)) % alignment
+            else
+                fillerSize <- (alignment - ((it.aHeap.u32 + it.heapSize + blob<Allocator::FirstFit::Frame>.size) % alignment)) % alignment
+            ;
+
+            // Make sure we have enough space for the frame header
+            if fillerSize < blob<Allocator::FirstFit::Frame>.size
+                fillerSize <- fillerSize + ((blob<Allocator::FirstFit::Frame>.size + alignment - 1) / alignment) * alignment
+            ;
+        ;
+
+        // Check if we need to allocate more heap memory
+        frameSize u32 <- if pCurrentFrame.val.isFree: it.getFrameSize(pCurrentFrame) else: 0
+        allocatedSize u32
+        if requiredFrameSize + fillerSize > frameSize
+            // If we're expanding a frame, account for just the extra space, otherwise we need space for the fame info too
+            requiredAllocationSize u32 <- if pCurrentFrame.val.isFree: requiredFrameSize + fillerSize - frameSize else: requiredFrameSize + fillerSize + blob<Allocator::FirstFit::Frame>.size
+
+            allocatedSize <- PagingManager::instance.allocateKernelPages(
+                {0},
+                PagingManager::PAGE_KERNEL,
+                requiredAllocationSize,
+                (it.aHeap + it.heapSize).u32
+            )
+
+            // If allocation failed, bail
+            if allocatedSize = 0: ret 0.a
+        ;
+
+        // Keep reference to the previous frame so we can them update generated frames
+        pPreviousFrame ptr<blob<Allocator::FirstFit::Frame>>
+        // If a free frame has been found, adjust its location
+        if pCurrentFrame.val.isFree
+            pPreviousFrame <- it.getPreviousFrame(pCurrentFrame)
+
+            pNextFrame ptr<blob<Allocator::FirstFit::Frame>> <- pCurrentFrame.val.pNextFrame
+            pCurrentFrame <- {pCurrentFrame.vadr + fillerSize}
+            pCurrentFrame.val.pNextFrame <- pNextFrame
+        // If no free frame has been found, append a new one
+        else
+            pPreviousFrame <- pCurrentFrame
+
+            pCurrentFrame.val.pNextFrame <- {it.aHeap + it.heapSize + fillerSize}
+            pCurrentFrame <- pCurrentFrame.val.pNextFrame
+            pCurrentFrame.val.pNextFrame <- {0}
+
+            // Used by the new frame header
+            it.usedSize <- it.usedSize + blob<Allocator::FirstFit::Frame>.size
+        ;
+
+        // Expand the heap
+        it.heapSize <- it.heapSize + allocatedSize
+
+        // Split frame if it's too big (frame contents + next frame header)
+        if it.getFrameSize(pCurrentFrame) > (requiredFrameSize + blob<Allocator::FirstFit::Frame>.size)
+            pNextFrame ptr<blob<Allocator::FirstFit::Frame>> <- {
+                pCurrentFrame.vadr +
+                blob<Allocator::FirstFit::Frame>.size +
+                requiredFrameSize
+            }
+            pNextFrame.val.isFree <- true
+            pNextFrame.val.pNextFrame <- pCurrentFrame.val.pNextFrame
+            pCurrentFrame.val.pNextFrame <- pNextFrame
+
+            // Used by the split frame header
+            it.usedSize <- it.usedSize + blob<Allocator::FirstFit::Frame>.size
+        ;
+
+        // Used by the frame
+        it.usedSize <- it.usedSize + it.getFrameSize(pCurrentFrame)
+
+        // Create a frame in the filler area if required
+        if fillerSize > 0
+            pFillerFrame ptr<blob<Allocator::FirstFit::Frame>> <- {pCurrentFrame.vadr - fillerSize}
+            pFillerFrame.val.isFree <- true
+            pFillerFrame.val.pNextFrame <- pCurrentFrame
+            if pPreviousFrame.vadr != 0: pPreviousFrame.val.pNextFrame <- pFillerFrame
+
+            // Used by the filler frame header
+            it.usedSize <- it.usedSize + blob<Allocator::FirstFit::Frame>.size
+        ;
+
+        // Mark the frame as in use
+        pCurrentFrame.val.isFree <- false
+
+        // Clear the memory if required
+        if shouldClear: @BSys::memSet(0, pCurrentFrame.vadr + blob<Allocator::FirstFit::Frame>.size, it.getFrameSize(pCurrentFrame))
+
+        // And the return the address skiping the header
+        ret pCurrentFrame.vadr + blob<Allocator::FirstFit::Frame>.size
+    ;
+
+    free fun: adr a
+        if adr = 0: ret
+
+        // First mark as free
+        pFrame ptr<blob<Allocator::FirstFit::Frame>> <- {adr - blob<Allocator::FirstFit::Frame>.size}
+        pFrame.val.isFree <- true
+        it.usedSize <- it.usedSize - it.getFrameSize(pFrame)
+
+        // Try merging with the next frame if present and free
+        if pFrame.val.pNextFrame.vadr != 0
+            if pFrame.val.pNextFrame.val.isFree
+                pFrame.val.pNextFrame <- pFrame.val.pNextFrame.val.pNextFrame
+
+                // Getting rid of a single frame header
+                it.usedSize <- it.usedSize - blob<Allocator::FirstFit::Frame>.size
+            ;
+        ;
+
+        // Try merging with the previous frame if present and free
+        pPreviousFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.getPreviousFrame(pFrame)
+        if pPreviousFrame.vadr != 0
+            if pPreviousFrame.val.isFree
+                pPreviousFrame.val.pNextFrame <- pFrame.val.pNextFrame
+
+                // Getting rid of a single frame header
+                it.usedSize <- it.usedSize - blob<Allocator::FirstFit::Frame>.size
+            ;
+        ;
+    ;
+
+    getPreviousFrame fun: pFrame ptr<blob<Allocator::FirstFit::Frame>> -> ptr<blob<Allocator::FirstFit::Frame>>
+        pCurrentFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.pFirstFrame
+
+        rep pCurrentFrame.vadr != 0, pCurrentFrame <- pCurrentFrame.val.pNextFrame
+            if pCurrentFrame.val.pNextFrame.vadr = pFrame.vadr: ret pCurrentFrame
+        ;
+
+        ret pCurrentFrame
+    ;
+
+    getFrameSize fun: pFrame ptr<blob<Allocator::FirstFit::Frame>> -> u32
+        // Last frame is calculated against the size of the heap
+        ret if pFrame.val.pNextFrame.vadr = 0: it.aHeap.u32 + it.heapSize - pFrame.vadr.u32 - blob<Allocator::FirstFit::Frame>.size
+        // Whereas other ones against the start address of the next frame
+        else: pFrame.val.pNextFrame.vadr.u32 - pFrame.vadr.u32 - blob<Allocator::FirstFit::Frame>.size
+    ;
+
+    getUsedSize fun -> u32
+        ret it.usedSize
+    ;
+
+    getFreeSize fun -> u32
+        ret it.heapSize - (it.pFirstFrame.vadr - it.aHeap) - it.usedSize
+    ;
+
+    debugPrintFrames fun
+        pCurrentFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.pFirstFrame
+
+        rep pCurrentFrame.vadr != 0, pCurrentFrame <- pCurrentFrame.val.pNextFrame
+            @B::String("Frame @ ").print()
+            @B::StringHexForU32(pCurrentFrame.vadr.u32).print()
+            @B::String(", size: ").print()
+            @B::StringForU32(it.getFrameSize(pCurrentFrame)).print()
+            if pCurrentFrame.val.isFree: @B::String(" F").print()
+            @B::String::println()
+        ;
+    ;
+;

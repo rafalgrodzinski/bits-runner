@@ -59,7 +59,7 @@ resId u32
         pCurrentPageTablesDirectory <- {linearAdr}
     ;
 
-    pProcess ptr<blob<Process>> <- @BSys::memAlignedAlloc(blob<Process>.size, 0x1000).ptr<blob<Process>>
+    pProcess ptr<blob<Process>> <- @BSys::memAllocAligned(blob<Process>.size, true, 0x1000).ptr<blob<Process>>
     pProcess.val.state <- Process::STATE_NOT_STARTED
 
     pProcess.val.cr3 <- @Memory::PagingManager::lAdrToPAdr(pProcess.val.pageTablesDirectory.adr).u32

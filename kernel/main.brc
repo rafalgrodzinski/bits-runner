@@ -21,11 +21,11 @@ busPci blob<@Bus::BusPci>
     bootPartitionFirstSector u32 <- @BSys::getEcx()
     biosBootDriveNumber u32 <- @BSys::getEdx()
 
-    // Initialize subsystems
-    @BiosService::init(biosServiceAdr)
-    @Dispatch::Dispatcher::instance.init(gdtTssAdr)
+    // Initialize core subsystem
     @Memory::PagingManager::instance.init()
     @Memory::HeapManager::instance.init()
+    @BiosService::init(biosServiceAdr)
+    @Dispatch::Dispatcher::instance.init(gdtTssAdr)
     @Interrupt::Handler::instance.init()
     @Term::init(@Term::MODE_80x50)
 
@@ -35,7 +35,6 @@ busPci blob<@Bus::BusPci>
     @Storage::instance.init(biosBootDriveNumber, bootPartitionFirstSector)
     @Input::instance.init()
     @Video::instance.init()
-    
     @B::String("All ready, welcome to Bits Runner!\n").printlnColor(@B::String::FOREGROUND_GREEN)
 
     // Load apps
@@ -49,6 +48,7 @@ busPci blob<@Bus::BusPci>
     aFileBuffer <- @BSys::memAlloc(pEntry.val.fileSize)
     pEntry.val.read(0, pEntry.val.fileSize, aFileBuffer)
     @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, pEntry.val.fileSize)
+    @BSys::memFree(aFileBuffer)
     @BSys::memFree(pEntry.vadr)
 
     @Dispatch::Dispatcher::instance.start()
