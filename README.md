@@ -1,11 +1,35 @@
-# Bits Runner
-Bits Runner is a 32 bit operating system for x86, written in [BRC (Bits Runner Code)](https://github.com/rafalgrodzinski/bits-runner-builder) language, which has been created specifically for this project.
+<div align="center">
+  <p>
+    <h1>Bits Runner</h1>
+  </p>
+  <p>
+    A from-scratch x86 OS written in BRC and assembly
+  </p>
+  <p>
+    <a href="https://github.com/rafalgrodzinski/bits-runner-builder"><img src="https://img.shields.io/badge/;-f5b31e?label=BRC&labelColor=202020"/></a>
+    &nbsp;
+    <a href="https://flint.cs.yale.edu/cs422/doc/art-of-asm/pdf/"><img src="https://img.shields.io/badge/ASM-navy"/></a>
+    &nbsp;
+    <a href="https://github.com/rafalgrodzinski/bits-runner"><img src="https://img.shields.io/github/stars/rafalgrodzinski/bits-runner"/></a>
+    &nbsp;
+    <a href="https://github.com/rafalgrodzinski/bits-runner/releases"><img src="https://img.shields.io/github/v/tag/rafalgrodzinski/bits-runner?label=Version&color=white"/></a>
+    &nbsp;
+    <a href="#"><img src="https://img.shields.io/github/repo-size/rafalgrodzinski/bits-runner?label=Repo%20Size&color=white"></img></a>
+    &nbsp;
+    <a href="https://github.com/rafalgrodzinski/bits-runner-builder/issues"><img src="https://img.shields.io/github/issues/rafalgrodzinski/bits-runner?label=Issues&color=white"></img></a>
+  </p>
+</div>
 
-It already boots from a floppy and a hard disk on a real hardware. It supports paged virual memory, preemptive multitasking, user mode processes, FAT 12/16, PS/2 keyboard and mouse, and VGA.
+#
+Bits Runner is a from-scratch, fully custom x86 operating system, written in [Bits Runner Code](https://github.com/rafalgrodzinski/bits-runner-builder) language, which has been created specifically for this project.
 
-</video><img width="600" src="https://github.com/user-attachments/assets/c1628637-8eb3-4634-8f87-cc761a273efe" />
+It's preemptive, multi tasking, with user mode and high resolution graphics. It runs on real hardware and provides native drivers for numerous devices. It's primarily a fun challenge and a learning opportunity, but a lot of the implementation details are fully applicable to the mainstream operating systems.
 
-### In this readme
+<div align="center">
+  <img width="600" src="https://github.com/user-attachments/assets/c1628637-8eb3-4634-8f87-cc761a273efe" />
+</div>
+
+## 🧵 In this readme
 - [💾 How to run](README.md#-how-to-run)
 - [🧩 Features](README.md#-features)
 - [🛠️ How to build](README.md#-how-to-build)
