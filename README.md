@@ -35,42 +35,40 @@ It's preemptive, multi tasking, with user mode and high resolution graphics. It 
 </div>
 
 ## 🧵 In this readme
-- [💾 How to run](README.md#-how-to-run)
 - [🧩 Features](README.md#-features)
+- [💾 How to run](README.md#-how-to-run)
 - [🛠️ How to build](README.md#-how-to-build)
 - [🔗 Further resources](README.md#-further-resources)
 
-
 ## 🧩 Features
 ### Already working
-- Boots on real hardware both from a floppy and a hard disk
-- Paged virtual memory
+- Boots on real hardware both from a floppy or a hard disk
+- Paged, per process virtual memory
 - Preemptive multi-tasking
-- User mode processes
+- User mode processes and resources
 - FAT 12/16
 - PS/2 mouse & keyboard input
-- VGA mode X
+- VGA/VESA support
+- Timer, PC speaker
 
 ### Planned
 - FAT 32
-- Hardware abstraction layer
 - Hardware acceleration for simple graphics cards (S3 Virge, Intel Extreme Graphics, etc)
-- Sound (PC speaker, Sound Blaster)
+- Sound (AC97, Sound Blaster)
 - Networking
 - USB
 - CD support
+- Loadable drivers
+- ELF
 - Maybe 64 bit CPU support?
-
 
 ## 💾 How to run
 You can download an fdd or hdd image from the [releases](https://github.com/rafalgrodzinski/bits-runner/releases) page. On macOS or Linux use the `dd` command to prepare a disk. For example on macOS `sudo dd if=hdd.img of=/dev/disk<NUMBER> status=progress` will copy the image to a USB drive, which then can be used to boot the system in an hdd emulation mode.
-
 
 ## 🛠️ How to build
 Building works on macOS. Support for Linux may be added at a later point.
 
 Make sure you have [nasm](https://github.com/netwide-assembler/nasm) and [BRC](https://github.com/rafalgrodzinski/bits-runner-builder) installed and in your run path. Execute `./make.sh`, which will produce `fdd.img` and `hdd.img`, which are correspondigly FAT12 formatted floppy disk image and a hard drive image with two partitions, one FAT12 and one FAT16. `./create_images.sh` will in addition convert the `hdd.img` into formats that can be used by different virual machines.
-
 
 ## Further resources
 - [Extra Information](docs/extra.md)
