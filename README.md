@@ -1,6 +1,6 @@
 <div align="center">
   <p>
-    <img width=96 src="https://github.com/rafalgrodzinski/bits-runner/blob/52-memory-memfree-for-kernel/img/Logo.png"/>
+    <img width=96 src="https://github.com/rafalgrodzinski/bits-runner/main/img/Logo.png"/>
     <h1>Bits Runner</h1>
   </p>
   <p>
