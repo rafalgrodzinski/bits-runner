@@ -1,3 +1,7 @@
+
+
+
+
 <div align="center">
   <p>
     <img width=96 src="https://github.com/rafalgrodzinski/bits-runner/main/img/Logo.png"/>
@@ -27,7 +31,7 @@ Bits Runner is a from-scratch, fully custom x86 operating system, written in [Bi
 It's preemptive, multi tasking, with user mode and high resolution graphics. It runs on real hardware and provides native drivers for numerous devices. It's primarily a fun challenge and a learning opportunity, but a lot of the implementation details are fully applicable to the mainstream operating systems.
 
 <div align="center">
-  <img width="600" src="https://github.com/user-attachments/assets/c1628637-8eb3-4634-8f87-cc761a273efe" />
+  <video width=500 src="https://github.com/user-attachments/assets/8cde1be2-c761-49a7-adcb-39e8607f2d13"/>
 </div>
 
 ## 🧵 In this readme
