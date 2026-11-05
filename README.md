@@ -92,6 +92,8 @@ Unique thing about OS development is that it touches almost every topic related 
 - [Video VESA](docs/video_vesa.md)
 - [Video VMWare SVGA II](docs/video_svga2.md)
 
+- [Audio PC Speaker](docs/audio_pc_speaker.md)
+
 - [Extra Information](docs/extra.md)
 
 ### Notes
