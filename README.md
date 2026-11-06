@@ -63,7 +63,19 @@ It's preemptive, multi tasking, with user mode and high resolution graphics. It 
 - Maybe 64 bit CPU support?
 
 ## 💾 How to run
-You can download an fdd or hdd image from the [releases](https://github.com/rafalgrodzinski/bits-runner/releases) page. On macOS or Linux use the `dd` command to prepare a disk. For example on macOS `sudo dd if=hdd.img of=/dev/disk<NUMBER> status=progress` will copy the image to a USB drive, which then can be used to boot the system in an hdd emulation mode.
+Latest floppy and disk images are available from the [releases](https://github.com/rafalgrodzinski/bits-runner/releases) page.
+
+### qemu
+To run using qemu you can use the following commands:
+- From floppy image: `qemu-system-i386 -drive file=fdd.img,if=floppy,format=raw`
+- From hard disk image: `qemu-system-i386 -drive file=hdd.img,if=ide,format=raw`
+
+To make the window stretchable, you can append `-display cocoa,zoom-to-fit=on` for macOS or `-display gtk,zoom-to-fit=on` for Linux.
+
+### Real hardware
+First you need to prepare a bootable medium. You can either put `fdd.img` on a floppy, `hdd.img` on a hard disk, or either one on a USB drive with appropriately set emulation mode in your computer's BIOS settings.
+
+On macOS or Linux use the `dd` command to prepare a disk. For example on macOS `sudo dd if=fdd.img of=/dev/disk<NUMBER> status=progress` will copy the image to a specified floppy drive.
 
 ## 🛠️ How to build
 Building works on macOS. Support for Linux may be added at a later point.
