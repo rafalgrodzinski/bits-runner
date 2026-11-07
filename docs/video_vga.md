@@ -43,3 +43,4 @@ Each color component is a 6 bit value, so it can have a range of 0..63.
 - Free VGA Project [http://www.osdever.net/FreeVGA/home.htm](http://www.osdever.net/FreeVGA/home.htm)
 - Mode X: The VGA's Hiden Mode [https://trevorwoollacott.com/mode-x-the-vgas-hidden-mode-0a6efa45e7b4](https://trevorwoollacott.com/mode-x-the-vgas-hidden-mode-0a6efa45e7b4)
 - Michael Abrash’s Graphics Programming Black Book [https://www.jagregory.com/abrash-black-book/](https://www.jagregory.com/abrash-black-book/)
+- "VGA Hardware": [https://wiki.osdev.org/VGA_Hardware#Sample_Register_Settings](https://wiki.osdev.org/VGA_Hardware#Sample_Register_Settings)
