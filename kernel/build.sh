@@ -55,7 +55,7 @@ SOURCES_DIRS=(
 )
 
 for SOURCES_DIR in "${SOURCES_DIRS[@]}"; do
-    FILES=`find "${SOURCES_DIR}" -name *.brc -print | sort`
+    FILES=`find "${SOURCES_DIR}" -name *.brc -print`
     for FILE in ${FILES}; do
         # and add them to the list
         SOURCES+=("${FILE}")
