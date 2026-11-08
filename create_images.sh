@@ -1,8 +1,7 @@
 #!/bin/bash
 
-PROJ_DIR="${HOME}/Workspace/Bits Runner"
 OUT_DIR="${HOME}/Downloads"
-export PREFIX="${PROJ_DIR}/bits-runner-builder"
+
 ./make.sh
 if [ $? -ne 0 ]; then
     exit 1

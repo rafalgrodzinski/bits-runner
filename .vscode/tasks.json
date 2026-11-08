@@ -4,7 +4,7 @@
         {
             "label": "Build & Create Images",
             "type": "shell",
-            "command": "${workspaceFolder}/create_images.sh",
+            "command": "${workspaceFolder}/make.sh",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -15,12 +15,12 @@
                 "close": false,
                 "focus": true
             },
-            "problemMatcher": ["$brc"],
+            "problemMatcher": ["$brc"]
         },
         {
-            "label": "Stop in VirtualBox",
+            "label": "Stop QEMU",
             "type": "shell",
-            "command": "VBoxManage controlvm \"Bits Runner\" poweroff",
+            "command": "echo quit | nc -U /tmp/qemu-monitor.sock",
             "presentation": {
                 "reveal": "silent",
                 "revealProblems": "onProblem",
