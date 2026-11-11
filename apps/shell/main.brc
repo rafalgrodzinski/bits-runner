@@ -244,4 +244,6 @@ cmd_help fun
 
 test fun
     @BSys::Allocator::FirstFit::instance.debugPrintFrames()
+    @BSys::memAlloc(1024)
+    @BSys::Allocator::FirstFit::instance.debugPrintFrames()
 ;

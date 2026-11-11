@@ -51,6 +51,9 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
             // If we're expanding a frame, account for just the extra space, otherwise we need space for the fame info too
             requiredAllocationSize u32 <- if frameSize > 0: requiredFrameSize - frameSize else: requiredFrameSize + blob<Allocator::FirstFit::Frame>.size
 
+            @B::String("alocating: ").printColor(@B::String::FOREGROUND_GREEN)
+            @B::StringForU32(requiredAllocationSize).printColor(@B::String::FOREGROUND_GREEN)
+
             // Allocate additioanl heap memory
             allocatedSize <- @Syscall::Memory::expandHeap(requiredAllocationSize)
 
@@ -58,7 +61,7 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
             if allocatedSize = 0: ret 0.a
         ;
 
-        @B::String("frameSize: ").printColor(@B::String::FOREGROUND_GREEN)
+        @B::String(", frameSize: ").printColor(@B::String::FOREGROUND_GREEN)
         @B::StringHexForU32(frameSize).printColor(@B::String::FOREGROUND_GREEN)
         @B::String(", allocated: ").printColor(@B::String::FOREGROUND_GREEN)
         @B::StringForU32(allocatedSize).printColor(@B::String::FOREGROUND_GREEN)
