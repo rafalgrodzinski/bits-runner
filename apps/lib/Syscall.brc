@@ -83,6 +83,10 @@ Memory::GET_INFO u32 <- 0x100
     ret info
 ;
 
+@export Memory::expandHeap fun: size u32 -> u32
+    ret 0
+;
+
 // Process
 Process::YIELD u32 <- 0x200
 Process::SLEEP u32 <- 0x201

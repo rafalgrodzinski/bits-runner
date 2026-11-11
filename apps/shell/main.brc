@@ -1,5 +1,6 @@
 @import B
 @import Syscall
+@import BSys
 
 @export start fun
     character u8 <- 0
@@ -61,6 +62,8 @@
             @Syscall::Debug::dumpStack(80)
         else if cmd.isEqual(@B::String("dmem"))
             @Syscall::Debug::dumpMemory(0x40_0000, 256)
+        else if cmd.isEqual(@B::String("test"))
+            test()
         // Else
         else
             @B::String("Dunno").printlnColor(@B::String::FOREGROUND_RED)
@@ -237,4 +240,8 @@ cmd_help fun
     @B::String("dstack: Dumps stack contents").println()
     @B::String("dmem: Dumps memory contents").println()
     @B::String("help: This thing").println()
+;
+
+test fun
+    @BSys::Allocator::FirstFit::instance.debugPrintFrames()
 ;

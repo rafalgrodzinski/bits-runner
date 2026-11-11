@@ -6,6 +6,7 @@ SECTIONS {
         *(.text .text.*)
         *(.rodata .rodata.*)
         *(.data .data.*)
+        BSys.heap = .;
     }
     .shstrtab : {
         *(.shstrtab)
