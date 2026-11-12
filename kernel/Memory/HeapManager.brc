@@ -34,7 +34,7 @@
         ret it.allocator.heapSize
     ;
 
-    getUsedSize fun -> u32
+    getHeapUsedSize fun -> u32
         ret it.allocator.getUsedSize()
     ;
 ;
