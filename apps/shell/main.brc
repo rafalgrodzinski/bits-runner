@@ -87,37 +87,46 @@ cmd_time fun
 
 // Memory
 cmd_mem fun
-    info blob<@Syscall::InfoMem> <- @Syscall::Memory::getInfoKernel()
+    info blob<@Syscall::Memory::Info> <- @Syscall::Memory::getInfo()
 
     @B::String("Total size: ").print()
     @B::StringForU32(info.totalSize).println()
 
-    @B::String("Total pages: ").print()
-    @B::StringForU32(info.totalPages).println()
+    @B::String("Total pages count: ").print()
+    @B::StringForU32(info.totalPagesCount).println()
 
-    @B::String("Unavailable pages: ").print()
-    @B::StringForU32(info.unavailablePages).println()
+    @B::String("Unavailable pages count: ").print()
+    @B::StringForU32(info.unavailablePagesCount).println()
 
-    @B::String("Free pages: ").print()
-    @B::StringForU32(info.freePages).println()
+    @B::String("Free pages count: ").print()
+    @B::StringForU32(info.freePagesCount).println()
 
-    @B::String("Kernel pages: ").print()
-    @B::StringForU32(info.kernelPages).println()
+    @B::String("Kernel pages count: ").print()
+    @B::StringForU32(info.kernelPagesCount).println()
 
-    @B::String("Kernel stack pages: ").print()
-    @B::StringForU32(info.kernelStackPages).println()
+    @B::String("Kernel stack pages count: ").print()
+    @B::StringForU32(info.kernelStackPagesCount).println()
 
-    @B::String("User pages: ").print()
-    @B::StringForU32(info.userPages).println()
+    @B::String("Kernel heap addrress: ").print()
+    @B::StringHexForU32(info.kernelHeapStart).println()
 
-    @B::String("Heap start: ").print()
-    @B::StringForU32(info.kernelHeapStart).println()
-
-    @B::String("Heap size: ").print()
+    @B::String("Kernel heap size: ").print()
     @B::StringForU32(info.kernelHeapSize).println()
 
-    @B::String("Allocated bytes: ").print()
-    @B::StringForU32(info.kernelAllocateBytes).println()
+    @B::String("Kernel heap used size: ").print()
+    @B::StringForU32(info.kernelHeapUsedSize).println()
+    
+    @B::String("User pages count: ").print()
+    @B::StringForU32(info.userPagesCount).println()
+
+    @B::String("User stack pages count: ").print()
+    @B::StringForU32(info.userStackPagesCount).println()
+
+    @B::String("User heap addrress: ").print()
+
+    @B::String("User heap size: ").print()
+
+    @B::String("User heap used size: ").print()
 ;
 
 // Storage
