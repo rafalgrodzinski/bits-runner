@@ -191,27 +191,27 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         @BSys::enableInterrupts()
     ;
 
-    getInfoTotalSize fun -> u32
+    getTotalSize fun -> u32
         ret it.pMemoryLayout.val.pagesCount * it.pMemoryLayout.val.pageSize
     ;
 
-    getInfoTotalPages fun -> u32
+    getTotalPagesCount fun -> u32
         ret it.pMemoryLayout.val.pagesCount
     ;
 
-    getInfoUnavailablePages fun -> u32
+    getUnavailablePagesCount fun -> u32
         ret it.unavailablePagesCount
     ;
 
-    getInfoFreePages fun -> u32
+    getFreePagesCount fun -> u32
         ret it.freePagesCount
     ;
 
-    getInfoKernelPages fun -> u32
+    getKernelPagesCount fun -> u32
         ret it.kernelPagesCount
     ;
 
-    getInfoKernelStackPages fun -> u32
+    getKernelStackPagesCount fun -> u32
         ret it.kernelStackPagesCount
     ;
 ;
