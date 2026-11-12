@@ -121,6 +121,28 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
 
     free fun: adr a
         if adr = 0: ret
+
+        // First mark as free
+        pFrame ptr<blob<Allocator::FirstFit::Frame>> <- {adr - blob<Allocator::FirstFit::Frame>.size}
+        pFrame.val.isFree <- true
+        it.usedSize <- it.usedSize - it.getFrameSize(pFrame)
+
+        // Try merging with the next frame if present and free
+        if pFrame.val.pNextFrame.vadr != 0 and pFrame.val.pNextFrame.val.isFree
+            pFrame.val.pNextFrame <- pFrame.val.pNextFrame.val.pNextFrame
+
+            // Getting rid of a single frame header
+            it.usedSize <- it.usedSize - blob<Allocator::FirstFit::Frame>.size
+        ;
+
+        // Try merging with the previous frame if present and free
+        pPreviousFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.getPreviousFrame(pFrame)
+        if pPreviousFrame.vadr != 0 and pPreviousFrame.val.isFree
+            pPreviousFrame.val.pNextFrame <- pFrame.val.pNextFrame
+
+            // Getting rid of a single frame header
+            it.usedSize <- it.usedSize - blob<Allocator::FirstFit::Frame>.size
+        ;
     ;
 
     getPreviousFrame fun: pFrame ptr<blob<Allocator::FirstFit::Frame>> -> ptr<blob<Allocator::FirstFit::Frame>>
