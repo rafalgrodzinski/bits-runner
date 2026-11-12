@@ -49,6 +49,14 @@ resId u32
         ;
         ret 0
     ;
+
+    getPagesCount fun -> u32
+        ret it.pages.count
+    ;
+
+    getStackPagesCount fun -> u32
+        ret 0
+    ;
 ;
 
 @export Process::new fun: imageSourceAddress a, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
