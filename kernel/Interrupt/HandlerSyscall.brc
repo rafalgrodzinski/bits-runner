@@ -127,7 +127,7 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
             pInfoMem.val[4] <- @Memory::PagingManager::instance.getKernelPagesCount()
             pInfoMem.val[5] <- @Memory::PagingManager::instance.getKernelStackPagesCount()
             
-            pInfoMem.val[8] <- @Memory::HeapManager::instance.getHeapAdr()
+            pInfoMem.val[8] <- @Memory::HeapManager::instance.getHeapAdr().u32
             pInfoMem.val[9] <- @Memory::HeapManager::instance.getHeapSize()
             pInfoMem.val[10] <- @Memory::HeapManager::instance.getUsedSize()
 
