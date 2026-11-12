@@ -23,7 +23,9 @@ HandlerSyscall::System::ResourceCategory::CREATE_STORAGE_ENTRY u32 <- 0x02
 HandlerSyscall::System::ResourceCategory::VIDEO_GET_SURFACE u32 <- 0x03
 
 // Memory
-HandlerSyscall::Memory::GET_INFO u32 <- 0x100
+HandlerSyscall::Memory::GET_INFO_KERNEL u32 <- 0x100
+HandlerSyscall::Memory::GET_INFO_USER u32 <- 0x101
+HandlerSyscall::Memory::EXPAND_HEAP u32 <- 0x102
 
 // Process
 HandlerSyscall::Process::YIELD u32 <- 0x200
@@ -117,7 +119,7 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
         else if eax = HandlerSyscall::System::RELEASE_RESOURCE
             // TODO
         // Memory
-        else if eax = HandlerSyscall::Memory::GET_INFO
+        else if eax = HandlerSyscall::Memory::GET_INFO_KERNEL
             pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
             pInfoMem.val[0] <- @Memory::PagingManager::instance.getInfoTotalSize()
             pInfoMem.val[1] <- @Memory::PagingManager::instance.getInfoTotalPages()
@@ -131,6 +133,20 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
 
             pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
             pInfoMem.val[6] <- if pCurrentProcess.vadr != 0: pCurrentProcess.val.pages.count else: 0
+        else if eax = HandlerSyscall::Memory::GET_INFO_USER
+        else if eax = HandlerSyscall::Memory::EXPAND_HEAP
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            if pCurrentProcess.vadr = 0: ret 0
+            @B::StringForU32(ebx).printColor(@B::String::FOREGROUND_RED)
+            @B::String(" ").printColor(@B::String::FOREGROUND_RED)
+            @B::StringHexForU32(pCurrentProcess.val.linearMemLimit).printColor(@B::String::FOREGROUND_RED)
+            @B::String::println()
+            ret @Memory::PagingManager::instance.allocateUserPages(
+                pCurrentProcess,
+                pCurrentProcess.val.pageTablesDirectory.ptr,
+                @Memory::PagingManager::PAGE_USER,
+                ebx,
+                pCurrentProcess.val.linearMemLimit)
         // Process
         else if eax = HandlerSyscall::Process::YIELD
             @Dispatch::Dispatcher::instance.yield()

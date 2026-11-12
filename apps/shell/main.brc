@@ -87,7 +87,7 @@ cmd_time fun
 
 // Memory
 cmd_mem fun
-    info blob<@Syscall::InfoMem> <- @Syscall::Memory::getInfo()
+    info blob<@Syscall::InfoMem> <- @Syscall::Memory::getInfoKernel()
 
     @B::String("Total size: ").print()
     @B::StringForU32(info.totalSize).println()

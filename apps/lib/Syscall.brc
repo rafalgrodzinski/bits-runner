@@ -60,7 +60,9 @@ System::RELEASE_RESOURCE u32 <- 0x031
 ;
 
 // Memory
-Memory::GET_INFO u32 <- 0x100
+Memory::GET_INFO_KERNEL u32 <- 0x100
+Memory::GET_INFO_USER u32 <- 0x101
+Memory::EXPAND_HEAP u32 <- 0x102
 
 @export InfoMem blob
     totalSize u32
@@ -77,14 +79,18 @@ Memory::GET_INFO u32 <- 0x100
     kernelAllocateBytes u32
 ;
 
-@export Memory::getInfo fun -> blob<InfoMem>
+@export Memory::getInfoKernel fun -> blob<InfoMem>
     info blob<InfoMem>
-    syscallRaw(Memory::GET_INFO, info.adr.u32, 0, 0, 0)
+    syscallRaw(Memory::GET_INFO_KERNEL, info.adr.u32, 0, 0, 0)
     ret info
 ;
 
+@export Memory::getInfoUser fun
+    syscallRaw(Memory::GET_INFO_USER, 0, 0, 0, 0)
+;
+
 @export Memory::expandHeap fun: size u32 -> u32
-    ret 0
+    ret syscallRaw(Memory::EXPAND_HEAP, size, 0, 0, 0)
 ;
 
 // Process

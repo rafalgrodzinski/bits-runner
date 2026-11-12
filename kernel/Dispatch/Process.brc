@@ -15,13 +15,18 @@ resId u32
 ;
 
 @export Process blob
+    // memory
     pageTablesDirectory data<u32, 1024>
+    pages blob<@B::Array, u32>
+    linearMemLimit u32
+
+    // state
     cr3 u32
     esp u32
     esp0 u32
     state u32
 
-    pages blob<@B::Array, u32>
+    // resources
     resources blob<@B::Array, ptr<blob<Resource>>>
     sleepTimeout u32
 
@@ -47,7 +52,7 @@ resId u32
 ;
 
 @export Process::new fun: imageSourceAddress a, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
-    pCurrentPageTablesDirectory ptr<data<u32>>
+    pCurrentPageTablesDirectory ptr<data<u32, 1024>>
     oldCr3 u32
 
     if pCurrentProcess.vadr != 0
