@@ -37,7 +37,7 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
         // Find an empty frame that matches the size
         pCurrentFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.pFirstFrame
         if pCurrentFrame.vadr != 0
-            rep it.getFrameSize(pCurrentFrame) < requiredFrameSize and pCurrentFrame.val.pNextFrame.vadr != 0
+            rep (not pCurrentFrame.val.isFree or it.getFrameSize(pCurrentFrame) < requiredFrameSize) and pCurrentFrame.val.pNextFrame.vadr != 0
                 pCurrentFrame <- pCurrentFrame.val.pNextFrame
             ;
         ;
@@ -74,9 +74,11 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
         pPreviousFrame ptr<blob<Allocator::FirstFit::Frame>>
         // If a free frame has been found
         if pCurrentFrame.vadr != 0 and pCurrentFrame.val.isFree
+            @B::String("opt 1").printColor(@B::String::FOREGROUND_BROWN)
             pPreviousFrame <- it.getPreviousFrame(pCurrentFrame)
         // If no free frame has been found, append a new one
         else if pCurrentFrame.vadr = 0 or not pCurrentFrame.val.isFree
+            @B::String("opt 2").printColor(@B::String::FOREGROUND_BROWN)
             pPreviousFrame <- pCurrentFrame
             pCurrentFrame <- {heap.adr + it.heapSize}
             pCurrentFrame.val.pNextFrame <- {0}
@@ -94,6 +96,21 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
 
         // Expand the heap
         it.heapSize <- it.heapSize + allocatedSize
+
+        // Split frame if it's too big (frame contents + next frame header)
+        if it.getFrameSize(pCurrentFrame) > (requiredFrameSize + blob<Allocator::FirstFit::Frame>.size)
+            pNextFrame ptr<blob<Allocator::FirstFit::Frame>> <- {
+                pCurrentFrame.vadr +
+                blob<Allocator::FirstFit::Frame>.size +
+                requiredFrameSize
+            }
+            pNextFrame.val.isFree <- true
+            pNextFrame.val.pNextFrame <- pCurrentFrame.val.pNextFrame
+            pCurrentFrame.val.pNextFrame <- pNextFrame
+
+            // Used by the split frame header
+            it.usedSize <- it.usedSize + blob<Allocator::FirstFit::Frame>.size
+        ;
 
         // Mark frame as in use
         pCurrentFrame.val.isFree <- false
