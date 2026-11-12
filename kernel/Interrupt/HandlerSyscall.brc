@@ -124,6 +124,7 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
             pInfoMem.val[1] <- @Memory::PagingManager::instance.getTotalPagesCount()
             pInfoMem.val[2] <- @Memory::PagingManager::instance.getUnavailablePagesCount()
             pInfoMem.val[3] <- @Memory::PagingManager::instance.getFreePagesCount()
+            
             pInfoMem.val[4] <- @Memory::PagingManager::instance.getKernelPagesCount()
             pInfoMem.val[5] <- @Memory::PagingManager::instance.getKernelStackPagesCount()
             
