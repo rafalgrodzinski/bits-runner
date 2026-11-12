@@ -128,13 +128,13 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
             pInfoMem.val[4] <- @Memory::PagingManager::instance.getKernelPagesCount()
             pInfoMem.val[5] <- @Memory::PagingManager::instance.getKernelStackPagesCount()
             
-            pInfoMem.val[8] <- @Memory::HeapManager::instance.getHeapAdr().u32
-            pInfoMem.val[9] <- @Memory::HeapManager::instance.getHeapSize()
-            pInfoMem.val[10] <- @Memory::HeapManager::instance.getUsedSize()
+            pInfoMem.val[6] <- @Memory::HeapManager::instance.getHeapAdr().u32
+            pInfoMem.val[7] <- @Memory::HeapManager::instance.getHeapSize()
+            pInfoMem.val[8] <- @Memory::HeapManager::instance.getHeapUsedSize()
 
             pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
-            pInfoMem.val[6] <- if pCurrentProcess.vadr != 0: pCurrentProcess.val.getPagesCount() else: 0
-            pInfoMem.val[7] <- if pCurrentProcess.vadr != 0: pCurrentProcess.val.getStackPagesCount() else: 0
+            pInfoMem.val[9] <- if pCurrentProcess.vadr != 0: pCurrentProcess.val.getPagesCount() else: 0
+            pInfoMem.val[10] <- if pCurrentProcess.vadr != 0: pCurrentProcess.val.getStackPagesCount() else: 0
         else if eax = HandlerSyscall::Memory::EXPAND_HEAP
             pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
             if pCurrentProcess.vadr = 0: ret 0
