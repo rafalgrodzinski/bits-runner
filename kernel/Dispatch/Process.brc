@@ -18,6 +18,8 @@ resId u32
     // memory
     pageTablesDirectory data<u32, 1024>
     pages blob<@B::Array, u32>
+    pagesCount u32
+    stackPagesCount u32
     linearMemLimit u32
 
     // state
@@ -30,8 +32,11 @@ resId u32
     resources blob<@B::Array, ptr<blob<Resource>>>
     sleepTimeout u32
 
-    registerPage fun: page u32
+    registerPage fun: page u32, pageTag u8
         it.pages.push(page)
+
+        if pageTag = @Memory::PagingManager::PAGE_USER_STACK: it.stackPagesCount <- it.stackPagesCount + 1
+        else: it.pagesCount <- it.pagesCount + 1
     ;
 
     registerResource fun: category u32, aResource a -> u32
@@ -51,11 +56,11 @@ resId u32
     ;
 
     getPagesCount fun -> u32
-        ret it.pages.count
+        ret it.pagesCount
     ;
 
     getStackPagesCount fun -> u32
-        ret 0
+        ret it.stackPagesCount
     ;
 ;
 

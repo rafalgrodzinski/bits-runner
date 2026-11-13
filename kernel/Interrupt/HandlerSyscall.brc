@@ -143,7 +143,8 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
                 pCurrentProcess.val.pageTablesDirectory.ptr,
                 @Memory::PagingManager::PAGE_USER,
                 ebx,
-                pCurrentProcess.val.linearMemLimit)
+                pCurrentProcess.val.linearMemLimit
+            )
         // Process
         else if eax = HandlerSyscall::Process::YIELD
             @Dispatch::Dispatcher::instance.yield()

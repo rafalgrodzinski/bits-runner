@@ -27,11 +27,11 @@
     ;
 
     getHeapAdr fun -> a
-        ret it.allocator.aHeap.u32
+        ret it.allocator.getAdr()
     ;
 
     getHeapSize fun -> u32
-        ret it.allocator.heapSize
+        ret it.allocator.getSize()
     ;
 
     getHeapUsedSize fun -> u32

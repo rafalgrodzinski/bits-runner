@@ -196,12 +196,16 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
         else: pFrame.val.pNextFrame.vadr.u32 - pFrame.vadr.u32 - blob<Allocator::FirstFit::Frame>.size
     ;
 
-    getUsedSize fun -> u32
-        ret it.usedSize
+    getAdr fun -> a
+        ret it.aHeap
     ;
 
-    getFreeSize fun -> u32
-        ret it.heapSize - (it.pFirstFrame.vadr - it.aHeap) - it.usedSize
+    getSize fun -> u32
+        ret it.heapSize
+    ;
+
+    getUsedSize fun -> u32
+        ret it.usedSize
     ;
 
     debugPrintFrames fun

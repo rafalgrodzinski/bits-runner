@@ -112,6 +112,9 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
             it.usedSize <- it.usedSize + blob<Allocator::FirstFit::Frame>.size
         ;
 
+        // Used by the frame
+        it.usedSize <- it.usedSize + it.getFrameSize(pCurrentFrame)
+
         // Mark frame as in use
         pCurrentFrame.val.isFree <- false
 
@@ -164,6 +167,18 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
         ret if pFrame.val.pNextFrame.vadr = 0: it.pFirstFrame.vadr.u32 + it.heapSize - pFrame.vadr.u32 - blob<Allocator::FirstFit::Frame>.size
         // Whereas other ones against the start address of the next frame
         else: pFrame.val.pNextFrame.vadr.u32 - pFrame.vadr.u32 - blob<Allocator::FirstFit::Frame>.size
+    ;
+
+    getAdr fun -> a
+        ret heap.adr
+    ;
+
+    getSize fun -> u32
+        ret it.heapSize
+    ;
+
+    getUsedSize fun -> u32
+        ret it.usedSize
     ;
 
     debugPrintFrames fun

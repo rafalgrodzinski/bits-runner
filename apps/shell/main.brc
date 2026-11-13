@@ -92,41 +92,44 @@ cmd_mem fun
     @B::String("Total size: ").print()
     @B::StringForU32(info.totalSize).println()
 
-    @B::String("Total pages count: ").print()
-    @B::StringForU32(info.totalPagesCount).println()
+    @B::String("Total pages count: ").printColor(@B::String::FOREGROUND_CYAN)
+    @B::StringForU32(info.totalPagesCount).printlnColor(@B::String::FOREGROUND_CYAN)
 
-    @B::String("Unavailable pages count: ").print()
-    @B::StringForU32(info.unavailablePagesCount).println()
+    @B::String("Unavailable pages count: ").printColor(@B::String::FOREGROUND_CYAN)
+    @B::StringForU32(info.unavailablePagesCount).printlnColor(@B::String::FOREGROUND_CYAN)
 
-    @B::String("Free pages count: ").print()
-    @B::StringForU32(info.freePagesCount).println()
+    @B::String("Free pages count: ").printColor(@B::String::FOREGROUND_CYAN)
+    @B::StringForU32(info.freePagesCount).printlnColor(@B::String::FOREGROUND_CYAN)
 
-    @B::String("Kernel pages count: ").print()
-    @B::StringForU32(info.kernelPagesCount).println()
+    @B::String("Kernel pages count: ").printColor(@B::String::FOREGROUND_RED)
+    @B::StringForU32(info.kernelPagesCount).printlnColor(@B::String::FOREGROUND_RED)
 
-    @B::String("Kernel stack pages count: ").print()
-    @B::StringForU32(info.kernelStackPagesCount).println()
+    @B::String("Kernel stack pages count: ").printColor(@B::String::FOREGROUND_RED)
+    @B::StringForU32(info.kernelStackPagesCount).printlnColor(@B::String::FOREGROUND_RED)
 
-    @B::String("Kernel heap addrress: ").print()
-    @B::StringHexForU32(info.kernelHeapStart).println()
+    @B::String("Kernel heap address: ").printColor(@B::String::FOREGROUND_RED)
+    @B::StringHexForU32(info.kernelHeapAdr.u32).printlnColor(@B::String::FOREGROUND_RED)
 
-    @B::String("Kernel heap size: ").print()
-    @B::StringForU32(info.kernelHeapSize).println()
+    @B::String("Kernel heap size: ").printColor(@B::String::FOREGROUND_RED)
+    @B::StringForU32(info.kernelHeapSize).printlnColor(@B::String::FOREGROUND_RED)
 
-    @B::String("Kernel heap used size: ").print()
-    @B::StringForU32(info.kernelHeapUsedSize).println()
+    @B::String("Kernel heap used size: ").printColor(@B::String::FOREGROUND_RED)
+    @B::StringForU32(info.kernelHeapUsedSize).printlnColor(@B::String::FOREGROUND_RED)
     
-    @B::String("User pages count: ").print()
-    @B::StringForU32(info.userPagesCount).println()
+    @B::String("User pages count: ").printColor(@B::String::FOREGROUND_GREEN)
+    @B::StringForU32(info.userPagesCount).printlnColor(@B::String::FOREGROUND_GREEN)
 
-    @B::String("User stack pages count: ").print()
-    @B::StringForU32(info.userStackPagesCount).println()
+    @B::String("User stack pages count: ").printColor(@B::String::FOREGROUND_GREEN)
+    @B::StringForU32(info.userStackPagesCount).printlnColor(@B::String::FOREGROUND_GREEN)
 
-    @B::String("User heap addrress: ").print()
+    @B::String("User heap address: ").printColor(@B::String::FOREGROUND_GREEN)
+    @B::StringHexForU32(@BSys::Allocator::FirstFit::instance.getAdr().u32).printlnColor(@B::String::FOREGROUND_GREEN)
 
-    @B::String("User heap size: ").print()
+    @B::String("User heap size: ").printColor(@B::String::FOREGROUND_GREEN)
+    @B::StringForU32(@BSys::Allocator::FirstFit::instance.getSize()).printlnColor(@B::String::FOREGROUND_GREEN)
 
-    @B::String("User heap used size: ").print()
+    @B::String("User heap used size: ").printColor(@B::String::FOREGROUND_GREEN)
+    @B::StringForU32(@BSys::Allocator::FirstFit::instance.getUsedSize()).printlnColor(@B::String::FOREGROUND_GREEN)
 ;
 
 // Storage

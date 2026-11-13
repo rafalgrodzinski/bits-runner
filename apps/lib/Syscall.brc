@@ -72,7 +72,7 @@ Memory::EXPAND_HEAP u32 <- 0x101
     kernelPagesCount u32
     kernelStackPagesCount u32
 
-    kernelHeapStart u32
+    kernelHeapAdr a
     kernelHeapSize u32
     kernelHeapUsedSize u32
 
@@ -81,7 +81,7 @@ Memory::EXPAND_HEAP u32 <- 0x101
 ;
 
 @export Memory::getInfo fun -> blob<Memory::Info>
-    info blob<InfoMem>
+    info blob<Memory::Info>
     syscallRaw(Memory::GET_INFO, info.adr.u32, 0, 0, 0)
     ret info
 ;

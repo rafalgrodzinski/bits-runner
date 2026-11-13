@@ -111,7 +111,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
                 
                 remainingPagesCount <- remainingPagesCount - 1
 
-                if pProcess.vadr != 0: pProcess.val.registerPage(i)
+                if pProcess.vadr != 0: pProcess.val.registerPage(i, pageTag)
             ;
         ;
 
