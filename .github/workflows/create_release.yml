@@ -64,7 +64,7 @@ jobs:
       - name: Update Notes Version
         shell: bash
         run: |
-          sed -i -E -e "s/VERSION/${{env.VERSION}}/" "${{github.workspace}}/docs/Notes.md"
+          sed -i '' -E -e "s/VERSION/${{env.VERSION}}/" "${{github.workspace}}/docs/Notes.md"
 
       - name: Create Release
         env:
