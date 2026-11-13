@@ -6,9 +6,6 @@ function check {
     fi
 }
 
-PROJ_DIR="${HOME}/Workspace/Bits Runner"
-export PREFIX="${PROJ_DIR}/bits-runner-builder"
-
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE}")"
 SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
 PREFIX="${PREFIX:-`brew --prefix`}"
@@ -38,19 +35,8 @@ for SOURCES_DIR in "${SCRIPT_DIR}/" "${BLIB}/" "${LIB}"; do
     done
 done
 
-#echo -n "\"args\": ["
-#for FLAG in "${FLAGS[@]}"; do
-#    echo -n "\"${FLAG}\", "
-#done
-#
-#for SOURCE in "${SOURCES[@]}"; do
-#    echo -n "\"${SOURCE}\", "
-#done
-#echo -e "\b\b],"
-#
-#exit 1
-
 rm *.o 2> /dev/null
+
 brb ${FLAGS[@]} ${SOURCES[@]}
 check
 

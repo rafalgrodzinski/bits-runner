@@ -24,25 +24,6 @@ FLAGS=(
     --reloc=static
 )
 
-# and resulting object files
-OBJS=(
-    main.o
-    B.o
-    BSys.o
-    BiosService.o
-    Bus.o
-    DrvCmos.o
-    Devices.o
-    Interrupt.o
-    interrupt_handler.o
-    Memory.o
-    Dispatch.o
-    Storage.o
-    Term.o
-    Video.o
-    Input.o
-)
-
 # don't split on spaces, only on new lines
 IFS=$'\n'
 
@@ -74,6 +55,9 @@ done
 #
 #exit 1
 
+# Get rid of previously generated object files
+rm *.o 2> /dev/null
+
 # build the source
 brb ${FLAGS[@]} ${SOURCES[@]}
 check
@@ -83,4 +67,5 @@ nasm -f elf32 -o interrupt_handler.o "${SCRIPT_DIR}/Interrupt/interrupt_handler.
 check
 
 # and finally link everything
-ld.lld -T "${SCRIPT_DIR}/kernel.ld" -o kernel.bin ${OBJS[@]}
+ld.lld -T "${SCRIPT_DIR}/kernel.ld" -o kernel.bin *.o
+check
