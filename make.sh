@@ -8,9 +8,6 @@ function check {
     fi
 }
 
-PROJ_DIR="${HOME}/Workspace/Bits Runner"
-export PREFIX="${PROJ_DIR}/bits-runner-builder"
-
 VOLUME_NAME="BITS RUNNER"
 FAT_12_16_HEADER_SIZE=62
 FAT_32_HEADER_SIZE=90
