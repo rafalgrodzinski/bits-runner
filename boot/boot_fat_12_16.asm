@@ -73,7 +73,8 @@ start:
 
 	; fat_root_dir_start_sector
 	mov ax, [bpb_sectors_per_fat]
-	mul word [bpb_fats_count]
+	movzx bx, byte [bpb_fats_count]
+	mul bx
 	add ax, [bpb_reserved_sectors_count]
 	add ax, [bpb_hidden_sectors]
 	mov [fat_root_dir_start_sector], ax

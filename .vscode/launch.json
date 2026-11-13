@@ -2,12 +2,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run in VirtualBox",
+            "name": "Run in QEMU",
             "type": "node-terminal",
             "request": "launch",
-            "command": "VBoxManage startvm \"Bits Runner\"",
+            "command": "./run_in_qemu.sh",
             "preLaunchTask": "Build & Create Images",
-            "postDebugTask": "Stop in VirtualBox"
+            "postDebugTask": "Stop QEMU"
         }
     ]
 }

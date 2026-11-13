@@ -164,33 +164,27 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
         it.usedSize <- it.usedSize - it.getFrameSize(pFrame)
 
         // Try merging with the next frame if present and free
-        if pFrame.val.pNextFrame.vadr != 0
-            if pFrame.val.pNextFrame.val.isFree
-                pFrame.val.pNextFrame <- pFrame.val.pNextFrame.val.pNextFrame
+        if pFrame.val.pNextFrame.vadr != 0 and pFrame.val.pNextFrame.val.isFree
+            pFrame.val.pNextFrame <- pFrame.val.pNextFrame.val.pNextFrame
 
-                // Getting rid of a single frame header
-                it.usedSize <- it.usedSize - blob<Allocator::FirstFit::Frame>.size
-            ;
+            // Getting rid of a single frame header
+            it.usedSize <- it.usedSize - blob<Allocator::FirstFit::Frame>.size
         ;
 
         // Try merging with the previous frame if present and free
         pPreviousFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.getPreviousFrame(pFrame)
-        if pPreviousFrame.vadr != 0
-            if pPreviousFrame.val.isFree
-                pPreviousFrame.val.pNextFrame <- pFrame.val.pNextFrame
+        if pPreviousFrame.vadr != 0 and pPreviousFrame.val.isFree
+            pPreviousFrame.val.pNextFrame <- pFrame.val.pNextFrame
 
-                // Getting rid of a single frame header
-                it.usedSize <- it.usedSize - blob<Allocator::FirstFit::Frame>.size
-            ;
+            // Getting rid of a single frame header
+            it.usedSize <- it.usedSize - blob<Allocator::FirstFit::Frame>.size
         ;
     ;
 
     getPreviousFrame fun: pFrame ptr<blob<Allocator::FirstFit::Frame>> -> ptr<blob<Allocator::FirstFit::Frame>>
         pCurrentFrame ptr<blob<Allocator::FirstFit::Frame>> <- it.pFirstFrame
 
-        rep pCurrentFrame.vadr != 0, pCurrentFrame <- pCurrentFrame.val.pNextFrame
-            if pCurrentFrame.val.pNextFrame.vadr = pFrame.vadr: ret pCurrentFrame
-        ;
+        rep pCurrentFrame.vadr != 0 and pCurrentFrame.val.pNextFrame.vadr != pFrame.vadr, pCurrentFrame <- pCurrentFrame.val.pNextFrame:
 
         ret pCurrentFrame
     ;
@@ -202,12 +196,16 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
         else: pFrame.val.pNextFrame.vadr.u32 - pFrame.vadr.u32 - blob<Allocator::FirstFit::Frame>.size
     ;
 
-    getUsedSize fun -> u32
-        ret it.usedSize
+    getAdr fun -> a
+        ret it.aHeap
     ;
 
-    getFreeSize fun -> u32
-        ret it.heapSize - (it.pFirstFrame.vadr - it.aHeap) - it.usedSize
+    getSize fun -> u32
+        ret it.heapSize
+    ;
+
+    getUsedSize fun -> u32
+        ret it.usedSize
     ;
 
     debugPrintFrames fun

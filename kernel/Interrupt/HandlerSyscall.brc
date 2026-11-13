@@ -24,6 +24,7 @@ HandlerSyscall::System::ResourceCategory::VIDEO_GET_SURFACE u32 <- 0x03
 
 // Memory
 HandlerSyscall::Memory::GET_INFO u32 <- 0x100
+HandlerSyscall::Memory::EXPAND_HEAP u32 <- 0x101
 
 // Process
 HandlerSyscall::Process::YIELD u32 <- 0x200
@@ -119,18 +120,31 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
         // Memory
         else if eax = HandlerSyscall::Memory::GET_INFO
             pInfoMem ptr<data<u32>> <- ebx.a.ptr<data<u32>>
-            pInfoMem.val[0] <- @Memory::PagingManager::instance.getInfoTotalSize()
-            pInfoMem.val[1] <- @Memory::PagingManager::instance.getInfoTotalPages()
-            pInfoMem.val[2] <- @Memory::PagingManager::instance.getInfoUnavailablePages()
-            pInfoMem.val[3] <- @Memory::PagingManager::instance.getInfoFreePages()
-            pInfoMem.val[4] <- @Memory::PagingManager::instance.getInfoKernelPages()
-            pInfoMem.val[5] <- @Memory::PagingManager::instance.getInfoKernelStackPages()
-            pInfoMem.val[7] <- @Memory::HeapManager::instance.getInfoHeapStart()
-            pInfoMem.val[8] <- @Memory::HeapManager::instance.getInfoHeapSize()
-            pInfoMem.val[9] <- @Memory::HeapManager::instance.getInfoAllocatedBytes()
+            pInfoMem.val[0] <- @Memory::PagingManager::instance.getTotalSize()
+            pInfoMem.val[1] <- @Memory::PagingManager::instance.getTotalPagesCount()
+            pInfoMem.val[2] <- @Memory::PagingManager::instance.getUnavailablePagesCount()
+            pInfoMem.val[3] <- @Memory::PagingManager::instance.getFreePagesCount()
+            
+            pInfoMem.val[4] <- @Memory::PagingManager::instance.getKernelPagesCount()
+            pInfoMem.val[5] <- @Memory::PagingManager::instance.getKernelStackPagesCount()
+            
+            pInfoMem.val[6] <- @Memory::HeapManager::instance.getHeapAdr().u32
+            pInfoMem.val[7] <- @Memory::HeapManager::instance.getHeapSize()
+            pInfoMem.val[8] <- @Memory::HeapManager::instance.getHeapUsedSize()
 
             pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
-            pInfoMem.val[6] <- if pCurrentProcess.vadr != 0: pCurrentProcess.val.pages.count else: 0
+            pInfoMem.val[9] <- if pCurrentProcess.vadr != 0: pCurrentProcess.val.getPagesCount() else: 0
+            pInfoMem.val[10] <- if pCurrentProcess.vadr != 0: pCurrentProcess.val.getStackPagesCount() else: 0
+        else if eax = HandlerSyscall::Memory::EXPAND_HEAP
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            if pCurrentProcess.vadr = 0: ret 0
+            ret @Memory::PagingManager::instance.allocateUserPages(
+                pCurrentProcess,
+                pCurrentProcess.val.pageTablesDirectory.ptr,
+                @Memory::PagingManager::PAGE_USER,
+                ebx,
+                pCurrentProcess.val.linearMemLimit
+            )
         // Process
         else if eax = HandlerSyscall::Process::YIELD
             @Dispatch::Dispatcher::instance.yield()

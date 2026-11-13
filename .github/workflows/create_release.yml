@@ -23,18 +23,25 @@ jobs:
 
     steps:
       - name: Install BRB
-        run: brew install rafalgrodzinski/tap/brb
+        shell: bash
+        run: |
+          brew install rafalgrodzinski/tap/brb
 
       - name: Install NASM
-        run: brew install nasm
+        shell: bash
+        run: |
+          brew install nasm
 
       - name: Install LLD
-        run: brew install lld
+        shell: bash
+        run: |
+          brew install lld
 
       - name: Checkout Project
         uses: actions/checkout@v6
 
       - name: Read Version
+        shell: bash
         run: |
           BUILD_KIND="${{inputs.build_kind || 'dev'}}"
           VERSION_NUMBER="$(cat ${GITHUB_WORKSPACE}/version.txt)"
@@ -50,12 +57,20 @@ jobs:
           echo "TAG=${BUILD_KIND}/${VERSION_NUMBER}${VERSION_SUFFIX}" >> $GITHUB_ENV
 
       - name: Build Project
-        run: "${GITHUB_WORKSPACE}/make.sh"
+        shell: bash
+        run: |
+          "${GITHUB_WORKSPACE}/make.sh"
+
+      - name: Update Notes Version
+        shell: bash
+        run: |
+          sed -i -E -e "s/VERSION/${{env.VERSION}}/" "${{github.workspace}}/docs/Notes.md"
 
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        shell: bash
         run: |
           gh release create "${{env.TAG}}" "${GITHUB_WORKSPACE}/*.img" \
           --title "${{env.VERSION}}" \
-          --notes-file "${GITHUB_WORKSPACE}/docs/notes.md"
+          --notes-file "${GITHUB_WORKSPACE}/docs/Notes.md"

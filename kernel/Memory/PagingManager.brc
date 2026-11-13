@@ -67,7 +67,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         ret allocatedSize
     ;
 
-    allocateUserPages fun: pProcess ptr<blob<@Dispatch::Process>>, pCurrentPageTablesDirectory ptr<data<u32>>, pageTag u8, size u32, linearAddress u32 -> u32
+    allocateUserPages fun: pProcess ptr<blob<@Dispatch::Process>>, pCurrentPageTablesDirectory ptr<data<u32, 1024>>, pageTag u8, size u32, linearAddress u32 -> u32
         @BSys::disableInterrupts()
         currentSelfReference u32 <- pCurrentPageTablesDirectory.val[1023] & 0xffff_f000
         selfReference u32 <- PagingManager::lAdrToPAdr(pProcess.val.pageTablesDirectory.adr).u32 | PagingManager::FLAGS_RWP
@@ -85,6 +85,10 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         pCurrentPageTablesDirectory.val[1023] <- currentSelfReference | PagingManager::FLAGS_RWP
         PagingManager::flushTlbRaw()
         @BSys::enableInterrupts()
+
+        if pageTag = PagingManager::PAGE_USER and pProcess.vadr !=0 and (linearAddress + allocatedSize) > pProcess.val.linearMemLimit
+            pProcess.val.linearMemLimit <- linearAddress + allocatedSize
+        ;
 
         ret allocatedSize
     ;
@@ -107,7 +111,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
                 
                 remainingPagesCount <- remainingPagesCount - 1
 
-                if pProcess.vadr != 0: pProcess.val.registerPage(i)
+                if pProcess.vadr != 0: pProcess.val.registerPage(i, pageTag)
             ;
         ;
 
@@ -187,27 +191,27 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         @BSys::enableInterrupts()
     ;
 
-    getInfoTotalSize fun -> u32
+    getTotalSize fun -> u32
         ret it.pMemoryLayout.val.pagesCount * it.pMemoryLayout.val.pageSize
     ;
 
-    getInfoTotalPages fun -> u32
+    getTotalPagesCount fun -> u32
         ret it.pMemoryLayout.val.pagesCount
     ;
 
-    getInfoUnavailablePages fun -> u32
+    getUnavailablePagesCount fun -> u32
         ret it.unavailablePagesCount
     ;
 
-    getInfoFreePages fun -> u32
+    getFreePagesCount fun -> u32
         ret it.freePagesCount
     ;
 
-    getInfoKernelPages fun -> u32
+    getKernelPagesCount fun -> u32
         ret it.kernelPagesCount
     ;
 
-    getInfoKernelStackPages fun -> u32
+    getKernelStackPagesCount fun -> u32
         ret it.kernelStackPagesCount
     ;
 ;

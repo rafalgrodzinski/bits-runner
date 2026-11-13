@@ -3,11 +3,28 @@
 @import Syscall
 
 // Memory
-@export memAlloc fun: bytesCount u32 -> a
-    ret 0.a
+@export memAlloc fun: size u32 -> a
+    ret Allocator::FirstFit::instance.alloc(size)
 ;
 
-@export memFree fun: address a
+@export memFree fun: adr a
+    Allocator::FirstFit::instance.free(adr)
+;
+
+@export memCopy raw<"r, r, r, ~{esi}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/aSource a, /*$1*/aTarget a, /*$2*/size u32
+    mov esi, $0
+    mov edi, $1
+    mov ecx, $2
+    cld
+    rep movsb
+;
+
+@export memSet raw<"r, r, r, ~{eax}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/value u8, /*$1*/aTarget a, /*$2*/size u32
+    mov al, $0
+    mov edi, $1
+    mov ecx, $2
+    cld
+    rep stosb
 ;
 
 // Print

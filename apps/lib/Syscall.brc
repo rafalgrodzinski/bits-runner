@@ -61,26 +61,33 @@ System::RELEASE_RESOURCE u32 <- 0x031
 
 // Memory
 Memory::GET_INFO u32 <- 0x100
+Memory::EXPAND_HEAP u32 <- 0x101
 
-@export InfoMem blob
+@export Memory::Info blob
     totalSize u32
-    totalPages u32
-    unavailablePages u32
-    freePages u32
+    totalPagesCount u32
+    unavailablePagesCount u32
+    freePagesCount u32
 
-    kernelPages u32
-    kernelStackPages u32
-    userPages u32
+    kernelPagesCount u32
+    kernelStackPagesCount u32
 
-    kernelHeapStart u32
+    kernelHeapAdr a
     kernelHeapSize u32
-    kernelAllocateBytes u32
+    kernelHeapUsedSize u32
+
+    userPagesCount u32
+    userStackPagesCount u32
 ;
 
-@export Memory::getInfo fun -> blob<InfoMem>
-    info blob<InfoMem>
+@export Memory::getInfo fun -> blob<Memory::Info>
+    info blob<Memory::Info>
     syscallRaw(Memory::GET_INFO, info.adr.u32, 0, 0, 0)
     ret info
+;
+
+@export Memory::expandHeap fun: size u32 -> u32
+    ret syscallRaw(Memory::EXPAND_HEAP, size, 0, 0, 0)
 ;
 
 // Process

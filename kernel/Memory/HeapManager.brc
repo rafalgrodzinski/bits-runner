@@ -26,15 +26,15 @@
         it.allocator.free(adr)
     ;
 
-    getInfoHeapStart fun -> u32
-        ret it.allocator.aHeap.u32
+    getHeapAdr fun -> a
+        ret it.allocator.getAdr()
     ;
 
-    getInfoHeapSize fun -> u32
-        ret it.allocator.heapSize
+    getHeapSize fun -> u32
+        ret it.allocator.getSize()
     ;
 
-    getInfoAllocatedBytes fun -> u32
+    getHeapUsedSize fun -> u32
         ret it.allocator.getUsedSize()
     ;
 ;
