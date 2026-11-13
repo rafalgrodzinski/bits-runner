@@ -1,11 +1,9 @@
-@export memset fun: aDest a, value u32, bytesCount u32
-    rep i u32 <- 0, i < bytesCount, i <- i + 1
-        aDest.ptr<data<u8>>.val[i] <- value.u8
-    ;
+@import BSys
+
+@export memset fun: aTarget a, value u32, size u32
+    @BSys::memSet(value.u8, aTarget, size)
 ;
 
-@export memcpy fun: aDest a, aSrc a, bytesCount u32
-    rep i u32 <- 0, i < bytesCount, i <- i + 1
-        aDest.ptr<data<u8>>.val[i] <- aSrc.ptr<data<u8>>.val[i]
-    ;
+@export memcpy fun: aTarget a, aSource a, size u32
+    @BSys::memCopy(aSource, aTarget, size)
 ;
