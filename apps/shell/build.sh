@@ -8,7 +8,7 @@ function check {
 
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE}")"
 SCRIPT_DIR="$(dirname "${SCRIPT_PATH}")"
-PREFIX="${PREFIX:-`brew --prefix`}"
+[ -d "${PREFIX}"] || PREFIX="$(brew --prefix)"
 PATH="${PREFIX}/bin:${PREFIX}/build:${PATH}"
 BLIB="${PREFIX}/lib/brc/B"
 LIB="${SCRIPT_DIR}/../lib"
