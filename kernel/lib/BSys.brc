@@ -3,6 +3,7 @@
 @import Memory
 @import Term
 @import BiosService
+@import Storage
 
 @export getEax raw<"=r"> -> u32
     mov $0, eax
@@ -165,4 +166,28 @@ printAttribute u8 <- 0x07
 
 @export resetPrintAttribute fun
     printAttribute <- 0x07
+;
+
+// File
+@export fileOpen fun: aPath a -> a
+    fp a <- @Storage::instance.bootFilesystem.getEntry(aPath.ptr<blob<@B::String>>.val).vadr
+    if fp = 0
+        fp <- @Storage::instance.bootFilesystem.createEntry(aPath.ptr<blob<@B::String>>.val, @Storage::Entry::Kind::FILE).vadr
+    ;
+    ret fp
+;
+
+@export fileClose fun: fp a
+;
+
+@export fileGetSize fun: fp a -> u64
+    ret fp.ptr<blob<@Storage::Entry>>.val.fileSize
+;
+
+@export fileRead fun: fp a, offset u64, size u64, aTarget a -> u64
+    ret fp.ptr<blob<@Storage::Entry>>.val.read(offset.u32, size.u32, aTarget)
+;
+
+@export fileWrite fun: fp a, aSource a, offset u64, size u64 -> u64
+    ret fp.ptr<blob<@Storage::Entry>>.val.write(offset.u32, size.u32, aSource)
 ;
