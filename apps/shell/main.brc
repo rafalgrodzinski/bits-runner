@@ -155,10 +155,10 @@ cmd_read fun: path blob<@B::String>
     @Syscall::Storage::readEntry(resourceId, 0, 64, stringData.string.adr)
     stringData.println()*/
     //pFile ptr<blob<@B::File>> <- match @B::File::new(@B::String("/APPS/LENNA.BMP")): enum<@B::Result, ptr<blob<@B::File>>>::Success: $0.val.ptr<blob<@B::File>> else: {0}.ptr<blob<@B::File>>
-    pFile ptr<blob<@B::File>>
+    /*pFile ptr<blob<@B::File>>
     match @B::File::new(@B::String("/APPS/LENNA.BMP")): enum<@B::Result, ptr<blob<@B::File>>>::Success: pFile <- $0.val.ptr<blob<@B::File>>
 
-    @B::StringForU32(pFile.val.getSize().u32).println()
+    @B::StringForU32(pFile.val.getSize().u32).println()*/
 ;
 
 cmd_write fun: path blob<@B::String>
