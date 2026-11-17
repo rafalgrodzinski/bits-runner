@@ -41,3 +41,46 @@ printAttribute u8 <- 0x07
 @export resetPrintAttribute fun
     printAttribute <- 0x07
 ;
+
+// File
+@export fileOpen fun: a_path a -> u64
+    ret @Syscall::System::grabResource(@Syscall::System::ResourceCategory::GET_STORAGE_ENTRY, a_path.u32, 0)
+;
+
+@export fileCreate fun: a_path a -> u64
+    ret 0
+;
+
+@export fileClose fun: resId u64
+;
+
+@export fileGetSize fun: resId u64 -> u64
+    ret @Syscall::Storage::getEntryInfo(resId.u32).entrySize
+;
+
+@export fileRead fun: resId u64, offset u64, size u64, a_target a -> u64
+    ret 0
+;
+
+@export fileWrite fun: resId u64, a_source a, offset u64, size u64 -> u64
+    ret 0
+;
+
+@export fileDelete fun: resId u64 -> bool
+    ret false
+;
+
+@export dirOpen fun: a_path a -> u64
+    ret 0
+;
+
+@export dirCreate fun: a_path a -> u64
+    ret 0
+;
+
+@export dirClose fun: resId u64
+;
+
+@export dirDelete fun: resId u64 -> bool
+    ret false
+;
