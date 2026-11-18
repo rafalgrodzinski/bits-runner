@@ -174,14 +174,15 @@ printAttribute u8 <- 0x07
 ;
 
 @export fileCreate fun: a_path a -> u64
-    fp a <- @Storage::instance.bootFilesystem.getEntry(a_path.ptr<blob<@B::String>>.val).vadr
-    if fp = 0
-        fp <- @Storage::instance.bootFilesystem.createEntry(a_path.ptr<blob<@B::String>>.val, @Storage::Entry::Kind::FILE).vadr
+    a_fsNode a <- @Storage::instance.bootFilesystem.getEntry(a_path.ptr<blob<@B::String>>.val).vadr
+    if a_fsNode = 0
+        a_fsNode <- @Storage::instance.bootFilesystem.createEntry(a_path.ptr<blob<@B::String>>.val, @Storage::Entry::Kind::FILE).vadr
     ;
-    ret fp.u64
+    ret a_fsNode.u64
 ;
 
 @export fileClose fun: resId u64
+    memFree(resId.a)
 ;
 
 @export fileGetSize fun: resId u64 -> u64
@@ -197,7 +198,8 @@ printAttribute u8 <- 0x07
 ;
 
 @export fileDelete fun: resId u64 -> bool
-    ret false
+    resId.a.ptr<blob<@Storage::Entry>>.val.delete()
+    ret true
 ;
 
 @export dirOpen fun: a_path a -> u64
