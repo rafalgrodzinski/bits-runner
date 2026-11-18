@@ -48,10 +48,11 @@ printAttribute u8 <- 0x07
 ;
 
 @export fileCreate fun: a_path a -> u64
-    ret 0
+    ret @Syscall::System::grabResource(@Syscall::System::ResourceCategory::CREATE_STORAGE_ENTRY, a_path.u32, 0)
 ;
 
 @export fileClose fun: resId u64
+    @Syscall::System::releaseResource(resId.u32)
 ;
 
 @export fileGetSize fun: resId u64 -> u64
@@ -59,14 +60,15 @@ printAttribute u8 <- 0x07
 ;
 
 @export fileRead fun: resId u64, offset u64, size u64, a_target a -> u64
-    ret 0
+    ret @Syscall::Storage::readEntry(resId.u32, offset.u32, size.u32, a_target)
 ;
 
 @export fileWrite fun: resId u64, a_source a, offset u64, size u64 -> u64
-    ret 0
+    ret @Syscall::Storage::writeEntry(resId.u32, offset.u32, size.u32, a_source)
 ;
 
 @export fileDelete fun: resId u64 -> bool
+    @Syscall::Storage::deleteEntry(resId.u32)
     ret true
 ;
 
