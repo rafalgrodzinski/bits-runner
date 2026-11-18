@@ -67,7 +67,7 @@ printAttribute u8 <- 0x07
 ;
 
 @export fileDelete fun: resId u64 -> bool
-    ret false
+    ret true
 ;
 
 @export dirOpen fun: a_path a -> u64
