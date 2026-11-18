@@ -81,4 +81,8 @@
             ;
         ;
     ;
+
+    drawBitmap fun: x u32, y u32, a_data a
+        if it.iAdapter.vadr = 0: ret
+    ;
 ;

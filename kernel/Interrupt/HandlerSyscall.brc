@@ -52,6 +52,7 @@ HandlerSyscall::Video::COMMIT u32 <- 0x610
 HandlerSyscall::Video::CLEAR u32 <- 0x620
 HandlerSyscall::Video::DRAW_PIXEL u32 <- 0x621
 HandlerSyscall::Video::DRAW_LINE u32 <- 0x622
+HandlerSyscall::Video::DRAW_BITMAP u32 <- 0x623
 
 // Audio
 HandlerSyscall::Audio::PLAY u32 <- 0x700
@@ -257,6 +258,12 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
             blue u8 <- ((esi >> 0) & 0xff).u8
 
             pSurface.val.drawLine(x1, y1, x2, y2, red, green, blue)
+        else if eax = HandlerSyscall::Video::DRAW_BITMAP
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            pSurface ptr<blob<@Video::Surface>> <- pCurrentProcess.val.resourceForResourceId(ebx).ptr<blob<@Video::Surface>>
+            if pSurface.vadr = 0: ret 0
+
+            pSurface.val.drawBitmap(ecx, edx, esi.a)
         // Audio
         else if eax = HandlerSyscall::Audio::PLAY
             @Devices::Audio::Speaker::instance.play(ebx, ecx)
