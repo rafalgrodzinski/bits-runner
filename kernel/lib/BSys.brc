@@ -168,7 +168,7 @@ printAttribute u8 <- 0x07
     printAttribute <- 0x07
 ;
 
-// File
+// FsNode, File, Dir
 @export fileOpen fun: a_path a -> u64
     ret @Storage::instance.bootFilesystem.getEntry(a_path.ptr<blob<@B::String>>.val).vadr.u64
 ;
@@ -193,7 +193,7 @@ printAttribute u8 <- 0x07
     ret resId.a.ptr<blob<@Storage::Entry>>.val.read(offset.u32, size.u32, a_target)
 ;
 
-@export fileWrite fun: resId u64, a_source a, offset u64, size u64 -> u64
+@export fileWrite fun: resId u64, offset u64, size u64, a_source a -> u64
     ret resId.a.ptr<blob<@Storage::Entry>>.val.write(offset.u32, size.u32, a_source)
 ;
 

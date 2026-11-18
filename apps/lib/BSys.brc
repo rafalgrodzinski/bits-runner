@@ -42,7 +42,7 @@ printAttribute u8 <- 0x07
     printAttribute <- 0x07
 ;
 
-// File
+// FsNode, File, Dir
 @export fileOpen fun: a_path a -> u64
     ret @Syscall::System::grabResource(@Syscall::System::ResourceCategory::GET_STORAGE_ENTRY, a_path.u32, 0)
 ;
@@ -63,7 +63,7 @@ printAttribute u8 <- 0x07
     ret @Syscall::Storage::readEntry(resId.u32, offset.u32, size.u32, a_target)
 ;
 
-@export fileWrite fun: resId u64, a_source a, offset u64, size u64 -> u64
+@export fileWrite fun: resId u64, offset u64, size u64, a_source a -> u64
     ret @Syscall::Storage::writeEntry(resId.u32, offset.u32, size.u32, a_source)
 ;
 

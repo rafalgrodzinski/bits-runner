@@ -117,22 +117,22 @@ Storage::WRITE_ENTRY u32 <- 0x303
     entrySize u32
 ;
 
-@export Storage::getEntryInfo fun: resourceId u32 -> blob<Storage::EntryInfo>
+@export Storage::getEntryInfo fun: resId u32 -> blob<Storage::EntryInfo>
     entryInfo blob<Storage::EntryInfo>
-    syscallRaw(Storage::GET_ENTRY_INFO, resourceId, entryInfo.adr.u32, 0, 0)
+    syscallRaw(Storage::GET_ENTRY_INFO, resId, entryInfo.adr.u32, 0, 0)
     ret entryInfo
 ;
 
-@export Storage::deleteEntry fun: resourceId u32
-    syscallRaw(Storage::DELETE_ENTRY, resourceId, 0, 0, 0)
+@export Storage::deleteEntry fun: resId u32
+    syscallRaw(Storage::DELETE_ENTRY, resId, 0, 0, 0)
 ;
 
-@export Storage::readEntry fun: resourceId u32, startByte u32, bytesCount u32, targetAddress a -> u32
-    ret syscallRaw(Storage::READ_ENTRY, resourceId, startByte, bytesCount, targetAddress.u32)
+@export Storage::readEntry fun: resId u32, offset u32, size u32, a_target a -> u32
+    ret syscallRaw(Storage::READ_ENTRY, resId, offset, size, a_target.u32)
 ;
 
-@export Storage::writeEntry fun: resourceId u32, startByte u32, bytesCount u32, sourceAddress a -> u32
-    ret syscallRaw(Storage::WRITE_ENTRY, resourceId, startByte, bytesCount, sourceAddress.u32)
+@export Storage::writeEntry fun: resId u32, offset u32, size u32, a_source a -> u32
+    ret syscallRaw(Storage::WRITE_ENTRY, resId, offset, size, a_source.u32)
 ;
 
 // Input
