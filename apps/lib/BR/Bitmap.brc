@@ -7,6 +7,14 @@
     width u32
     height u32
     a_data a
+
+    set fun: x u32, y u32, r u32, g u32, b u32
+        i u32 <- (y * it.width + x) * 4
+        p_data ptr<data<u8>> <- it.a_data.ptr<data<u8>>
+        p_data.val[i + 0] <- b
+        p_data.val[i + 1] <- g
+        p_data.val[i + 2] <- r
+    ;
 ;
 
 @export Bitmap fun: p_file ptr<blob<@B::File>> -> enum<@B::Result, ptr<blob<Bitmap>>>
