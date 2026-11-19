@@ -1,0 +1,49 @@
+@module BR
+
+@export Bitmap blob
+    width u32
+    height u32
+    a_data a
+;
+
+@export Bitmap fun: p_file ptr<blob<@B::File>> -> enum<@B::Result, ptr<blob<Bitmap>>>
+    p_bitmap ptr<blob<Bitmap>>
+    p_bitmap <- bitmapForBmp(p_file)
+    if p_bitmap.vadr != 0: ret {p_bitmap}.enum<@B::Result, ptr<blob<Bitmap>>>::Success
+
+    ret {}.enum<@B::Result, ptr<blob<Bitmap>>>::Failure
+;
+
+bitmapForBmp fun: p_file ptr<blob<@B::File>> -> ptr<blob<Bitmap>>
+    // Signature must be 'BM'
+    signature data<u8, 2>
+    p_file.read(0, 2 signature.adr)
+    if signature[0] != 'B' or signature[1] != 'M': ret {0}
+
+    dataOffset u32
+    p_file.read(0x0a, 4, dataOffset.adr)
+
+    // Size of the header determines version of the format
+    headerSize u32
+    p_file.read(0x0e, 4, headerSize.adr)
+    if headerSize != 40: ret {0} // We only handle V1
+
+    width u32
+    height u32
+    bpp u16
+    p_file.val.read(0x12, 4, width.adr)
+    p_file.val.read(0x16, 4, height.adr)
+    p_file.val.read(0x1c, 2, bpp.adr)
+
+    bytesPerPixel u32 <- bpp / 8
+
+    a_data a < @B::memAlloc(width * height * bytesPerPixel)
+    p_file.val.read(dataOffset width * height * bytesPerPixel)
+
+    p_bitmap ptr<blob<Bitmap>> <- @B::memAlloc(blob<Bitmap>.size)
+    p_bitmap.val.width <- width
+    p_bitmap.val.height <- height
+    p_bitmap.val.a_data <- a_data
+
+    ret p_bitmap
+;
