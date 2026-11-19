@@ -38,16 +38,39 @@ bitmapForBmp fun: p_file ptr<blob<@B::File>> -> ptr<blob<Bitmap>>
     p_file.val.read(0x16, 4, height.adr)
     p_file.val.read(0x1c, 2, bpp.adr)
 
-    @B::StringForS32(width).println()
-    @B::StringForS32(height).println()
-    @B::StringForU32(bpp).println()
-
     bytesPerPixel u32 <- bpp / 8
 
-    a_data a <- @BSys::memAlloc(width.u32 * height.u32 * bytesPerPixel)
+    // Allocated data for 32 bit color
+    a_data a <- @BSys::memAlloc(width.u32 * height.u32 * 4)
     if a_data = 0: ret {0}
     p_file.val.read(dataOffset, width.u32 * height.u32 * bytesPerPixel, a_data)
 
+    // Convert to 32bit color
+    if bpp = 24
+        // For 24 bit color we need to shift data and put 0 in the padding
+        p_data ptr<data<u8>> <- a_data.ptr<data<u8>>
+        rep i s32 <- width * height, i >= 0, i <- i - 1
+            p_data.val[i * 4 + 3] <- 0
+            p_data.val[i * 4 + 2] <- p_data.val[i * 3 + 2]
+            p_data.val[i * 4 + 1] <- p_data.val[i * 3 + 1]
+            p_data.val[i * 4 + 0] <- p_data.val[i * 3 + 0]
+        ;
+    else if bpp = 16
+        // For 16 bit color we need to expand each of the components to 8 bit and set 0 in the padding
+        rep i s32 <- width * height, i >= 0, i <- i - 1
+            p_data ptr<data<u8>> <- a_data.ptr<data<u8>>
+            p_data16 ptr<data<u16>> <- a_data.ptr<data<u16>>
+
+            p_data.val[i * 4 + 3] <- 0
+            p_data.val[i * 4 + 2] <- p_data16.val[i] << 3
+            p_data.val[i * 4 + 1] <- (p_data16.val[i] >> 2) & 0b1111_1100
+            p_data.val[i * 4 + 0] <- (p_data16.val[i] >> 8) & 0b1111_1000
+        ;
+    else if bpp = 8
+        //For 8 bit color we need to convert to extract each indexed palette color
+    ;
+
+    // Allocate and setup the Bitmap blob itself
     p_bitmap ptr<blob<Bitmap>> <- @BSys::memAlloc(blob<Bitmap>.size).ptr<blob<Bitmap>>
     p_bitmap.val.width <- width.u32
     p_bitmap.val.height <- height.u32
