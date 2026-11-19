@@ -424,13 +424,32 @@ demo_6 fun
         ;
     ;
 
-    if p_bitmap.vadr != 0
-        @Syscall::Video::drawBitmap(resourceId, 0, 0, p_bitmap.val.width, p_bitmap.val.height, p_bitmap.val.a_data)
-        @Syscall::Video::commit(resourceId)
-    ;
+    xPos s32 <- (width.s32 - p_bitmap.val.width) / 2
+    yPos s32 <- (height.s32 - p_bitmap.val.height) / 2
 
     rep demoMode = 6
         readKeyboard()
         readMouse()
+
+        xPos <- xPos + mouseState.deltaX
+        yPos <- yPos - mouseState.deltaY
+
+        if xPos > width.s32 - p_bitmap.val.width
+            xPos <- width.s32 - p_bitmap.val.width
+        else if xPos < 0
+            xPos <- 0
+        ;
+
+        if yPos > height - p_bitmap.val.height
+            yPos <- height - p_bitmap.val.height
+        else if yPos < 0
+            yPos <- 0
+        ;
+
+        @Syscall::Video::clear(resourceId, 100, 100, 100)
+        if p_bitmap.vadr != 0
+            @Syscall::Video::drawBitmap(resourceId, xPos.u32, yPos.u32, p_bitmap.val.width, p_bitmap.val.height, p_bitmap.val.a_data)
+        ;
+        @Syscall::Video::commit(resourceId)
     ;
 ;
