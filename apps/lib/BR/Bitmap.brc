@@ -45,7 +45,7 @@ bitmapForBmp fun: p_file ptr<blob<@B::File>> -> ptr<blob<Bitmap>>
     if a_data = 0: ret {0}
     p_file.val.read(dataOffset, width.u32 * height.u32 * bytesPerPixel, a_data)
 
-    // Convert to 32bit color
+    // Convert to BGRX
     if bpp = 24
         // For 24 bit color we need to shift data and put 0 in the padding
         p_data ptr<data<u8>> <- a_data.ptr<data<u8>>
@@ -68,6 +68,16 @@ bitmapForBmp fun: p_file ptr<blob<@B::File>> -> ptr<blob<Bitmap>>
         ;
     else if bpp = 8
         //For 8 bit color we need to convert to extract each indexed palette color
+    ;
+
+    // And flip the image upside-down
+    p_data32 ptr<data<u32>> <- a_data.ptr<data<u32>>
+    rep y u32, y < height / 2, y <- y + 1
+        rep x u32, x < width.u32, x <- x + 1
+            iSource u32 <- (y * width.u32 +  x)
+            iTarget u32 <- ((height.u32 - y - 1) * width.u32 + x)
+            p_data32.val[iSource] <-> p_data32.val[iTarget]
+        ;
     ;
 
     // Allocate and setup the Bitmap blob itself

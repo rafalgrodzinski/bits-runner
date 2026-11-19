@@ -82,7 +82,19 @@
         ;
     ;
 
-    drawBitmap fun: x u32, y u32, a_data a
+    drawBitmap fun: x u32, y u32, width u32, height u32, a_data a
         if it.iAdapter.vadr = 0: ret
+        p_data ptr<data<u8>> <- a_data.ptr<data<u8>>
+        rep y u32, y < height, y <- y + 1
+            rep x u32, x < width, x <- x + 1
+                it.drawPixel(
+                    x,
+                    y,
+                    p_data.val[(y * width + x) * 4 + 2],
+                    p_data.val[(y * width + x) * 4 + 1],
+                    p_data.val[(y * width + x) * 4 + 0]
+                )
+            ;
+        ;
     ;
 ;

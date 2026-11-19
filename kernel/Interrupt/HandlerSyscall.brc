@@ -263,7 +263,12 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
             pSurface ptr<blob<@Video::Surface>> <- pCurrentProcess.val.resourceForResourceId(ebx).ptr<blob<@Video::Surface>>
             if pSurface.vadr = 0: ret 0
 
-            pSurface.val.drawBitmap(ecx, edx, esi.a)
+            x u32 <- ecx >> 16
+            y u32 <- ecx & 0xffff
+            width u32 <- edx >> 16
+            height u32 <- edx & 0xffff
+
+            pSurface.val.drawBitmap(x, y, width, height, esi.a)
         // Audio
         else if eax = HandlerSyscall::Audio::PLAY
             @Devices::Audio::Speaker::instance.play(ebx, ecx)

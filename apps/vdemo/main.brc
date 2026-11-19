@@ -16,7 +16,7 @@ ascii u32
 mouseState blob<@Syscall::MouseState>
 
 setMode fun: mode u32
-    /*if mode = 0
+    if mode = 0
         width <- mode0.width
         height <- mode0.height
         resourceId <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::VIDEO_GET_SURFACE, mode0.id, 0)
@@ -24,7 +24,7 @@ setMode fun: mode u32
         width <- mode1.width
         height <- mode1.height
         resourceId <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::VIDEO_GET_SURFACE, mode1.id, 0)
-    ;*/
+    ;
 ;
 
 readKeyboard fun
@@ -407,28 +407,27 @@ demo_5 fun
 ;
 
 demo_6 fun
-    setMode(0)
+    setMode(1)
 
     @Syscall::Video::clear(resourceId, 100, 100, 100)
     @Syscall::Video::commit(resourceId)
 
     p_fsNode ptr<blob<@B::FsNode>> <- @B::FsNode(@B::String("/APPS/LENNA.BMP"))
-    @B::StringHexForU32(p_fsNode.vadr.u32).println()
-    /*p_bitmap ptr<blob<@BR::Bitmap>>*/
-    /*match p_fsNode.val.getFile({}.enum<@B::FsNode::Mode>::Open)
+    p_bitmap ptr<blob<@BR::Bitmap>>
+    match p_fsNode.val.getFile({}.enum<@B::FsNode::Mode>::Open)
         enum<@B::Result, ptr<blob<@B::File>>>::Success
-            /*match @BR::Bitmap($0.val.ptr<blob<@B::File>>)
+            match @BR::Bitmap($0.val.ptr<blob<@B::File>>)
                 enum<@B::Result, ptr<blob<@BR::Bitmap>>>::Success
                     p_bitmap <- $0.val.ptr<blob<@BR::Bitmap>>
                 ;
-            ;*/
+            ;
         ;
-    ;*/
+    ;
 
-    /*if p_bitmap.vadr != 0
+    if p_bitmap.vadr != 0
         @Syscall::Video::drawBitmap(resourceId, 0, 0, p_bitmap.val.width, p_bitmap.val.height, p_bitmap.val.a_data)
         @Syscall::Video::commit(resourceId)
-    ;*/
+    ;
 
     rep demoMode = 6
         readKeyboard()
