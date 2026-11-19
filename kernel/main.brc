@@ -42,31 +42,14 @@ busPci blob<@Bus::BusPci>
     aFileBuffer a
 
     // Load shell
-    pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
-    //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/VDEMO.BIN"))
+    //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
+    pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/VDEMO.BIN"))
     //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/FIRE.BIN"))
     aFileBuffer <- @BSys::memAlloc(pEntry.val.fileSize)
     pEntry.val.read(0, pEntry.val.fileSize, aFileBuffer)
     @Dispatch::Dispatcher::instance.createProcess(aFileBuffer, pEntry.val.fileSize)
     @BSys::memFree(aFileBuffer)
     @BSys::memFree(pEntry.vadr)
-
-    /*
-    pFile ptr<blob<@B::File>>
-    match @B::File::new(@B::String("/TEST.TXT"))
-        enum<@B::Result, ptr<blob<@B::File>>>::Success
-            pFile <- $0.val.ptr<blob<@B::File>>
-            @B::String("Success").println()
-        ;
-    else
-        @B::String("Failed").println()
-    ;
-
-    @B::StringForU32(pFile.val.getSize().u32).println()
-
-    text blob<@B::String> <- @B::String("Hello, world!\n")
-    pFile.val.write(text.string.adr, 0, text.length() + 1)
-    */
 
     @Dispatch::Dispatcher::instance.start()
 ;

@@ -212,8 +212,10 @@ Video::DRAW_BITMAP u32 <- 0x623
     syscallRaw(Video::DRAW_LINE, resourceId, xy1, xy2, rgb)
 ;
 
-@export Video::drawBitmap fun: resId u32, x u32, y u32, a_data a
-    syscallRaw(Video::DRAW_BITMAP, resId, x, y, a_data.u32)
+@export Video::drawBitmap fun: resId u32, x u32, y u32, width u32, height u32, a_data a
+    xy u32 <- (x << 16) | (y & 0xffff)
+    wh u32 <- (width << 16) | (height & 0xffff)
+    syscallRaw(Video::DRAW_BITMAP, resId, xy, wh, a_data.u32)
 ;
 
 // Audio
