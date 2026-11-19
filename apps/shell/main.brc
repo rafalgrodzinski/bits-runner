@@ -1,6 +1,7 @@
 @import B
 @import Syscall
 @import BSys
+@import BR
 
 @export start fun
     character u8 <- 0
@@ -150,7 +151,7 @@ cmd_rm fun: path blob<@B::String>
 ;
 
 cmd_read fun: path blob<@B::String>
-    p_fsNode ptr<blob<@B::FsNode>> <- @B::FsNode(path)
+    /*p_fsNode ptr<blob<@B::FsNode>> <- @B::FsNode(path)
     p_file ptr<blob<@B::File>>
     match p_fsNode.val.getFile({}.enum<@B::FsNode::Mode>::Open)
         enum<@B::Result, ptr<blob<@B::File>>>::Success: p_file <- $0.val.ptr<blob<@B::File>>
@@ -169,7 +170,29 @@ cmd_read fun: path blob<@B::String>
     @B::String::println()
 
     @BSys::memFree(a_buffer)
-    p_fsNode.val.release()
+    p_fsNode.val.release()*/
+
+    p_fsNode ptr<blob<@B::FsNode>> <- @B::FsNode(@B::String("/APPS/LENNA.BMP"))
+    p_file ptr<blob<@B::File>>
+    match p_fsNode.val.getFile({}.enum<@B::FsNode::Mode>::Open)
+        enum<@B::Result, ptr<blob<@B::File>>>::Success: p_file <- $0.val.ptr<blob<@B::File>>
+    else
+        @B::String("Failed to open ").print()
+        path.println()
+        ret
+    ;
+
+    p_bitmap ptr<blob<@BR::Bitmap>>
+    match @BR::Bitmap(p_file)
+        enum<@B::Result, ptr<blob<@BR::Bitmap>>>::Success: p_bitmap <- $0.val.ptr<blob<@BR::Bitmap>>
+    else
+        @B::String("Failed to read bmp ").print()
+        ret
+    ;
+
+    @B::StringForU32(p_bitmap.val.width).println()
+    @B::StringForU32(p_bitmap.val.height).println()
+    @B::StringHexForU32(p_bitmap.val.a_data.u32).println()
 ;
 
 cmd_write fun: path blob<@B::String>

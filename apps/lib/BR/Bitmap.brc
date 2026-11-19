@@ -1,5 +1,8 @@
 @module BR
 
+@import BSys
+@import B
+
 @export Bitmap blob
     width u32
     height u32
@@ -17,32 +20,37 @@
 bitmapForBmp fun: p_file ptr<blob<@B::File>> -> ptr<blob<Bitmap>>
     // Signature must be 'BM'
     signature data<u8, 2>
-    p_file.read(0, 2 signature.adr)
+    p_file.val.read(0, 2, signature.adr)
     if signature[0] != 'B' or signature[1] != 'M': ret {0}
 
     dataOffset u32
-    p_file.read(0x0a, 4, dataOffset.adr)
+    p_file.val.read(0x0a, 4, dataOffset.adr)
 
     // Size of the header determines version of the format
     headerSize u32
-    p_file.read(0x0e, 4, headerSize.adr)
+    p_file.val.read(0x0e, 4, headerSize.adr)
     if headerSize != 40: ret {0} // We only handle V1
 
-    width u32
-    height u32
+    width s32
+    height s32
     bpp u16
     p_file.val.read(0x12, 4, width.adr)
     p_file.val.read(0x16, 4, height.adr)
     p_file.val.read(0x1c, 2, bpp.adr)
 
+    @B::StringForS32(width).println()
+    @B::StringForS32(height).println()
+    @B::StringForU32(bpp).println()
+
     bytesPerPixel u32 <- bpp / 8
 
-    a_data a < @B::memAlloc(width * height * bytesPerPixel)
-    p_file.val.read(dataOffset width * height * bytesPerPixel)
+    a_data a <- @BSys::memAlloc(width.u32 * height.u32 * bytesPerPixel)
+    if a_data = 0: ret {0}
+    p_file.val.read(dataOffset, width.u32 * height.u32 * bytesPerPixel, a_data)
 
-    p_bitmap ptr<blob<Bitmap>> <- @B::memAlloc(blob<Bitmap>.size)
-    p_bitmap.val.width <- width
-    p_bitmap.val.height <- height
+    p_bitmap ptr<blob<Bitmap>> <- @BSys::memAlloc(blob<Bitmap>.size).ptr<blob<Bitmap>>
+    p_bitmap.val.width <- width.u32
+    p_bitmap.val.height <- height.u32
     p_bitmap.val.a_data <- a_data
 
     ret p_bitmap
