@@ -313,6 +313,8 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
     ;
 
     readEntry fun: pEntry ptr<blob<Entry>>, startByte u32, bytesCount u32, targetAddress a -> u32
+        if bytesCount = 0: ret 0
+
         cluster u32 <- pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
 
         bytesCopied u32
@@ -339,9 +341,11 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                 aBuffer a <- @BSys::memAlloc(it.bytesPerCluster)
                 it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
                 // copy just the required bytes
-                rep i u32, i < firstClusterBytesCount, i <- i + 1
-                    targetAddress.ptr<data<u8>>.val[i] <- aBuffer.ptr<data<u8>>.val[firstClusterBytesOffset + i]
-                ;
+                @BSys::memCopy(
+                    aBuffer + firstClusterBytesOffset,
+                    targetAddress,
+                    if firstClusterBytesCount > bytesCount: bytesCount else: firstClusterBytesCount
+                )
                 @BSys::memFree(aBuffer)
                 bytesCopied <- firstClusterBytesCount
             // Handle copying remainder of less than a cluster size
@@ -349,9 +353,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                 aBuffer a <- @BSys::memAlloc(it.bytesPerCluster)
                 it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
                 // copy just the required bytes
-                rep i u32, i < lastClusterBytesCount, i <- i + 1
-                    targetAddress.ptr<data<u8>>.val[bytesCopied + i] <- aBuffer.ptr<data<u8>>.val[i]
-                ;
+                @BSys::memCopy(aBuffer, targetAddress + bytesCopied, lastClusterBytesCount)
                 @BSys::memFree(aBuffer)
                 bytesCopied <- bytesCopied + lastClusterBytesCount
             // Copy a full cluster

@@ -77,7 +77,8 @@ Handler::INT_DEBUG_CALL u32 <- 0x32
                 pCpuState.val.ebx,
                 pCpuState.val.ecx,
                 pCpuState.val.edx,
-                pCpuState.val.esi
+                pCpuState.val.esi,
+                pCpuState.val.edi
             )
         // Debug
         else if interrupt = Handler::INT_DEBUG_DUMP_CPU_STATE or interrupt = Handler::INT_DEBUG_CALL

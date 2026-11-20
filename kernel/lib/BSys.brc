@@ -3,6 +3,7 @@
 @import Memory
 @import Term
 @import BiosService
+@import Storage
 
 @export getEax raw<"=r"> -> u32
     mov $0, eax
@@ -165,4 +166,53 @@ printAttribute u8 <- 0x07
 
 @export resetPrintAttribute fun
     printAttribute <- 0x07
+;
+
+// FsNode, File, Dir
+@export fileOpen fun: a_path a -> u64
+    ret @Storage::instance.bootFilesystem.getEntry(a_path.ptr<blob<@B::String>>.val).vadr.u64
+;
+
+@export fileCreate fun: a_path a -> u64
+    a_fsNode a <- @Storage::instance.bootFilesystem.getEntry(a_path.ptr<blob<@B::String>>.val).vadr
+    if a_fsNode = 0
+        a_fsNode <- @Storage::instance.bootFilesystem.createEntry(a_path.ptr<blob<@B::String>>.val, @Storage::Entry::Kind::FILE).vadr
+    ;
+    ret a_fsNode.u64
+;
+
+@export fileClose fun: resId u64
+    memFree(resId.a)
+;
+
+@export fileGetSize fun: resId u64 -> u64
+    ret resId.a.ptr<blob<@Storage::Entry>>.val.fileSize
+;
+
+@export fileRead fun: resId u64, offset u64, size u64, a_target a -> u64
+    ret resId.a.ptr<blob<@Storage::Entry>>.val.read(offset.u32, size.u32, a_target)
+;
+
+@export fileWrite fun: resId u64, offset u64, size u64, a_source a -> u64
+    ret resId.a.ptr<blob<@Storage::Entry>>.val.write(offset.u32, size.u32, a_source)
+;
+
+@export fileDelete fun: resId u64 -> bool
+    resId.a.ptr<blob<@Storage::Entry>>.val.delete()
+    ret true
+;
+
+@export dirOpen fun: a_path a -> u64
+    ret 0
+;
+
+@export dirCreate fun: a_path a -> u64
+    ret 0
+;
+
+@export dirClose fun: resId u64
+;
+
+@export dirDelete fun: resId u64 -> bool
+    ret false
 ;
