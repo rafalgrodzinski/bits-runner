@@ -9,6 +9,9 @@
     bpp u32
     a_data a
 
+    clear fun: red u8, green u8, blue u8
+    ;
+
     set fun: x u32, y u32, red u8, green u8, blue u8
         i u32 <- (y * it.width + x) * 4
         p_data ptr<data<u8>> <- it.a_data.ptr<data<u8>>
@@ -16,6 +19,32 @@
         p_data.val[i + 1] <- green
         p_data.val[i + 2] <- red
     ;
+;
+
+@export Bitmap::new fun: width u32, height u32, bpp u32 -> enum<@B::Result, ptr<blob<Bitmap>>>
+    // Check that bits per pixel is valid
+    if bpp != 32 and bpp != 24 and bpp != 16 and bpp != 8
+        ret {}.enum<@B::Result, ptr<blob<Bitmap>>>::Failure
+    ;
+
+    // Try allocating bitmap blob
+    p_bitmap ptr<blob<Bitmap>> <- @BSys::memAlloc(blob<Bitmap>.size).ptr<blob<Bitmap>>
+    if p_bitmap.vadr = 0: ret {}.enum<@B::Result, ptr<blob<Bitmap>>>::Failure
+
+    p_bitmap.val.width <- width
+    p_bitmap.val.height <- height
+    p_bitmap.val.bpp <- bpp
+
+    // Try allocating bitmap data
+    bytesPerPixel u32 <- (bpp + 7) / 8
+    p_bitmap.val.a_data <- @BSys::memAlloc(width * height * bytesPerPixel)
+
+    if p_bitmap.val.a_data = 0
+        @BSys::memFree(p_bitmap.val.a_data)
+        ret {}.enum<@B::Result, ptr<blob<Bitmap>>>::Failure
+    ;
+
+    ret {p_bitmap}.enum<@B::Result, ptr<blob<Bitmap>>>::Success
 ;
 
 @export Bitmap fun: p_file ptr<blob<@B::File>> -> enum<@B::Result, ptr<blob<Bitmap>>>
@@ -47,7 +76,7 @@ bitmapForBmp fun: p_file ptr<blob<@B::File>> -> ptr<blob<Bitmap>>
     p_file.val.read(0x16, 4, height.adr)
     p_file.val.read(0x1c, 2, bpp.adr)
 
-    bytesPerPixel u32 <- bpp / 8
+    bytesPerPixel u32 <- (bpp + 7) / 8
 
     // Allocated data for 32 bit color
     a_data a <- @BSys::memAlloc(width.u32 * height.u32 * 4)
