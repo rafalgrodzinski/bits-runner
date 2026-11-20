@@ -412,7 +412,7 @@ demo_6 fun
     @Syscall::Video::clear(resourceId, 100, 100, 100)
     @Syscall::Video::commit(resourceId)
 
-    p_fsNode ptr<blob<@B::FsNode>> <- @B::FsNode(@B::String("/APPS/LENNA.BMP"))
+    p_fsNode ptr<blob<@B::FsNode>> <- @B::FsNode(@B::String("/APPS/KUMAKO.BMP"))
     p_bitmap ptr<blob<@BR::Bitmap>>
     match p_fsNode.val.getFile({}.enum<@B::FsNode::Mode>::Open)
         enum<@B::Result, ptr<blob<@B::File>>>::Success
@@ -448,7 +448,15 @@ demo_6 fun
 
         @Syscall::Video::clear(resourceId, 100, 100, 100)
         if p_bitmap.vadr != 0
-            @Syscall::Video::drawBitmap(resourceId, xPos.u32, yPos.u32, p_bitmap.val.width, p_bitmap.val.height, p_bitmap.val.a_data)
+            @Syscall::Video::drawBitmap(
+                resourceId,
+                xPos.u32,
+                yPos.u32,
+                p_bitmap.val.width,
+                p_bitmap.val.height,
+                p_bitmap.val.bpp,
+                 p_bitmap.val.a_data
+            )
         ;
         @Syscall::Video::commit(resourceId)
     ;

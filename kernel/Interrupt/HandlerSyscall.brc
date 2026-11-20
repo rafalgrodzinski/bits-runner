@@ -59,7 +59,7 @@ HandlerSyscall::Audio::PLAY u32 <- 0x700
 HandlerSyscall::Audio::STOP u32 <- 0x701
 
 @export HandlerSyscall blob
-    handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32 -> u32
+    handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, edi u32 -> u32
         // System
         if eax = HandlerSyscall::System::REBOOT
             @BiosService::reboot()
@@ -268,7 +268,7 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
             width u32 <- edx >> 16
             height u32 <- edx & 0xffff
 
-            pSurface.val.drawBitmap(x, y, width, height, esi.a)
+            pSurface.val.drawBitmap(x, y, width, height, esi, edi.a)
         // Audio
         else if eax = HandlerSyscall::Audio::PLAY
             @Devices::Audio::Speaker::instance.play(ebx, ecx)

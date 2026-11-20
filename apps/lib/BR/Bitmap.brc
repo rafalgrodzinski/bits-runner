@@ -6,14 +6,15 @@
 @export Bitmap blob
     width u32
     height u32
+    bpp u32
     a_data a
 
-    set fun: x u32, y u32, r u32, g u32, b u32
+    set fun: x u32, y u32, red u8, green u8, blue u8
         i u32 <- (y * it.width + x) * 4
         p_data ptr<data<u8>> <- it.a_data.ptr<data<u8>>
-        p_data.val[i + 0] <- b
-        p_data.val[i + 1] <- g
-        p_data.val[i + 2] <- r
+        p_data.val[i + 0] <- blue
+        p_data.val[i + 1] <- green
+        p_data.val[i + 2] <- red
     ;
 ;
 
@@ -92,6 +93,7 @@ bitmapForBmp fun: p_file ptr<blob<@B::File>> -> ptr<blob<Bitmap>>
     p_bitmap ptr<blob<Bitmap>> <- @BSys::memAlloc(blob<Bitmap>.size).ptr<blob<Bitmap>>
     p_bitmap.val.width <- width.u32
     p_bitmap.val.height <- height.u32
+    p_bitmap.val.bpp <- 32
     p_bitmap.val.a_data <- a_data
 
     ret p_bitmap

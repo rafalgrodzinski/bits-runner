@@ -82,7 +82,7 @@
         ;
     ;
 
-    drawBitmap fun: x u32, y u32, width u32, height u32, a_data a
+    drawBitmap fun: x u32, y u32, width u32, height u32, bpp u32, a_data a
         if it.iAdapter.vadr = 0: ret
         p_data ptr<data<u8>> <- a_data.ptr<data<u8>>
         rep pY u32, pY < height, pY <- pY + 1
