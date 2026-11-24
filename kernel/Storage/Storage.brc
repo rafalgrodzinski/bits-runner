@@ -7,14 +7,14 @@ MBR_PARTITION_SECTORS_COUNT_OFFSET u32 <- 0x0c
 
 buffer data<u8, 512>
 
-@export instance blob<Storage>
+@ instance blob<Storage>
 
-@export Storage blob
+@ Storage blob
   deviceBios blob<DeviceBios>
   filesystemFat blob<FilesystemFat>
-  bootFilesystem proto<Filesystem>
+  @ bootFilesystem proto<Filesystem>
 
-  init fun: biosBootDriveNumber u32, bootPartitionFirstSector u32
+  @ init fun: biosBootDriveNumber u32, bootPartitionFirstSector u32
     // First setup the storage device
     it.deviceBios.init(biosBootDriveNumber)
     device proto<Device> <- {it.deviceBios.adr.ptr<blob<DeviceBios>>}

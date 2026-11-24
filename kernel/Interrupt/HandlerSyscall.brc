@@ -58,7 +58,7 @@ HandlerSyscall::Video::DRAW_BITMAP u32 <- 0x623
 HandlerSyscall::Audio::PLAY u32 <- 0x700
 HandlerSyscall::Audio::STOP u32 <- 0x701
 
-@export HandlerSyscall blob
+@ HandlerSyscall blob
     handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, edi u32 -> u32
         // System
         if eax = HandlerSyscall::System::REBOOT

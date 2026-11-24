@@ -18,7 +18,7 @@ REGISTER_CENTURY u8 <- 0x32
 
 REGISTER_FLOPPY u8 <- 0x10
 
-@export getTimestamp fun -> u32
+@ getTimestamp fun -> u32
     nmiFlag u8 <- @BSys::in8(REGISTER_SELECT_PORT) & 0x80
 
     @BSys::out8(REGISTER_SELECT_PORT, REGISTER_B | nmiFlag)
@@ -82,14 +82,14 @@ REGISTER_FLOPPY u8 <- 0x10
 // 3: 720 KB 3.5 Drive
 // 4: 1.44 MB 3.5 Drive
 // 5: 2.88 MB 3.5 drive
-@export getFloppyKindA fun -> u32
+@ getFloppyKindA fun -> u32
     nmiFlag u8 <- @BSys::in8(REGISTER_SELECT_PORT) & 0x80
 
     @BSys::out8(REGISTER_SELECT_PORT, REGISTER_FLOPPY | nmiFlag)
     ret (@BSys::in8(DATA_PORT) & 0xf0) >> 4
 ;
 
-@export getFloppyKindB fun -> u32
+@ getFloppyKindB fun -> u32
     nmiFlag u8 <- @BSys::in8(REGISTER_SELECT_PORT) & 0x80
 
     @BSys::out8(REGISTER_SELECT_PORT, REGISTER_FLOPPY | nmiFlag)

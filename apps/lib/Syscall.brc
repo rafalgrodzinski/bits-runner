@@ -18,45 +18,45 @@ System::GET_INFO_PCI u32 <- 0x021
 System::GRAB_RESOURCE u32 <- 0x030
 System::RELEASE_RESOURCE u32 <- 0x031
 
-@export System::ResourceCategory::GET_STORAGE_ENTRY u32 <- 0x01
-@export System::ResourceCategory::CREATE_STORAGE_ENTRY u32 <- 0x02
-@export System::ResourceCategory::VIDEO_GET_SURFACE u32 <- 0x03
+@ System::ResourceCategory::GET_STORAGE_ENTRY u32 <- 0x01
+@ System::ResourceCategory::CREATE_STORAGE_ENTRY u32 <- 0x02
+@ System::ResourceCategory::VIDEO_GET_SURFACE u32 <- 0x03
 
-@export InfoPciDevice blob
-        busNum u32
-        deviceNum u32
-        funNum u32
+@ InfoPciDevice blob
+        @ busNum u32
+        @ deviceNum u32
+        @ funNum u32
 
-        vendorId u32
-        deviceId u32
-        class u32
-        subclass u32
+        @ vendorId u32
+        @ deviceId u32
+        @ class u32
+        @ subclass u32
 ;
 
-@export InfoPci blob
+@ InfoPci blob
     devicesCount u32
     devices data<blob<InfoPciDevice>, 16>
 ;
 
-@export System::reboot fun
+@ System::reboot fun
     syscallRaw(System::REBOOT, 0, 0, 0, 0, 0)
 ;
 
-@export System::getTimestamp fun -> u32
+@ System::getTimestamp fun -> u32
     ret syscallRaw(System::GET_TIMESTAMP, 0, 0, 0, 0, 0)
 ;
 
-@export System::getInfoPci fun -> blob<InfoPci>
+@ System::getInfoPci fun -> blob<InfoPci>
     info blob<InfoPci>
     syscallRaw(System::GET_INFO_PCI, info.adr.u32, 0, 0, 0, 0)
     ret info
 ;
 
-@export System::grabResource fun: category u32, arg0 u32, arg1 u32 -> u32
+@ System::grabResource fun: category u32, arg0 u32, arg1 u32 -> u32
     ret syscallRaw(System::GRAB_RESOURCE, category, arg0, arg1, 0, 0)
 ;
 
-@export System::releaseResource fun: resourceId u32
+@ System::releaseResource fun: resourceId u32
     syscallRaw(System::RELEASE_RESOURCE, resourceId, 0, 0, 0, 0)
 ;
 
@@ -64,30 +64,30 @@ System::RELEASE_RESOURCE u32 <- 0x031
 Memory::GET_INFO u32 <- 0x100
 Memory::EXPAND_HEAP u32 <- 0x101
 
-@export Memory::Info blob
-    totalSize u32
-    totalPagesCount u32
-    unavailablePagesCount u32
-    freePagesCount u32
+@ Memory::Info blob
+    @ totalSize u32
+    @ totalPagesCount u32
+    @ unavailablePagesCount u32
+    @ freePagesCount u32
 
-    kernelPagesCount u32
-    kernelStackPagesCount u32
+    @ kernelPagesCount u32
+    @ kernelStackPagesCount u32
 
-    kernelHeapAdr a
-    kernelHeapSize u32
-    kernelHeapUsedSize u32
+    @ kernelHeapAdr a
+    @ kernelHeapSize u32
+    @ kernelHeapUsedSize u32
 
-    userPagesCount u32
-    userStackPagesCount u32
+    @ userPagesCount u32
+    @ userStackPagesCount u32
 ;
 
-@export Memory::getInfo fun -> blob<Memory::Info>
+@ Memory::getInfo fun -> blob<Memory::Info>
     info blob<Memory::Info>
     syscallRaw(Memory::GET_INFO, info.adr.u32, 0, 0, 0, 0)
     ret info
 ;
 
-@export Memory::expandHeap fun: size u32 -> u32
+@ Memory::expandHeap fun: size u32 -> u32
     ret syscallRaw(Memory::EXPAND_HEAP, size, 0, 0, 0, 0)
 ;
 
@@ -95,11 +95,11 @@ Memory::EXPAND_HEAP u32 <- 0x101
 Process::YIELD u32 <- 0x200
 Process::SLEEP u32 <- 0x201
 
-@export Process::yield fun
+@ Process::yield fun
     syscallRaw(Process::YIELD, 0, 0, 0, 0, 0)
 ;
 
-@export Process::sleep fun: milliseconds u32
+@ Process::sleep fun: milliseconds u32
     syscallRaw(Process::SLEEP, milliseconds, 0, 0, 0, 0)
 ;
 
@@ -109,30 +109,30 @@ Storage::DELETE_ENTRY u32 <- 0x301
 Storage::READ_ENTRY u32 <- 0x302
 Storage::WRITE_ENTRY u32 <- 0x303
 
-@export Storage::ENTRY_KIND_EMPTY u32 <- 0
-@export Storage::ENTRY_KIND_FILE u32 <- 'f'
-@export Storage::ENTRY_KIND_DIRECTORY u32 <- 'd'
+@ Storage::ENTRY_KIND_EMPTY u32 <- 0
+@ Storage::ENTRY_KIND_FILE u32 <- 'f'
+@ Storage::ENTRY_KIND_DIRECTORY u32 <- 'd'
 
-@export Storage::EntryInfo blob
-    kind u32
-    entrySize u32
+@ Storage::EntryInfo blob
+    @ kind u32
+    @ entrySize u32
 ;
 
-@export Storage::getEntryInfo fun: resId u32 -> blob<Storage::EntryInfo>
+@ Storage::getEntryInfo fun: resId u32 -> blob<Storage::EntryInfo>
     entryInfo blob<Storage::EntryInfo>
     syscallRaw(Storage::GET_ENTRY_INFO, resId, entryInfo.adr.u32, 0, 0, 0)
     ret entryInfo
 ;
 
-@export Storage::deleteEntry fun: resId u32
+@ Storage::deleteEntry fun: resId u32
     syscallRaw(Storage::DELETE_ENTRY, resId, 0, 0, 0, 0)
 ;
 
-@export Storage::readEntry fun: resId u32, offset u32, size u32, a_target a -> u32
+@ Storage::readEntry fun: resId u32, offset u32, size u32, a_target a -> u32
     ret syscallRaw(Storage::READ_ENTRY, resId, offset, size, a_target.u32, 0)
 ;
 
-@export Storage::writeEntry fun: resId u32, offset u32, size u32, a_source a -> u32
+@ Storage::writeEntry fun: resId u32, offset u32, size u32, a_source a -> u32
     ret syscallRaw(Storage::WRITE_ENTRY, resId, offset, size, a_source.u32, 0)
 ;
 
@@ -140,18 +140,18 @@ Storage::WRITE_ENTRY u32 <- 0x303
 Input::KEYBOARD_GET_ASCII u32 <- 0x401
 Input::MOUSE_GET_STATE u32 <- 0x410
 
-@export MouseState blob
-    buttonsState u32
-    deltaX s32
-    deltaY s32
-    deltaZ s32
+@ MouseState blob
+    @ buttonsState u32
+    @ deltaX s32
+    @ deltaY s32
+    @ deltaZ s32
 ;
 
-@export Input::getAscii fun -> u32
+@ Input::getAscii fun -> u32
     ret syscallRaw(Input::KEYBOARD_GET_ASCII, 0, 0, 0, 0, 0)
 ;
 
-@export Input::getMouseState fun -> blob<MouseState>
+@ Input::getMouseState fun -> blob<MouseState>
     mouseState blob<MouseState>
     syscallRaw(Input::MOUSE_GET_STATE, mouseState.adr.u32, 0, 0, 0, 0)
     ret mouseState
@@ -160,7 +160,7 @@ Input::MOUSE_GET_STATE u32 <- 0x410
 // Terminal
 Terminal::PRINT_CHARACTER u32 <- 0x501
 
-@export Terminal::printCharacter fun: character u8, attribute u8
+@ Terminal::printCharacter fun: character u8, attribute u8
     syscallRaw(Terminal::PRINT_CHARACTER, character, attribute, 0, 0, 0)
 ;
 
@@ -175,45 +175,45 @@ Video::DRAW_PIXEL u32 <- 0x621
 Video::DRAW_LINE u32 <- 0x622
 Video::DRAW_BITMAP u32 <- 0x623
 
-@export Video::ModeInfo blob
-    id u32
-    width u32
-    height u32
-    bpp u32
+@ Video::ModeInfo blob
+    @ id u32
+    @ width u32
+    @ height u32
+    @ bpp u32
 ;
 
-@export Video::getModesCount fun -> u32
+@ Video::getModesCount fun -> u32
     ret syscallRaw(Video::GET_MODES_COUNT, 0, 0, 0, 0, 0)
 ;
 
-@export Video::getModeInfo fun: index u32 -> blob<Video::ModeInfo>
+@ Video::getModeInfo fun: index u32 -> blob<Video::ModeInfo>
     modeInfo blob<Video::ModeInfo>
     syscallRaw(Video::GET_MODE_INFO, modeInfo.adr.u32, index, 0, 0, 0)
     ret modeInfo
 ;
 
-@export Video::commit fun: resourceId u32
+@ Video::commit fun: resourceId u32
     syscallRaw(Video::COMMIT, resourceId, 0, 0, 0, 0)
 ;
 
-@export Video::clear fun: resourceId u32, red u8, green u8, blue u8
+@ Video::clear fun: resourceId u32, red u8, green u8, blue u8
     rgb u32 <- (red << 16) | (green << 8) | (blue << 0)
     syscallRaw(Video::CLEAR, resourceId, rgb, 0, 0, 0)
 ;
 
-@export Video::drawPixel fun: resourceId u32, x u32, y u32, red u8, green u8, blue u8
+@ Video::drawPixel fun: resourceId u32, x u32, y u32, red u8, green u8, blue u8
     rgb u32 <- (red << 16) | (green << 8) | (blue << 0)
     syscallRaw(Video::DRAW_PIXEL, resourceId, x, y, rgb, 0)
 ;
 
-@export Video::drawLine fun: resourceId u32, x1 u32, y1 u32, x2 u32, y2 u32, red u8, green u8, blue u8
+@ Video::drawLine fun: resourceId u32, x1 u32, y1 u32, x2 u32, y2 u32, red u8, green u8, blue u8
     xy1 u32 <- (x1 << 16) | (y1 & 0xffff)
     xy2 u32 <- (x2 << 16) | (y2 & 0xffff)
     rgb u32 <- (red << 16) | (green << 8) | (blue << 0)
     syscallRaw(Video::DRAW_LINE, resourceId, xy1, xy2, rgb, 0)
 ;
 
-@export Video::drawBitmap fun: resId u32, x u32, y u32, width u32, height u32, bpp u32, a_data a
+@ Video::drawBitmap fun: resId u32, x u32, y u32, width u32, height u32, bpp u32, a_data a
     xy u32 <- (x << 16) | (y & 0xffff)
     wh u32 <- (width << 16) | (height & 0xffff)
     syscallRaw(Video::DRAW_BITMAP, resId, xy, wh, bpp, a_data.u32)
@@ -223,11 +223,11 @@ Video::DRAW_BITMAP u32 <- 0x623
 Audio::PLAY u32 <- 0x700
 Audio::STOP u32 <- 0x701
 
-@export Audio::play fun: frequency u32, durationMs u32
+@ Audio::play fun: frequency u32, durationMs u32
     syscallRaw(Audio::PLAY, frequency, durationMs, 0, 0, 0)
 ;
 
-@export Audio::stop fun
+@ Audio::stop fun
     syscallRaw(Audio::STOP, 0, 0, 0, 0, 0)
 ;
 
@@ -236,25 +236,25 @@ Debug::DUMP_PAGING u32 <- 0x00
 Debug::DUMP_STACK u32 <- 0x01
 Debug::DUMP_MEMORY u32 <- 0x02
 
-@export debugCallRaw raw<"m, m, m, ~{eax}, ~{ebx}, ~{ecx}">: /*$0*/debugCallNumber u32, /*$1*/arg0 u32, /*$2*/arg1 u32
+@ debugCallRaw raw<"m, m, m, ~{eax}, ~{ebx}, ~{ecx}">: /*$0*/debugCallNumber u32, /*$1*/arg0 u32, /*$2*/arg1 u32
     mov eax, $0
     mov ebx, $1
     mov ecx, $2
     int 0x32
 ;
 
-@export Debug::dumpCpuState raw
+@ Debug::dumpCpuState raw
     int 0x31
 ;
 
-@export Debug::dumpPaging fun
+@ Debug::dumpPaging fun
     debugCallRaw(Debug::DUMP_PAGING, 0, 0)
 ;
 
-@export Debug::dumpStack fun: size u32
+@ Debug::dumpStack fun: size u32
     debugCallRaw(Debug::DUMP_STACK, size, 0)
 ;
 
-@export Debug::dumpMemory fun: aMem a, size u32
+@ Debug::dumpMemory fun: aMem a, size u32
     debugCallRaw(Debug::DUMP_MEMORY, aMem.u32, size)
 ;

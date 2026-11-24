@@ -2,17 +2,17 @@
 
 @import Bus
 
-@export instance blob<Video>
+@ instance blob<Video>
 
-@export Video blob
-    primaryAdapter proto<Adapter>
+@ Video blob
+    @ primaryAdapter proto<Adapter>
 
     adapterSvga2 blob<AdapterSvga2>
     adapterVesa blob<AdapterVesa>
     adapterVga blob<AdapterVga>
     adapterNone blob<AdapterNone>
 
-    init fun
+    @ init fun
         if it.adapterVesa.init()
             it.primaryAdapter <- {it.adapterVesa.ptr}
         else if it.adapterVga.init()

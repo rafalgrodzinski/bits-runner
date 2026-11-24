@@ -1,9 +1,9 @@
 @import BSys
 
-@export memset fun: aTarget a, value u32, size u32
+@ memset fun: aTarget a, value u32, size u32
     @BSys::memSet(value.u8, aTarget, size)
 ;
 
-@export memcpy fun: aTarget a, aSource a, size u32
+@ memcpy fun: aTarget a, aSource a, size u32
     @BSys::memCopy(aSource, aTarget, size)
 ;

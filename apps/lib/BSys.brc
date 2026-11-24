@@ -3,15 +3,15 @@
 @import Syscall
 
 // Memory
-@export memAlloc fun: size u32 -> a
+@ memAlloc fun: size u32 -> a
     ret Allocator::FirstFit::instance.alloc(size)
 ;
 
-@export memFree fun: adr a
+@ memFree fun: adr a
     Allocator::FirstFit::instance.free(adr)
 ;
 
-@export memCopy raw<"r, r, r, ~{esi}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/aSource a, /*$1*/aTarget a, /*$2*/size u32
+@ memCopy raw<"r, r, r, ~{esi}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/aSource a, /*$1*/aTarget a, /*$2*/size u32
     mov esi, $0
     mov edi, $1
     mov ecx, $2
@@ -19,7 +19,7 @@
     rep movsb
 ;
 
-@export memSet raw<"r, r, r, ~{eax}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/value u8, /*$1*/aTarget a, /*$2*/size u32
+@ memSet raw<"r, r, r, ~{eax}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/value u8, /*$1*/aTarget a, /*$2*/size u32
     mov al, $0
     mov edi, $1
     mov ecx, $2
@@ -30,59 +30,59 @@
 // Print
 printAttribute u8 <- 0x07
 
-@export printChar fun: character u8
+@ printChar fun: character u8
     @Syscall::Terminal::printCharacter(character, printAttribute)
 ;
 
-@export setPrintAttribute fun: attribute u8
+@ setPrintAttribute fun: attribute u8
     printAttribute <- attribute
 ;
 
-@export resetPrintAttribute fun
+@ resetPrintAttribute fun
     printAttribute <- 0x07
 ;
 
 // FsNode, File, Dir
-@export fileOpen fun: a_path a -> u64
+@ fileOpen fun: a_path a -> u64
     ret @Syscall::System::grabResource(@Syscall::System::ResourceCategory::GET_STORAGE_ENTRY, a_path.u32, 0)
 ;
 
-@export fileCreate fun: a_path a -> u64
+@ fileCreate fun: a_path a -> u64
     ret @Syscall::System::grabResource(@Syscall::System::ResourceCategory::CREATE_STORAGE_ENTRY, a_path.u32, 0)
 ;
 
-@export fileClose fun: resId u64
+@ fileClose fun: resId u64
     @Syscall::System::releaseResource(resId.u32)
 ;
 
-@export fileGetSize fun: resId u64 -> u64
+@ fileGetSize fun: resId u64 -> u64
     ret @Syscall::Storage::getEntryInfo(resId.u32).entrySize
 ;
 
-@export fileRead fun: resId u64, offset u64, size u64, a_target a -> u64
+@ fileRead fun: resId u64, offset u64, size u64, a_target a -> u64
     ret @Syscall::Storage::readEntry(resId.u32, offset.u32, size.u32, a_target)
 ;
 
-@export fileWrite fun: resId u64, offset u64, size u64, a_source a -> u64
+@ fileWrite fun: resId u64, offset u64, size u64, a_source a -> u64
     ret @Syscall::Storage::writeEntry(resId.u32, offset.u32, size.u32, a_source)
 ;
 
-@export fileDelete fun: resId u64 -> bool
+@ fileDelete fun: resId u64 -> bool
     @Syscall::Storage::deleteEntry(resId.u32)
     ret true
 ;
 
-@export dirOpen fun: a_path a -> u64
+@ dirOpen fun: a_path a -> u64
     ret 0
 ;
 
-@export dirCreate fun: a_path a -> u64
+@ dirCreate fun: a_path a -> u64
     ret 0
 ;
 
-@export dirClose fun: resId u64
+@ dirClose fun: resId u64
 ;
 
-@export dirDelete fun: resId u64 -> bool
+@ dirDelete fun: resId u64 -> bool
     ret false
 ;

@@ -1,10 +1,10 @@
 @module Storage
 
-@export Area blob
+@ Area blob
     device proto<Device>
     partitionNumber u32
     firstSector u32
-    sectorsCount u32
+    @ sectorsCount u32
 
     init fun: device proto<Device>, partitionNumber u32, firstSector u32, sectorsCount u32
         it.device <- device

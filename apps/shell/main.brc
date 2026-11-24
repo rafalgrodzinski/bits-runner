@@ -3,7 +3,7 @@
 @import BSys
 @import BR
 
-@export start fun
+@ start fun
     character u8 <- 0
     input blob<@B::String> <- @B::String("")
     cmd blob<@B::String> <- @B::String("")

@@ -40,7 +40,7 @@ readMouse fun
     mouseState <- @Syscall::Input::getMouseState()
 ;
 
-@export start fun
+@ start fun
     selectedModeInfo blob<@Syscall::Video::ModeInfo>
     modesCount u32 <- @Syscall::Video::getModesCount()
     rep i u32, i < modesCount, i <- i + 1

@@ -9,37 +9,37 @@ Process::State::SLEEPING u32 <- 2
 
 resId u32
 
-@export Resource blob
-    id u32
-    aResource a
+@ Resource blob
+    @ id u32
+    @ aResource a
 ;
 
-@export Process blob
+@ Process blob
     // memory
-    pageTablesDirectory data<u32, 1024>
+    @ pageTablesDirectory data<u32, 1024>
     pages blob<@B::Array, u32>
     pagesCount u32
     stackPagesCount u32
-    linearMemLimit u32
+    @ linearMemLimit u32
 
     // state
-    cr3 u32
-    esp u32
-    esp0 u32
-    state u32
+    @ cr3 u32
+    @ esp u32
+    @ esp0 u32
+    @ state u32
 
     // resources
     resources blob<@B::Array, ptr<blob<Resource>>>
-    sleepTimeout u32
+    @ sleepTimeout u32
 
-    registerPage fun: page u32, pageTag u8
+    @ registerPage fun: page u32, pageTag u8
         it.pages.push(page)
 
         if pageTag = @Memory::PagingManager::PAGE_USER_STACK: it.stackPagesCount <- it.stackPagesCount + 1
         else: it.pagesCount <- it.pagesCount + 1
     ;
 
-    registerResource fun: category u32, aResource a -> u32
+    @ registerResource fun: category u32, aResource a -> u32
         resId <- resId + 1
         pResource ptr<blob<Resource>> <- @BSys::memAlloc(blob<Resource>.size).ptr<blob<Resource>>
         pResource.val.id <- resId
@@ -48,23 +48,23 @@ resId u32
         ret resId
     ;
 
-    resourceForResourceId fun: resourceId u32 -> a
+    @ resourceForResourceId fun: resourceId u32 -> a
         rep i u32, i < it.resources.count, i <- i + 1
             if it.resources.at(i).ptr<blob<Resource>>.val.id = resourceId: ret it.resources.at(i).ptr<blob<Resource>>.val.aResource
         ;
         ret 0
     ;
 
-    getPagesCount fun -> u32
+    @ getPagesCount fun -> u32
         ret it.pagesCount
     ;
 
-    getStackPagesCount fun -> u32
+    @ getStackPagesCount fun -> u32
         ret it.stackPagesCount
     ;
 ;
 
-@export Process::new fun: imageSourceAddress a, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
+@ Process::new fun: imageSourceAddress a, imageSize u32, pCurrentProcess ptr<blob<Process>>, isFirst bool -> ptr<blob<Process>>
     pCurrentPageTablesDirectory ptr<data<u32, 1024>>
     oldCr3 u32
 

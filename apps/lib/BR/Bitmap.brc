@@ -3,16 +3,16 @@
 @import BSys
 @import B
 
-@export Bitmap blob
-    width u32
-    height u32
-    bpp u32
-    a_data a
+@ Bitmap blob
+    @ width u32
+    @ height u32
+    @ bpp u32
+    @ a_data a
 
-    clear fun: red u8, green u8, blue u8
+    @ clear fun: red u8, green u8, blue u8
     ;
 
-    set fun: x u32, y u32, red u8, green u8, blue u8
+    @ set fun: x u32, y u32, red u8, green u8, blue u8
         i u32 <- (y * it.width + x) * 4
         p_data ptr<data<u8>> <- it.a_data.ptr<data<u8>>
         p_data.val[i + 0] <- blue
@@ -21,7 +21,7 @@
     ;
 ;
 
-@export Bitmap::new fun: width u32, height u32, bpp u32 -> enum<@B::Result, ptr<blob<Bitmap>>>
+@ Bitmap::new fun: width u32, height u32, bpp u32 -> enum<@B::Result, ptr<blob<Bitmap>>>
     // Check that bits per pixel is valid
     if bpp != 32 and bpp != 24 and bpp != 16 and bpp != 8
         ret {}.enum<@B::Result, ptr<blob<Bitmap>>>::Failure
@@ -47,7 +47,7 @@
     ret {p_bitmap}.enum<@B::Result, ptr<blob<Bitmap>>>::Success
 ;
 
-@export Bitmap fun: p_file ptr<blob<@B::File>> -> enum<@B::Result, ptr<blob<Bitmap>>>
+@ Bitmap fun: p_file ptr<blob<@B::File>> -> enum<@B::Result, ptr<blob<Bitmap>>>
     p_bitmap ptr<blob<Bitmap>>
     p_bitmap <- bitmapForBmp(p_file)
     if p_bitmap.vadr != 0: ret {p_bitmap}.enum<@B::Result, ptr<blob<Bitmap>>>::Success

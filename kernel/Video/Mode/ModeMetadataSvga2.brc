@@ -1,5 +1,5 @@
 @module Video
 
 Mode::Metadata::Svga2 blob
-    aFramebuffer a
+    @ aFramebuffer a
 ;

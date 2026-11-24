@@ -5,79 +5,79 @@
 @import BiosService
 @import Storage
 
-@export getEax raw<"=r"> -> u32
+@ getEax raw<"=r"> -> u32
     mov $0, eax
 ;
 
-@export getEbx raw<"=r"> -> u32
+@ getEbx raw<"=r"> -> u32
     mov $0, ebx
 ;
 
-@export getEcx raw<"=r"> -> u32
+@ getEcx raw<"=r"> -> u32
     mov $0, ecx
 ;
 
-@export getEdx raw<"=r"> -> u32
+@ getEdx raw<"=r"> -> u32
     mov $0, edx
 ;
 
-@export getEsp raw<"=r"> -> u32
+@ getEsp raw<"=r"> -> u32
     mov $0, esp
 ;
 
-@export getCr0 raw<"=r"> -> u32
+@ getCr0 raw<"=r"> -> u32
     mov $0, cr0
 ;
 
-@export getCr2 raw<"=r"> -> u32
+@ getCr2 raw<"=r"> -> u32
     mov $0, cr2
 ;
 
-@export getCr3 raw<"=r"> -> u32
+@ getCr3 raw<"=r"> -> u32
     mov $0, cr3
 ;
 
-@export setCr3 raw<"r, ~{memory}">: address u32
+@ setCr3 raw<"r, ~{memory}">: address u32
     mov cr3, $0
 ;
 
-@export out8 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u8
+@ out8 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u8
     mov dx, $0
     mov al, $1
     out dx, al
 ;
 
-@export out16 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u16
+@ out16 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u16
     mov dx, $0
     mov ax, $1
     out dx, ax
 ;
 
-@export out32 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u32
+@ out32 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u32
     mov dx, $0
     mov eax, $1
     out dx, eax
 ;
 
-@export in8 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u8
+@ in8 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u8
     mov dx, $1
     in al, dx
     mov $0, al
 ;
 
-@export in16 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u16
+@ in16 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u16
     mov dx, $1
     in ax, dx
     mov $0, ax
 ;
 
-@export in32 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u32
+@ in32 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u32
     mov dx, $1
     in eax, dx
     mov $0, eax
 ;
 
-@export disableInterrupts raw<"=r, ~{eax}, ~{flags}"> -> bool
+@ disableInterrupts raw<"=r, ~{eax}, ~{flags}"> -> bool
     mov $0, 0
 
     pushfd
@@ -90,54 +90,54 @@
     cli
 ;
 
-@export enableInterrupts raw<"~{flags}">
+@ enableInterrupts raw<"~{flags}">
     sti
 ;
 
-@export halt raw
+@ halt raw
     hlt
 ;
 
-@export debugDumpCpuState raw
+@ debugDumpCpuState raw
     int 0x31
 ;
 
-@export debugDumpPaging raw<"~{eax}">
+@ debugDumpPaging raw<"~{eax}">
     mov eax, 0x00
     int 0x32
 ;
 
-@export debugDumpStack raw<"m, ~{eax}, ~{ebx}">: size u32
+@ debugDumpStack raw<"m, ~{eax}, ~{ebx}">: size u32
     mov eax, 0x01
     mov ebx, $0
     int 0x32
 ;
 
-@export debugDumpMemory raw<"m, m, ~{eax}, ~{ebx}, ~{ecx}">: aMem u32, size u32
+@ debugDumpMemory raw<"m, m, ~{eax}, ~{ebx}, ~{ecx}">: aMem u32, size u32
     mov eax, 0x02
     mov ebx, $0
     mov ecx, $1
     int 0x32
 ;
 
-@export debugPause fun: scanCode u8
+@ debugPause fun: scanCode u8
     rep @BiosService::Input::keyboardGetScanCodeWaiting() != scanCode:
 ;
 
 // Memory
-@export memAllocAligned fun: size u32, shouldClear bool, alignment u32 -> a
+@ memAllocAligned fun: size u32, shouldClear bool, alignment u32 -> a
     ret @Memory::HeapManager::instance.allocAligned({0}, size, shouldClear, alignment)
 ;
 
-@export memAlloc fun: size u32 -> a
+@ memAlloc fun: size u32 -> a
     ret memAllocAligned(size, false, 0)
 ;
 
-@export memFree fun: adr a
+@ memFree fun: adr a
     @Memory::HeapManager::instance.free(adr)
 ;
 
-@export memCopy raw<"r, r, r, ~{esi}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/aSource a, /*$1*/aTarget a, /*$2*/size u32
+@ memCopy raw<"r, r, r, ~{esi}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/aSource a, /*$1*/aTarget a, /*$2*/size u32
     mov esi, $0
     mov edi, $1
     mov ecx, $2
@@ -145,7 +145,7 @@
     rep movsb
 ;
 
-@export memSet raw<"r, r, r, ~{eax}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/value u8, /*$1*/aTarget a, /*$2*/size u32
+@ memSet raw<"r, r, r, ~{eax}, ~{edi}, ~{ecx}, ~{memory}">: /*$0*/value u8, /*$1*/aTarget a, /*$2*/size u32
     mov al, $0
     mov edi, $1
     mov ecx, $2
@@ -156,24 +156,24 @@
 // Print
 printAttribute u8 <- 0x07
 
-@export printChar fun: character u8
+@ printChar fun: character u8
     @Term::printCharacter(character, printAttribute)
 ;
 
-@export setPrintAttribute fun: attribute u8
+@ setPrintAttribute fun: attribute u8
     printAttribute <- attribute
 ;
 
-@export resetPrintAttribute fun
+@ resetPrintAttribute fun
     printAttribute <- 0x07
 ;
 
 // FsNode, File, Dir
-@export fileOpen fun: a_path a -> u64
+@ fileOpen fun: a_path a -> u64
     ret @Storage::instance.bootFilesystem.getEntry(a_path.ptr<blob<@B::String>>.val).vadr.u64
 ;
 
-@export fileCreate fun: a_path a -> u64
+@ fileCreate fun: a_path a -> u64
     a_fsNode a <- @Storage::instance.bootFilesystem.getEntry(a_path.ptr<blob<@B::String>>.val).vadr
     if a_fsNode = 0
         a_fsNode <- @Storage::instance.bootFilesystem.createEntry(a_path.ptr<blob<@B::String>>.val, @Storage::Entry::Kind::FILE).vadr
@@ -181,38 +181,38 @@ printAttribute u8 <- 0x07
     ret a_fsNode.u64
 ;
 
-@export fileClose fun: resId u64
+@ fileClose fun: resId u64
     memFree(resId.a)
 ;
 
-@export fileGetSize fun: resId u64 -> u64
+@ fileGetSize fun: resId u64 -> u64
     ret resId.a.ptr<blob<@Storage::Entry>>.val.fileSize
 ;
 
-@export fileRead fun: resId u64, offset u64, size u64, a_target a -> u64
+@ fileRead fun: resId u64, offset u64, size u64, a_target a -> u64
     ret resId.a.ptr<blob<@Storage::Entry>>.val.read(offset.u32, size.u32, a_target)
 ;
 
-@export fileWrite fun: resId u64, offset u64, size u64, a_source a -> u64
+@ fileWrite fun: resId u64, offset u64, size u64, a_source a -> u64
     ret resId.a.ptr<blob<@Storage::Entry>>.val.write(offset.u32, size.u32, a_source)
 ;
 
-@export fileDelete fun: resId u64 -> bool
+@ fileDelete fun: resId u64 -> bool
     resId.a.ptr<blob<@Storage::Entry>>.val.delete()
     ret true
 ;
 
-@export dirOpen fun: a_path a -> u64
+@ dirOpen fun: a_path a -> u64
     ret 0
 ;
 
-@export dirCreate fun: a_path a -> u64
+@ dirCreate fun: a_path a -> u64
     ret 0
 ;
 
-@export dirClose fun: resId u64
+@ dirClose fun: resId u64
 ;
 
-@export dirDelete fun: resId u64 -> bool
+@ dirDelete fun: resId u64 -> bool
     ret false
 ;

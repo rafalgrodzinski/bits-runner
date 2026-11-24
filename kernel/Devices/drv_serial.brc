@@ -16,7 +16,7 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
 ;
 
 
-@export init fun
+@ init fun
     out(COM_PORT_1 + 1, 0x00.u8) // Disable all interrupts
     out(COM_PORT_1 + 3, 0x80.u8) // Enable DLAB (set baud rate divisor)
     out(COM_PORT_1 + 0, 0x03.u8) // Set divisor to 3 (lo byte) 38400 baud
@@ -27,19 +27,19 @@ out raw<"m,m,~{eax},~{edx}">: portNum u32, value u8
     out(COM_PORT_1 + 4, 0x0f.u8) // IRQs enabled and OUT#1 and OUT#2 bits enabled
 ;
 
-@export writeCharacter fun: character u8
+@ writeCharacter fun: character u8
     rep in(COM_PORT_1 + 5).u32 & 0x20 = 0
     ;
     out(COM_PORT_1, character)
 ;
 
-@export writeString fun: string data<u8, 64>
+@ writeString fun: string data<u8, 64>
     rep i u32 <- 0, i < string.count and string[i] != 0.u8, i <- i + 1
         writeCharacter(string[i])
     ;
 ;
 
-@export writeHex fun: number u32
+@ writeHex fun: number u32
     biggest u64 <- 16
     digitsCount u32 <- 1
     rep biggest <= number.u64

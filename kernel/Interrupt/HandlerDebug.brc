@@ -6,7 +6,7 @@ HandlerDebug::DUMP_PAGING u32 <- 0x00
 HandlerDebug::DUMP_STACK u32 <- 0x01
 HandlerDebug::DUMP_MEMORY u32 <- 0x02
 
-@export HandlerDebug blob
+@ HandlerDebug blob
     handle fun: pCpuState ptr<blob<CpuState>>, interrupt u32, errorCode u32
         if interrupt = Handler::INT_DEBUG_DUMP_CPU_STATE
             it.dumpCpuState(pCpuState)

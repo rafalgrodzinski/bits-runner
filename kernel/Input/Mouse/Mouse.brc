@@ -1,6 +1,6 @@
 @module Input
 
-@export Mouse proto
+@ Mouse proto
     getButonsState fun -> u32
     getDeltaX fun -> s32
     getDeltaY fun -> s32

@@ -10,10 +10,10 @@ PCI_DEVICE_TYPE_NORMAL u8 <- 0
 PCI_DEVICE_TYPE_PCI_BRIDGE u8 <- 1
 PCI_DEVICE_TYPE_CARDBUS_BRIDGE u8 <- 2
 
-@export devicesPciCount u32
-@export devicesPci data<blob<DevicePci>, 16>
+@ devicesPciCount u32
+@ devicesPci data<blob<DevicePci>, 16>
 
-@export BusPci blob
+@ BusPci blob
     scan fun
         rep busNum u32 <- 0, busNum < 256, busNum <- busNum + 1
             rep deviceNum u32 <- 0, deviceNum < 32, deviceNum <- deviceNum + 1
