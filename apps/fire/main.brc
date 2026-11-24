@@ -1,16 +1,13 @@
 @import B
+@import BR
 @import Syscall
 
 selectedModeInfo blob<@Syscall::Video::ModeInfo>
 surfaceResourceId u32
 
-heatMap data<u8, 40_000>
-heatWidth u32 <- 200
-heatHeight u32 <- 200
-
-/*heatMap data<u8, 10_000>
-heatWidth u32 <- 100
-heatHeight u32 <- 100*/
+heatWidth u32
+heatHeight u32
+p_heatMap ptr<data<u8>>
 
 heat u8 <- 200
 
@@ -21,7 +18,7 @@ rand fun -> u32
     ret (randNext / 65536) % 32768
 ;
 
-@export start fun
+@ start fun
     modesCount u32 <- @Syscall::Video::getModesCount()
     rep i u32, i < modesCount, i <- i + 1
         modeInfo blob<@Syscall::Video::ModeInfo> <- @Syscall::Video::getModeInfo(i)
@@ -35,31 +32,40 @@ rand fun -> u32
 
     surfaceResourceId <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::VIDEO_GET_SURFACE, selectedModeInfo.id, 0)
 
-    rep
-        @Syscall::Video::clear(surfaceResourceId, 0x00, 0x0, 0x00)
+    heatWidth <- selectedModeInfo.width
+    heatHeight <- selectedModeInfo.height
+    p_heatMap <- @BSys::memAlloc(u8.size * heatWidth * heatHeight).ptr<data<u8>>
 
+    p_bitmap ptr<blob<@BR::Bitmap>>
+    match @BR::Bitmap::new(selectedModeInfo.width, selectedModeInfo.height, 32)
+        enum<@B::Result, ptr<blob<@BR::Bitmap>>>::Success: p_bitmap <- $0.val.ptr<blob<@BR::Bitmap>>
+    ;
+
+    rep
         rep x u32 <- 5, x < heatWidth - 5, x <- x + 1
-            heatMap[(heatHeight - 1) * heatWidth + x] <- heat + (rand() % 16).u8
+            p_heatMap.val[(heatHeight - 1) * heatWidth + x] <- heat + (rand() % 16).u8
         ;
 
         rep y u32 <- 1, y < heatHeight - 1, y <- y + 1
             rep x u32 <- 1, x < heatWidth - 1, x <- x + 1
-                value s32 <- heatMap[y * heatWidth + x].s32 +
-                    heatMap[(y+1) * heatWidth + x].s32 +
-                    heatMap[y * heatWidth + x + 1].s32 +
-                    heatMap[y * heatWidth + x - 1].s32
+                value s32 <- p_heatMap.val[y * heatWidth + x].s32 +
+                    p_heatMap.val[(y+1) * heatWidth + x].s32 +
+                    p_heatMap.val[y * heatWidth + x + 1].s32 +
+                    p_heatMap.val[y * heatWidth + x - 1].s32
                 value <- value / 4
-                if value > 25: value <- value + (rand() % 16).s32 - 8
-                heatMap[y * heatWidth + x] <- value.u8
+                if value > 15
+                    value <- value + (rand() % 17).s32 - 8
+                ;
+                p_heatMap.val[y * heatWidth + x] <- value.u8
             ;
         ;
 
-        whiteThreshold u32 <- 150
-        yellowThreshold u32 <- 100
+        whiteThreshold u32 <- 120
+        yellowThreshold u32 <- 80
 
         rep y u32, y < heatHeight, y <- y + 1
             rep x u32, x < heatWidth, x <- x + 1
-                value u32 <- heatMap[y * heatWidth + x]
+                value u32 <- p_heatMap.val[y * heatWidth + x]
 
                 r u32
                 g u32
@@ -79,17 +85,11 @@ rand fun -> u32
                     b <- 0
                 ;
 
-                @Syscall::Video::drawPixel(
-                    surfaceResourceId,
-                    (selectedModeInfo.width - heatWidth) / 2 + x,
-                    selectedModeInfo.height - heatHeight + y,
-                    r.u8,
-                    g.u8,
-                    b.u8
-                )
+                p_bitmap.val.set(x, y, r.u8, g.u8, b.u8)
             ;
         ;
 
+        @Syscall::Video::drawBitmap(surfaceResourceId, 0, 0, p_bitmap.val.width, p_bitmap.val.height, p_bitmap.val.bpp, p_bitmap.val.a_data)
         @Syscall::Video::commit(surfaceResourceId)
     ;
 ;

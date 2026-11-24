@@ -4,41 +4,41 @@
 @import B
 @import Dispatch
 
-@export MemoryLayout blob
-    kernelImageSize u32
-    pageSize u32
-    pagesCount u32
-    memoryPages data<u8, 0>
+@ MemoryLayout blob
+    @ kernelImageSize u32
+    @ pageSize u32
+    @ pagesCount u32
+    @ memoryPages data<u8, 0>
 ;
 
 KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
 
-@export PagingManager::PAGE_UNAVAILABLE u8 <- 0xff
-@export PagingManager::PAGE_FREE u8 <- 0x00
-@export PagingManager::PAGE_KERNEL u8 <- 0x10
-@export PagingManager::PAGE_KERNEL_STACK u8 <- 0x11
-@export PagingManager::PAGE_USER u8 <- 0x20
-@export PagingManager::PAGE_USER_STACK u8 <- 0x21
-@export PagingManager::PAGE_DIRECT_MAPPING u8 <- 0x30
+@ PagingManager::PAGE_UNAVAILABLE u8 <- 0xff
+@ PagingManager::PAGE_FREE u8 <- 0x00
+@ PagingManager::PAGE_KERNEL u8 <- 0x10
+@ PagingManager::PAGE_KERNEL_STACK u8 <- 0x11
+@ PagingManager::PAGE_USER u8 <- 0x20
+@ PagingManager::PAGE_USER_STACK u8 <- 0x21
+@ PagingManager::PAGE_DIRECT_MAPPING u8 <- 0x30
 
-@export PagingManager::PAGES_TABLE_SIZE u32 <- u32.size * 1024
-@export PagingManager::PAGE_TABLES_ADR a <- 0xffc0_0000
-@export PagingManager::PAGE_TABLES_DIRECTORY_ADR a <- 0xffff_f000
+@ PagingManager::PAGES_TABLE_SIZE u32 <- u32.size * 1024
+@ PagingManager::PAGE_TABLES_ADR a <- 0xffc0_0000
+@ PagingManager::PAGE_TABLES_DIRECTORY_ADR a <- 0xffff_f000
 
-@export PagingManager::FLAGS_RWP u32 <- 0b0000_0011 // Read-Write, Present
-@export PagingManager::FLAGS_URWP u32 <- 0b0000_0111 // User, Read-Write, Present
-@export PagingManager::FLAGS_CDRWP u32 <- 0b0001_0011 // Caching Disabled, Read-Write, Present
+@ PagingManager::FLAGS_RWP u32 <- 0b0000_0011 // Read-Write, Present
+@ PagingManager::FLAGS_URWP u32 <- 0b0000_0111 // User, Read-Write, Present
+@ PagingManager::FLAGS_CDRWP u32 <- 0b0001_0011 // Caching Disabled, Read-Write, Present
 
-@export PagingManager::instance blob<PagingManager>
+@ PagingManager::instance blob<PagingManager>
 
-@export PagingManager blob
-    pMemoryLayout ptr<blob<MemoryLayout>>
+@ PagingManager blob
+    @ pMemoryLayout ptr<blob<MemoryLayout>>
     unavailablePagesCount u32
     freePagesCount u32
-    kernelPagesCount u32
+    @ kernelPagesCount u32
     kernelStackPagesCount u32
 
-    init fun
+    @ init fun
         it.pMemoryLayout <- {heap.adr + PagingManager::PAGES_TABLE_SIZE * 4} // first 4096 bytes for page tables directory + 3 * 4096 bytes for page tables
         // Figure out pages stats
         rep i u32 <- 0, i < it.pMemoryLayout.val.pagesCount, i <- i + 1
@@ -67,7 +67,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         ret allocatedSize
     ;
 
-    allocateUserPages fun: pProcess ptr<blob<@Dispatch::Process>>, pCurrentPageTablesDirectory ptr<data<u32, 1024>>, pageTag u8, size u32, linearAddress u32 -> u32
+    @ allocateUserPages fun: pProcess ptr<blob<@Dispatch::Process>>, pCurrentPageTablesDirectory ptr<data<u32, 1024>>, pageTag u8, size u32, linearAddress u32 -> u32
         @BSys::disableInterrupts()
         currentSelfReference u32 <- pCurrentPageTablesDirectory.val[1023] & 0xffff_f000
         selfReference u32 <- PagingManager::lAdrToPAdr(pProcess.val.pageTablesDirectory.adr).u32 | PagingManager::FLAGS_RWP
@@ -155,7 +155,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         PagingManager::flushTlbRaw()
     ;
 
-    mapMemory fun: aSource a, aTarget a, size u32
+    @ mapMemory fun: aSource a, aTarget a, size u32
         memOffset u32 <- aTarget.u32 % it.pMemoryLayout.val.pageSize
         startPage u32 <- aTarget.u32 / it.pMemoryLayout.val.pageSize
         pagesCount u32 <- (memOffset + size + it.pMemoryLayout.val.pageSize - 1) / it.pMemoryLayout.val.pageSize
@@ -173,7 +173,7 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         @BSys::enableInterrupts()
     ;
 
-    mapDirectMemory fun: aMem a, memSize u32
+    @ mapDirectMemory fun: aMem a, memSize u32
         memOffset u32 <- aMem.u32 % it.pMemoryLayout.val.pageSize
         startPage u32 <- aMem.u32 / it.pMemoryLayout.val.pageSize
         pagesCount u32 <- (memOffset + memSize + it.pMemoryLayout.val.pageSize - 1) / it.pMemoryLayout.val.pageSize
@@ -191,27 +191,27 @@ KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
         @BSys::enableInterrupts()
     ;
 
-    getTotalSize fun -> u32
+    @ getTotalSize fun -> u32
         ret it.pMemoryLayout.val.pagesCount * it.pMemoryLayout.val.pageSize
     ;
 
-    getTotalPagesCount fun -> u32
+    @ getTotalPagesCount fun -> u32
         ret it.pMemoryLayout.val.pagesCount
     ;
 
-    getUnavailablePagesCount fun -> u32
+    @ getUnavailablePagesCount fun -> u32
         ret it.unavailablePagesCount
     ;
 
-    getFreePagesCount fun -> u32
+    @ getFreePagesCount fun -> u32
         ret it.freePagesCount
     ;
 
-    getKernelPagesCount fun -> u32
+    @ getKernelPagesCount fun -> u32
         ret it.kernelPagesCount
     ;
 
-    getKernelStackPagesCount fun -> u32
+    @ getKernelStackPagesCount fun -> u32
         ret it.kernelStackPagesCount
     ;
 ;
@@ -221,7 +221,7 @@ PagingManager::flushTlbRaw raw<"~{eax}, ~{memory}">
     mov cr3, eax
 ;
 
-@export PagingManager::lAdrToPAdr fun: lAdr a -> a
+@ PagingManager::lAdrToPAdr fun: lAdr a -> a
     pPageDirectory ptr<data<u32>> <- {0xffc0_0000}
 
     tableIndex u32 <- (lAdr.u32 & 0xffc0_0000) >> 22

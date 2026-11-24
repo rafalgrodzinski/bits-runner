@@ -1,13 +1,13 @@
 @module Memory
 
-@export heap u32 // marks start of the kernel heap, set by linker in kernel.ld
+@ heap u32 // marks start of the kernel heap, set by linker in kernel.ld
 
-@export HeapManager::instance blob<HeapManager>
+@ HeapManager::instance blob<HeapManager>
 
-@export HeapManager blob
+@ HeapManager blob
     allocator blob<Allocator::FirstFit>
 
-    init fun
+    @ init fun
         pMemoryLayout ptr<blob<MemoryLayout>> <- PagingManager::instance.pMemoryLayout
         kernelImagePagesCount u32 <- (pMemoryLayout.val.kernelImageSize + pMemoryLayout.val.pageSize - 1) / pMemoryLayout.val.pageSize
 
@@ -18,23 +18,23 @@
         )
     ;
 
-    allocAligned fun: pProcess ptr<blob<@Dispatch::Process>>, size u32, shouldClear bool, alignment u32 -> a
+    @ allocAligned fun: pProcess ptr<blob<@Dispatch::Process>>, size u32, shouldClear bool, alignment u32 -> a
         ret it.allocator.alloc(size, alignment, shouldClear)
     ;
 
-    free fun: adr a
+    @ free fun: adr a
         it.allocator.free(adr)
     ;
 
-    getHeapAdr fun -> a
+    @ getHeapAdr fun -> a
         ret it.allocator.getAdr()
     ;
 
-    getHeapSize fun -> u32
+    @ getHeapSize fun -> u32
         ret it.allocator.getSize()
     ;
 
-    getHeapUsedSize fun -> u32
+    @ getHeapUsedSize fun -> u32
         ret it.allocator.getUsedSize()
     ;
 ;

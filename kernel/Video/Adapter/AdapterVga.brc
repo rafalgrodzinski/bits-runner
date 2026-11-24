@@ -25,11 +25,11 @@ BIT_MASK_REG u8 <- 0x08
 VGA_MODE_320x240x8 u32 <- 0x01
 VGA_MODE_640x480x4 u32 <- 0x00
 
-@export AdapterVga blob: Adapter
+@ AdapterVga blob: Adapter
     pFrontPageBuffer ptr_volatile<data<u8>>
     pBackPageBuffer ptr_volatile<data<u8>>
 
-    init fun -> bool
+    @ init fun -> bool
         ret true
     ;
 
@@ -54,7 +54,7 @@ VGA_MODE_640x480x4 u32 <- 0x00
     // MARK: proto<Adapter>
     //
 
-    getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
+    @ getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
         modes blob<@B::Array, ptr<blob<Mode>>>
 
         pMode ptr<blob<Mode>>
@@ -78,7 +78,7 @@ VGA_MODE_640x480x4 u32 <- 0x00
         ret modes
     ;
 
-    getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
+    @ getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
         // Setup surface
         pSurface ptr<blob<Surface>> <- @BSys::memAlloc(blob<Surface>.size).ptr<blob<Surface>>
         pSurface.val.iAdapter <- {it.ptr}
@@ -157,7 +157,7 @@ VGA_MODE_640x480x4 u32 <- 0x00
         ret pSurface
     ;
 
-    commit fun: pMode ptr<blob<Mode>>
+    @ commit fun: pMode ptr<blob<Mode>>
         if pMode.val.id = VGA_MODE_320x240x8
             // get offset to the new front buffer
             bufferOffset u32 <- 0
@@ -204,7 +204,7 @@ VGA_MODE_640x480x4 u32 <- 0x00
         ;
     ;
 
-    clear fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8
+    @ clear fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8
         pixel u8 <- it.toPixel(pMode, red, green, blue)
 
         if pMode.val.id = VGA_MODE_320x240x8
@@ -222,7 +222,7 @@ VGA_MODE_640x480x4 u32 <- 0x00
         ;
     ;
 
-    drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
+    @ drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
         pixel u8 <- it.toPixel(pMode, red, green, blue)
 
         if pMode.val.id = VGA_MODE_320x240x8

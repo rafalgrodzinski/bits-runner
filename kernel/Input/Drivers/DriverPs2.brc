@@ -138,24 +138,24 @@ DriverPs2::MOUSE_MODE_5_BUTTON u8 <- 0x04
 
 DriverPs2::instance blob<DriverPs2>
 
-@export DriverPs2 blob
+@ DriverPs2 blob
     isInitialized bool
 
     // Keyboard
-    isKeyboardPresent bool
+    @ isKeyboardPresent bool
 
     keyboardStatus data<bool, 128>
-    keyboardBufferedCharacter u8
+    @ keyboardBufferedCharacter u8
 
     // Mouse
-    isMousePresent bool
+    @ isMousePresent bool
 
     mouseMode u8
     mouseStatus data<u8, 4>
     currentMouseStatusIndex u32
 
-    mouseIsPressedStates data<bool, 5>
-    mouseOffsets data<s32, 3>
+    @ mouseIsPressedStates data<bool, 5>
+    @ mouseOffsets data<s32, 3>
 
     init fun
         if it.isInitialized: ret

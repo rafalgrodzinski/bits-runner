@@ -14,7 +14,7 @@
 
 busPci blob<@Bus::BusPci>
 
-@export start fun
+@ start fun
     // Get boot parameters from BIOS Service
     biosServiceAdr u32 <- @BSys::getEax()
     gdtTssAdr u32 <- @BSys::getEbx()

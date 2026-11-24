@@ -6,12 +6,12 @@
 Allocator::FirstFit::FRAME_ALIGNMENT u32 <- 4
 Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
 
-@export Allocator::FirstFit::Frame blob
-    isFree bool
-    pNextFrame ptr<blob<Allocator::FirstFit::Frame>>
+@ Allocator::FirstFit::Frame blob
+    @ isFree bool
+    @ pNextFrame ptr<blob<Allocator::FirstFit::Frame>>
 ;
 
-@export Allocator::FirstFit blob
+@ Allocator::FirstFit blob
     aHeap a
     heapSize u32
     pFirstFrame ptr<blob<Allocator::FirstFit::Frame>>

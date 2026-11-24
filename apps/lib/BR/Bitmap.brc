@@ -1,0 +1,129 @@
+@module BR
+
+@import BSys
+@import B
+
+@ Bitmap blob
+    @ width u32
+    @ height u32
+    @ bpp u32
+    @ a_data a
+
+    @ clear fun: red u8, green u8, blue u8
+    ;
+
+    @ set fun: x u32, y u32, red u8, green u8, blue u8
+        i u32 <- (y * it.width + x) * 4
+        p_data ptr<data<u8>> <- it.a_data.ptr<data<u8>>
+        p_data.val[i + 0] <- blue
+        p_data.val[i + 1] <- green
+        p_data.val[i + 2] <- red
+    ;
+;
+
+@ Bitmap::new fun: width u32, height u32, bpp u32 -> enum<@B::Result, ptr<blob<Bitmap>>>
+    // Check that bits per pixel is valid
+    if bpp != 32 and bpp != 24 and bpp != 16 and bpp != 8
+        ret {}.enum<@B::Result, ptr<blob<Bitmap>>>::Failure
+    ;
+
+    // Try allocating bitmap blob
+    p_bitmap ptr<blob<Bitmap>> <- @BSys::memAlloc(blob<Bitmap>.size).ptr<blob<Bitmap>>
+    if p_bitmap.vadr = 0: ret {}.enum<@B::Result, ptr<blob<Bitmap>>>::Failure
+
+    p_bitmap.val.width <- width
+    p_bitmap.val.height <- height
+    p_bitmap.val.bpp <- bpp
+
+    // Try allocating bitmap data
+    bytesPerPixel u32 <- (bpp + 7) / 8
+    p_bitmap.val.a_data <- @BSys::memAlloc(width * height * bytesPerPixel)
+
+    if p_bitmap.val.a_data = 0
+        @BSys::memFree(p_bitmap.val.a_data)
+        ret {}.enum<@B::Result, ptr<blob<Bitmap>>>::Failure
+    ;
+
+    ret {p_bitmap}.enum<@B::Result, ptr<blob<Bitmap>>>::Success
+;
+
+@ Bitmap fun: p_file ptr<blob<@B::File>> -> enum<@B::Result, ptr<blob<Bitmap>>>
+    p_bitmap ptr<blob<Bitmap>>
+    p_bitmap <- bitmapForBmp(p_file)
+    if p_bitmap.vadr != 0: ret {p_bitmap}.enum<@B::Result, ptr<blob<Bitmap>>>::Success
+
+    ret {}.enum<@B::Result, ptr<blob<Bitmap>>>::Failure
+;
+
+bitmapForBmp fun: p_file ptr<blob<@B::File>> -> ptr<blob<Bitmap>>
+    // Signature must be 'BM'
+    signature data<u8, 2>
+    p_file.val.read(0, 2, signature.adr)
+    if signature[0] != 'B' or signature[1] != 'M': ret {0}
+
+    dataOffset u32
+    p_file.val.read(0x0a, 4, dataOffset.adr)
+
+    // Size of the header determines version of the format
+    headerSize u32
+    p_file.val.read(0x0e, 4, headerSize.adr)
+    if headerSize != 40: ret {0} // We only handle V1
+
+    width s32
+    height s32
+    bpp u16
+    p_file.val.read(0x12, 4, width.adr)
+    p_file.val.read(0x16, 4, height.adr)
+    p_file.val.read(0x1c, 2, bpp.adr)
+
+    bytesPerPixel u32 <- (bpp + 7) / 8
+
+    // Allocated data for 32 bit color
+    a_data a <- @BSys::memAlloc(width.u32 * height.u32 * 4)
+    if a_data = 0: ret {0}
+    p_file.val.read(dataOffset, width.u32 * height.u32 * bytesPerPixel, a_data)
+
+    // Convert to BGRX
+    if bpp = 24
+        // For 24 bit color we need to shift data and put 0 in the padding
+        p_data ptr<data<u8>> <- a_data.ptr<data<u8>>
+        rep i s32 <- width * height, i >= 0, i <- i - 1
+            p_data.val[i * 4 + 3] <- 0
+            p_data.val[i * 4 + 2] <- p_data.val[i * 3 + 2]
+            p_data.val[i * 4 + 1] <- p_data.val[i * 3 + 1]
+            p_data.val[i * 4 + 0] <- p_data.val[i * 3 + 0]
+        ;
+    else if bpp = 16
+        // For 16 bit color we need to expand each of the components to 8 bit and set 0 in the padding
+        rep i s32 <- width * height, i >= 0, i <- i - 1
+            p_data ptr<data<u8>> <- a_data.ptr<data<u8>>
+            p_data16 ptr<data<u16>> <- a_data.ptr<data<u16>>
+
+            p_data.val[i * 4 + 3] <- 0
+            p_data.val[i * 4 + 2] <- p_data16.val[i] << 3
+            p_data.val[i * 4 + 1] <- (p_data16.val[i] >> 2) & 0b1111_1100
+            p_data.val[i * 4 + 0] <- (p_data16.val[i] >> 8) & 0b1111_1000
+        ;
+    else if bpp = 8
+        //For 8 bit color we need to convert to extract each indexed palette color
+    ;
+
+    // And flip the image upside-down
+    p_data32 ptr<data<u32>> <- a_data.ptr<data<u32>>
+    rep y u32, y < height / 2, y <- y + 1
+        rep x u32, x < width.u32, x <- x + 1
+            iSource u32 <- (y * width.u32 +  x)
+            iTarget u32 <- ((height.u32 - y - 1) * width.u32 + x)
+            p_data32.val[iSource] <-> p_data32.val[iTarget]
+        ;
+    ;
+
+    // Allocate and setup the Bitmap blob itself
+    p_bitmap ptr<blob<Bitmap>> <- @BSys::memAlloc(blob<Bitmap>.size).ptr<blob<Bitmap>>
+    p_bitmap.val.width <- width.u32
+    p_bitmap.val.height <- height.u32
+    p_bitmap.val.bpp <- 32
+    p_bitmap.val.a_data <- a_data
+
+    ret p_bitmap
+;

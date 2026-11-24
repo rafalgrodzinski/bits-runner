@@ -2,7 +2,7 @@
 
 @import B
 
-@export Filesystem proto
+@ Filesystem proto
     kind u32
     area blob<Area>
 

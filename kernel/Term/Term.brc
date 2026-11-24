@@ -3,29 +3,29 @@
 @import BiosService
 @import BSys
 
-@export MODE_80x25 u32 <- 1
-@export MODE_80x50 u32 <- 2
+@ MODE_80x25 u32 <- 1
+@ MODE_80x50 u32 <- 2
 
-@export FOREGROUND_BLACK u8 <- 0x00
-@export FOREGROUND_BLUE u8 <- 0x01
-@export FOREGROUND_GREEN u8 <- 0x02
-@export FOREGROUND_CYAN u8 <- 0x03
-@export FOREGROUND_RED u8 <- 0x04
-@export FOREGROUND_MAGENTA u8 <- 0x05
-@export FOREGROUND_BROWN u8 <- 0x06
-@export FOREGROUND_GRAY u8 <- 0x07
+@ FOREGROUND_BLACK u8 <- 0x00
+@ FOREGROUND_BLUE u8 <- 0x01
+@ FOREGROUND_GREEN u8 <- 0x02
+@ FOREGROUND_CYAN u8 <- 0x03
+@ FOREGROUND_RED u8 <- 0x04
+@ FOREGROUND_MAGENTA u8 <- 0x05
+@ FOREGROUND_BROWN u8 <- 0x06
+@ FOREGROUND_GRAY u8 <- 0x07
 
-@export BACKGROUND_BLACK u8 <- 0x00
-@export BACKGROUND_BLUE u8 <- 0x10
-@export BACKGROUND_GREEN u8 <- 0x20
-@export BACKGROUND_CYAN u8 <- 0x30
-@export BACKGROUND_RED u8 <- 0x40
-@export BACKGROUND_MAGENTA u8 <- 0x50
-@export BACKGROUND_BROWN u8 <- 0x60
-@export BACKGROUND_WHITE u8 <- 0x70
+@ BACKGROUND_BLACK u8 <- 0x00
+@ BACKGROUND_BLUE u8 <- 0x10
+@ BACKGROUND_GREEN u8 <- 0x20
+@ BACKGROUND_CYAN u8 <- 0x30
+@ BACKGROUND_RED u8 <- 0x40
+@ BACKGROUND_MAGENTA u8 <- 0x50
+@ BACKGROUND_BROWN u8 <- 0x60
+@ BACKGROUND_WHITE u8 <- 0x70
 
-@export ATTRIB_LIGHT u8 <- 0x08
-@export ATTRIB_BLINKING u8 <- 0x80
+@ ATTRIB_LIGHT u8 <- 0x08
+@ ATTRIB_BLINKING u8 <- 0x80
 
 cursorX u32 <- 0
 cursorY u32 <- 0
@@ -35,7 +35,7 @@ termHeight u32 <- 25
 
 pBuffer ptr<data<u8>> <- { 0x0b8000 }
 
-@export init fun: mode u32
+@ init fun: mode u32
     if mode = MODE_80x50
         termWidth <- 80
         termHeight <- 50
@@ -49,7 +49,7 @@ pBuffer ptr<data<u8>> <- { 0x0b8000 }
     clear(FOREGROUND_GRAY)
 ;
 
-@export clear fun: attribute u8
+@ clear fun: attribute u8
     rep i u32 <- 0, i < termWidth * termHeight * 2, i <- i + 2
         pBuffer.val[i] <- 0
         pBuffer.val[i + 1] <- attribute
@@ -57,7 +57,7 @@ pBuffer ptr<data<u8>> <- { 0x0b8000 }
     moveCursor(0, 0)
 ;
 
-@export moveCursor fun: x u32, y u32 -> bool
+@ moveCursor fun: x u32, y u32 -> bool
     isOverscrolled bool <- false
 
     if x >= termWidth
@@ -84,7 +84,7 @@ pBuffer ptr<data<u8>> <- { 0x0b8000 }
     ret isOverscrolled
 ;
 
-@export scrollDown fun
+@ scrollDown fun
     // Move all lines up
     rep y u32 <- 0, y < termHeight - 1, y <- y + 1
         rep x u32 <- 0, x < termWidth * 2, x <- x + 1
@@ -102,7 +102,7 @@ pBuffer ptr<data<u8>> <- { 0x0b8000 }
     ;
 ;
 
-@export printCharacter fun: character u8, attribute u8
+@ printCharacter fun: character u8, attribute u8
     shouldScroll bool <- false
 
     if character = '\n'.u8
@@ -127,13 +127,13 @@ pBuffer ptr<data<u8>> <- { 0x0b8000 }
     if shouldScroll: scrollDown()
 ;
 
-@export printString fun: string data<u8, 64>, attribute u8
+@ printString fun: string data<u8, 64>, attribute u8
     rep i u32 <- 0, i < string.count and string[i] != 0.u8, i <- i + 1
         printCharacter(string[i], attribute)
     ;
 ;
 
-@export printNumber fun: number s32, attribute u8
+@ printNumber fun: number s32, attribute u8
     if number < 0
         number <- -number
         printCharacter('-', attribute)
@@ -150,7 +150,7 @@ pBuffer ptr<data<u8>> <- { 0x0b8000 }
     ;
 ;
 
-@export printHex fun: number u32, attribute u8
+@ printHex fun: number u32, attribute u8
     biggest u64 <- 16
     digitsCount u32 <- 1
     rep biggest <= number.u64
@@ -169,6 +169,6 @@ pBuffer ptr<data<u8>> <- { 0x0b8000 }
     ;
 ;
 
-@export printNewLine fun
+@ printNewLine fun
     printCharacter('\n', 0)
 ;

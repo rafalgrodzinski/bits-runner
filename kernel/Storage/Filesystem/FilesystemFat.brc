@@ -32,9 +32,9 @@ FilesystemFat::Entry::ATTRIB_DIR u8 <- 0x10
 
 FilesystemFat::Entry::DELETED u8 <- 0xe5
 
-@export FilesystemFat blob: Filesystem
-    kind u32
-    area blob<Area>
+@ FilesystemFat blob: Filesystem
+    @ kind u32
+    @ area blob<Area>
 
     // FAT specific
     aFat a
@@ -54,7 +54,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
     clustersCount u32
     terminalCluster u32
 
-    init fun: area blob<Area>
+    @ init fun: area blob<Area>
         it.area <- area
 
         // Init FAT
@@ -113,7 +113,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
     // proto<FileSystem>
     //
 
-    getEntry fun: path blob<@B::String> -> ptr<blob<Entry>>
+    @ getEntry fun: path blob<@B::String> -> ptr<blob<Entry>>
         // path must start with a slash
         if path.string[0] != '/': ret {0}
 
@@ -208,7 +208,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
         ret pCurrentEntry
     ;
 
-    createEntry fun: path blob<@B::String>, kind u32 -> ptr<blob<Entry>>
+    @ createEntry fun: path blob<@B::String>, kind u32 -> ptr<blob<Entry>>
         // path must start with a slash
         if path.string[0] != '/': ret {0}
 
@@ -287,7 +287,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
         ret {0}
     ;
 
-    deleteEntry fun: pEntry ptr<blob<Entry>>
+    @ deleteEntry fun: pEntry ptr<blob<Entry>>
         pMetadata ptr<blob<Entry::Metadata::Fat>> <- pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>
 
         // Remove clusters chain
@@ -312,7 +312,9 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
         it.updateDirEntry(pEntry)
     ;
 
-    readEntry fun: pEntry ptr<blob<Entry>>, startByte u32, bytesCount u32, targetAddress a -> u32
+    @ readEntry fun: pEntry ptr<blob<Entry>>, startByte u32, bytesCount u32, targetAddress a -> u32
+        if bytesCount = 0: ret 0
+
         cluster u32 <- pEntry.val.aMetadata.ptr<blob<Entry::Metadata::Fat>>.val.cluster
 
         bytesCopied u32
@@ -339,9 +341,11 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                 aBuffer a <- @BSys::memAlloc(it.bytesPerCluster)
                 it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
                 // copy just the required bytes
-                rep i u32, i < firstClusterBytesCount, i <- i + 1
-                    targetAddress.ptr<data<u8>>.val[i] <- aBuffer.ptr<data<u8>>.val[firstClusterBytesOffset + i]
-                ;
+                @BSys::memCopy(
+                    aBuffer + firstClusterBytesOffset,
+                    targetAddress,
+                    if firstClusterBytesCount > bytesCount: bytesCount else: firstClusterBytesCount
+                )
                 @BSys::memFree(aBuffer)
                 bytesCopied <- firstClusterBytesCount
             // Handle copying remainder of less than a cluster size
@@ -349,9 +353,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
                 aBuffer a <- @BSys::memAlloc(it.bytesPerCluster)
                 it.area.readSectors(sector, it.fatSectorsPerCluster, aBuffer)
                 // copy just the required bytes
-                rep i u32, i < lastClusterBytesCount, i <- i + 1
-                    targetAddress.ptr<data<u8>>.val[bytesCopied + i] <- aBuffer.ptr<data<u8>>.val[i]
-                ;
+                @BSys::memCopy(aBuffer, targetAddress + bytesCopied, lastClusterBytesCount)
                 @BSys::memFree(aBuffer)
                 bytesCopied <- bytesCopied + lastClusterBytesCount
             // Copy a full cluster
@@ -364,7 +366,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
         ret bytesCopied
     ;
 
-    writeEntry fun: pEntry ptr<blob<Entry>>, startByte u32, bytesCount u32, sourceAddress a -> u32
+    @ writeEntry fun: pEntry ptr<blob<Entry>>, startByte u32, bytesCount u32, sourceAddress a -> u32
         // Sanity check
         if pEntry.val.kind != Entry::Kind::FILE or bytesCount = 0: ret 0
 
@@ -486,7 +488,7 @@ FilesystemFat::Entry::DELETED u8 <- 0xe5
         ret bytesWritten
     ;
 
-    getChildEntriesCount fun: pParentEntry ptr<blob<Entry>> -> u32
+    @ getChildEntriesCount fun: pParentEntry ptr<blob<Entry>> -> u32
         if pParentEntry.val.kind != Entry::Kind::DIRECTORY: ret 0
 
         entriesCount u32

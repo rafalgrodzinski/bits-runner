@@ -1,10 +1,10 @@
 @module Input
 
-@export instance blob<Input>
+@ instance blob<Input>
 
-@export Input blob
-    primaryKeyboard proto<Keyboard>
-    primaryMouse proto<Mouse>
+@ Input blob
+    @ primaryKeyboard proto<Keyboard>
+    @ primaryMouse proto<Mouse>
 
     keyboardPs2 blob<KeyboardPs2>
     keyboardBios blob<KeyboardBios>
@@ -14,7 +14,7 @@
     mouseBios blob<MouseBios>
     mouseNone blob<MouseNone>
 
-    init fun
+    @ init fun
         // Init Keyboard
         if it.keyboardPs2.init()
             it.primaryKeyboard <- {it.keyboardPs2.ptr}

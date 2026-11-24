@@ -5,10 +5,10 @@
 @import Devices
 
 Tss blob
-    unused0 u32
-    esp0 u32
-    ss0 u32
-    unused1 data<u32, 23>
+    @ unused0 u32
+    @ esp0 u32
+    @ ss0 u32
+    @ unused1 data<u32, 23>
 ;
 
 KERNEL_ADR u32 <- 0x8000_0000 // @ 2GiB
@@ -26,13 +26,13 @@ GDT_TSS u32 <- 0x38
 
 Dispatcher::tss blob<Tss>
 
-@export Dispatcher::instance blob<Dispatcher>
+@ Dispatcher::instance blob<Dispatcher>
 
-@export Dispatcher blob
+@ Dispatcher blob
     currentProcessIndex u32
     processes blob<@B::Array, ptr<blob<Process>>>
 
-    init fun: aGdtTss a
+    @ init fun: aGdtTss a
         it.currentProcessIndex <- 0xffff
 
         Dispatcher::tss.ss0 <- GDT_DATA
@@ -50,12 +50,12 @@ Dispatcher::tss blob<Tss>
         Dispatcher::setTssRaw(GDT_TSS)
     ;
 
-    start fun
+    @ start fun
         @Devices::Timer::Pit::instance.callback0 <- {Dispatcher::timerCallback.adr}
         rep: @BSys::halt()
     ;
 
-    createProcess fun: imageSourceAddress a, imageSize u32
+    @ createProcess fun: imageSourceAddress a, imageSize u32
         @BSys::disableInterrupts()
 
         pCurrentProcess ptr<blob<Process>> <- if it.currentProcessIndex < it.processes.count: it.processes.at(it.currentProcessIndex).ptr<blob<Process>> else: {0}
@@ -120,7 +120,7 @@ Dispatcher::tss blob<Tss>
         ;
     ;
 
-    yield fun
+    @ yield fun
         // Check if current process is sleeping
         if it.currentProcessIndex < it.processes.count
             if it.processes.at(it.currentProcessIndex).ptr<blob<Process>>.val.state = Process::State::SLEEPING: ret
@@ -128,7 +128,7 @@ Dispatcher::tss blob<Tss>
         it.runNextProcess()
     ;
 
-    sleep fun: milliseconds u32
+    @ sleep fun: milliseconds u32
         pProcess ptr<blob<Process>> <- it.processes.at(it.currentProcessIndex).ptr<blob<Process>>
         pProcess.val.sleepTimeout <- @Devices::Timer::Pit::instance.timestamp + milliseconds
         pProcess.val.state <- Process::State::SLEEPING
@@ -136,7 +136,7 @@ Dispatcher::tss blob<Tss>
         it.runNextProcess()
     ;
 
-    getCurrentProcess fun -> ptr<blob<Process>>
+    @ getCurrentProcess fun -> ptr<blob<Process>>
         if it.currentProcessIndex > it.processes.count: ret {0}
         ret it.processes.at(it.currentProcessIndex).ptr<blob<Process>>
     ;

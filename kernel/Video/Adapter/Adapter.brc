@@ -2,7 +2,7 @@
 
 @import B
 
-@export Adapter proto
+@ Adapter proto
     getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
     getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
 

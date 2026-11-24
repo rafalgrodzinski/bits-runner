@@ -1,8 +1,9 @@
 @import B
 @import Syscall
 @import BSys
+@import BR
 
-@export start fun
+@ start fun
     character u8 <- 0
     input blob<@B::String> <- @B::String("")
     cmd blob<@B::String> <- @B::String("")
@@ -150,10 +151,26 @@ cmd_rm fun: path blob<@B::String>
 ;
 
 cmd_read fun: path blob<@B::String>
-    stringData blob<@B::String>
-    resourceId u32 <- @Syscall::System::grabResource(@Syscall::System::ResourceCategory::GET_STORAGE_ENTRY, path.adr.u32, 0)
-    @Syscall::Storage::readEntry(resourceId, 0, 64, stringData.string.adr)
-    stringData.println()
+    p_fsNode ptr<blob<@B::FsNode>> <- @B::FsNode(path)
+    p_file ptr<blob<@B::File>>
+    match p_fsNode.val.getFile({}.enum<@B::FsNode::Mode>::Open)
+        enum<@B::Result, ptr<blob<@B::File>>>::Success: p_file <- $0.val.ptr<blob<@B::File>>
+    else
+        @B::String("Failed to open ").print()
+        path.println()
+        ret
+    ;
+
+    a_buffer a <- @BSys::memAlloc(p_file.val.getSize().u32)
+    p_file.val.read(0, p_file.val.getSize(), a_buffer)
+
+    rep i u32, i < p_file.val.getSize(), i <- i + 1
+        @B::StringForChar((a_buffer + i).ptr<u8>.val).printColor(@B::String::FOREGROUND_MAGENTA)
+    ;
+    @B::String::println()
+
+    @BSys::memFree(a_buffer)
+    p_fsNode.val.release()
 ;
 
 cmd_write fun: path blob<@B::String>

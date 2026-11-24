@@ -16,15 +16,15 @@ Timer::Pit::MODE_SQUARE_WAVE u8 <- 0b0000_011_0
 
 Timer::Pit::ACCESS_LOW_HIGH u8 <- 0b00_11_0000
 
-@export Timer::Pit::instance blob<Timer::Pit>
+@ Timer::Pit::instance blob<Timer::Pit>
 
-@export Timer::Pit blob
-    timestamp u32
+@ Timer::Pit blob
+    @ timestamp u32
     interval u32
-    callback0 ptr<fun>
-    callback1 ptr<fun>
+    @ callback0 ptr<fun>
+    @ callback1 ptr<fun>
 
-    init fun
+    @ init fun
         // Register timer IRQ handler
         @Interrupt::Handler::instance.registerIrqCallback(0, Timer::Pit::irqCallback.ptr)
 

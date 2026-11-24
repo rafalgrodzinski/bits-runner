@@ -6,21 +6,21 @@
 Allocator::FirstFit::FRAME_ALIGNMENT u32 <- 4
 Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
 
-@export heap u32 // marks start of the user heap, set by linker in app.ld
+@ heap u32 // marks start of the user heap, set by linker in app.ld
 
-@export Allocator::FirstFit::instance blob<Allocator::FirstFit>
+@ Allocator::FirstFit::instance blob<Allocator::FirstFit>
 
-@export Allocator::FirstFit::Frame blob
-    isFree bool
-    pNextFrame ptr<blob<Allocator::FirstFit::Frame>>
+@ Allocator::FirstFit::Frame blob
+    @ isFree bool
+    @ pNextFrame ptr<blob<Allocator::FirstFit::Frame>>
 ;
 
-@export Allocator::FirstFit blob
+@ Allocator::FirstFit blob
     heapSize u32
     pFirstFrame ptr<blob<Allocator::FirstFit::Frame>>
     usedSize u32
 
-    alloc fun: size u32 -> a
+    @ alloc fun: size u32 -> a
         if size = 0: ret 0
 
         // Round up requested size to multiples of frame alignment
@@ -96,7 +96,7 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
         ret pCurrentFrame.vadr + blob<Allocator::FirstFit::Frame>.size
     ;
 
-    free fun: adr a
+    @ free fun: adr a
         if adr = 0: ret
 
         // First mark as free
@@ -143,15 +143,15 @@ Allocator::FirstFit::FRAME_ALIGNMENT_MASK u32 <- 0xffff_fffc
         else: pFrame.val.pNextFrame.vadr.u32 - pFrame.vadr.u32 - blob<Allocator::FirstFit::Frame>.size
     ;
 
-    getAdr fun -> a
+    @ getAdr fun -> a
         ret heap.adr
     ;
 
-    getSize fun -> u32
+    @ getSize fun -> u32
         ret it.heapSize
     ;
 
-    getUsedSize fun -> u32
+    @ getUsedSize fun -> u32
         ret it.usedSize
     ;
 

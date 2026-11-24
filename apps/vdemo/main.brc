@@ -1,4 +1,5 @@
 @import B
+@import BR
 @import Syscall
 
 width u32
@@ -8,7 +9,7 @@ mode0 blob<@Syscall::Video::ModeInfo>
 mode1 blob<@Syscall::Video::ModeInfo>
 resourceId u32
 
-DEMOS_COUNT u32 <- 6
+DEMOS_COUNT u32 <- 7
 demoMode u32 <- 0
 
 ascii u32
@@ -39,7 +40,7 @@ readMouse fun
     mouseState <- @Syscall::Input::getMouseState()
 ;
 
-@export start fun
+@ start fun
     selectedModeInfo blob<@Syscall::Video::ModeInfo>
     modesCount u32 <- @Syscall::Video::getModesCount()
     rep i u32, i < modesCount, i <- i + 1
@@ -65,6 +66,7 @@ readMouse fun
         else if demoMode = 3: demo_3()
         else if demoMode = 4: demo_4()
         else if demoMode = 5: demo_5()
+        else if demoMode = 6: demo_6()
     ;
 ;
 
@@ -400,6 +402,62 @@ demo_5 fun
             @Syscall::Video::drawLine(resourceId, px[i].u32, py[i].u32, px[i2].u32, py[i2].u32, red, green, blue)
         ;
 
+        @Syscall::Video::commit(resourceId)
+    ;
+;
+
+demo_6 fun
+    setMode(1)
+
+    @Syscall::Video::clear(resourceId, 100, 100, 100)
+    @Syscall::Video::commit(resourceId)
+
+    p_fsNode ptr<blob<@B::FsNode>> <- @B::FsNode(@B::String("/APPS/KUMAKO.BMP"))
+    p_bitmap ptr<blob<@BR::Bitmap>>
+    match p_fsNode.val.getFile({}.enum<@B::FsNode::Mode>::Open)
+        enum<@B::Result, ptr<blob<@B::File>>>::Success
+            match @BR::Bitmap($0.val.ptr<blob<@B::File>>)
+                enum<@B::Result, ptr<blob<@BR::Bitmap>>>::Success
+                    p_bitmap <- $0.val.ptr<blob<@BR::Bitmap>>
+                ;
+            ;
+        ;
+    ;
+
+    xPos s32 <- (width.s32 - p_bitmap.val.width) / 2
+    yPos s32 <- (height.s32 - p_bitmap.val.height) / 2
+
+    rep demoMode = 6
+        readKeyboard()
+        readMouse()
+
+        xPos <- xPos + mouseState.deltaX
+        yPos <- yPos - mouseState.deltaY
+
+        if xPos > width.s32 - p_bitmap.val.width
+            xPos <- width.s32 - p_bitmap.val.width
+        else if xPos < 0
+            xPos <- 0
+        ;
+
+        if yPos > height - p_bitmap.val.height
+            yPos <- height - p_bitmap.val.height
+        else if yPos < 0
+            yPos <- 0
+        ;
+
+        @Syscall::Video::clear(resourceId, 100, 100, 100)
+        if p_bitmap.vadr != 0
+            @Syscall::Video::drawBitmap(
+                resourceId,
+                xPos.u32,
+                yPos.u32,
+                p_bitmap.val.width,
+                p_bitmap.val.height,
+                p_bitmap.val.bpp,
+                 p_bitmap.val.a_data
+            )
+        ;
         @Syscall::Video::commit(resourceId)
     ;
 ;

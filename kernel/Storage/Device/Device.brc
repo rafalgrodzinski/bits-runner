@@ -1,6 +1,6 @@
 @module Storage
 
-@export Device proto
+@ Device proto
     biosDriveNumber u32
     sectorsCount u32
 

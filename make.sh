@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 function check {
     if [ $? -ne 0 ]; then
@@ -77,7 +77,10 @@ cp kernel.bin "${FDD_MOUNT_POINT}/" &&
 mkdir "${FDD_MOUNT_POINT}/apps" &&
 cp shell.bin "${FDD_MOUNT_POINT}/apps/" &&
 cp vdemo.bin "${FDD_MOUNT_POINT}/apps/" &&
+cp apps/vdemo/lenna.bmp "${FDD_MOUNT_POINT}/apps/" &&
+cp apps/vdemo/kumako.bmp "${FDD_MOUNT_POINT}/apps/" &&
 cp fire.bin "${FDD_MOUNT_POINT}/apps/" &&
+cp LICENSE "${FDD_MOUNT_POINT}/LIC.TXT" &&
 
 hdiutil eject "${FDD_MOUNT_POINT}"
 check "Failed to create FDD image"
@@ -114,7 +117,10 @@ cp kernel.bin "${HDD_MOUNT_POINT}/" &&
 mkdir "${HDD_MOUNT_POINT}/apps" &&
 cp shell.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp apps/vdemo/lenna.bmp "${HDD_MOUNT_POINT}/apps/" &&
+cp apps/vdemo/kumako.bmp "${HDD_MOUNT_POINT}/apps/" &&
 cp fire.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp LICENSE "${HDD_MOUNT_POINT}/LIC.TXT" &&
 
 hdiutil eject "${DISK_HDD}" &&
 check "Failed to create HDD image"
@@ -128,7 +134,10 @@ cp kernel.bin "${HDD_MOUNT_POINT}/" &&
 mkdir "${HDD_MOUNT_POINT}/apps" &&
 cp shell.bin "${HDD_MOUNT_POINT}/apps/" &&
 cp vdemo.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp apps/vdemo/lenna.bmp "${HDD_MOUNT_POINT}/apps/" &&
+cp apps/vdemo/kumako.bmp "${HDD_MOUNT_POINT}/apps/" &&
 cp fire.bin "${HDD_MOUNT_POINT}/apps/" &&
+cp LICENSE "${HDD_MOUNT_POINT}/LIC.TXT" &&
 
 hdiutil eject "${DISK_HDD}" &&
 check "Failed to create HDD image"

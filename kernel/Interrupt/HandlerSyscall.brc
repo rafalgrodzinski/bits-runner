@@ -52,13 +52,14 @@ HandlerSyscall::Video::COMMIT u32 <- 0x610
 HandlerSyscall::Video::CLEAR u32 <- 0x620
 HandlerSyscall::Video::DRAW_PIXEL u32 <- 0x621
 HandlerSyscall::Video::DRAW_LINE u32 <- 0x622
+HandlerSyscall::Video::DRAW_BITMAP u32 <- 0x623
 
 // Audio
 HandlerSyscall::Audio::PLAY u32 <- 0x700
 HandlerSyscall::Audio::STOP u32 <- 0x701
 
-@export HandlerSyscall blob
-    handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32 -> u32
+@ HandlerSyscall blob
+    handle fun: eax u32, ebx u32, ecx u32, edx u32, esi u32, edi u32 -> u32
         // System
         if eax = HandlerSyscall::System::REBOOT
             @BiosService::reboot()
@@ -257,6 +258,17 @@ HandlerSyscall::Audio::STOP u32 <- 0x701
             blue u8 <- ((esi >> 0) & 0xff).u8
 
             pSurface.val.drawLine(x1, y1, x2, y2, red, green, blue)
+        else if eax = HandlerSyscall::Video::DRAW_BITMAP
+            pCurrentProcess ptr<blob<@Dispatch::Process>> <- @Dispatch::Dispatcher::instance.getCurrentProcess()
+            pSurface ptr<blob<@Video::Surface>> <- pCurrentProcess.val.resourceForResourceId(ebx).ptr<blob<@Video::Surface>>
+            if pSurface.vadr = 0: ret 0
+
+            x u32 <- ecx >> 16
+            y u32 <- ecx & 0xffff
+            width u32 <- edx >> 16
+            height u32 <- edx & 0xffff
+
+            pSurface.val.drawBitmap(x, y, width, height, esi, edi.a)
         // Audio
         else if eax = HandlerSyscall::Audio::PLAY
             @Devices::Audio::Speaker::instance.play(ebx, ecx)
