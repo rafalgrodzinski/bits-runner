@@ -7,12 +7,10 @@
 @import Storage
 @import BSys
 @import Interrupt
-@import Bus
 @import Devices
 @import Video
 @import Input
-
-busPci blob<@Bus::BusPci>
+@import Pci
 
 @ start fun
     // Get boot parameters from BIOS Service
@@ -30,8 +28,8 @@ busPci blob<@Bus::BusPci>
     @Term::init(@Term::MODE_80x25)
 
     @B::String("Initializing Bits Runner...").println()
+    @Pci::instance.init()
     @Devices::Timer::Pit::instance.init()
-    //busPci.scan()
     @Storage::instance.init(biosBootDriveNumber, bootPartitionFirstSector)
     @Input::instance.init()
     @Video::instance.init()
