@@ -45,35 +45,28 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
     @ init fun: p_pciDevice ptr<blob<@Pci::Device>> -> bool
         // Check if device matches
         if p_pciDevice.val.vendorId != Adapter::Svga2::VENDOR_ID or p_pciDevice.val.deviceId != Adapter::Svga2::DEVICE_ID: ret false
-@BSys::debugPrintSerial("v1")
         // Enable bus master, memory space, and IO space
         p_pciDevice.val.sendCommand(0b0111)
-@BSys::debugPrintSerial("v2")
+
         // get base port for registers
         it.portBase <- (p_pciDevice.val.bar0 - 1).u16
-@BSys::debugPrintSerial("v3")
+
         // check version
         // try v2
         it.writeReg(Adapter::Svga2::REG_ID, Adapter::Svga2::SPECS_VER_2)
         it.specsVersion <- it.readReg(Adapter::Svga2::REG_ID)
-
         // try v1
         if it.specsVersion != Adapter::Svga2::SPECS_VER_2
             it.writeReg(Adapter::Svga2::REG_ID, Adapter::Svga2::SPECS_VER_1)
             it.specsVersion <- it.readReg(Adapter::Svga2::REG_ID)
         ;
-
         // try v0
         if it.specsVersion != Adapter::Svga2::SPECS_VER_2 and it.specsVersion != Adapter::Svga2::SPECS_VER_1
             it.writeReg(Adapter::Svga2::REG_ID, Adapter::Svga2::SPECS_VER_0)
             it.specsVersion <- it.readReg(Adapter::Svga2::REG_ID)
         ;
 
-        @BSys::debugPrintSerial(@B::StringHexForU32(it.specsVersion).string)
-
         if it.specsVersion != Adapter::Svga2::SPECS_VER_2 and it.specsVersion != Adapter::Svga2::SPECS_VER_1 and it.specsVersion != Adapter::Svga2::SPECS_VER_0: ret false
-
-@BSys::debugPrintSerial("v5")
 
         /*fifoStart u32 <- it.readReg(Adapter::Svga2::REG_FIFO_START)
         fifoSize u32 <- it.readReg(Adapter::Svga2::REG_FIFO_SIZE)
@@ -124,6 +117,12 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
         @BSys::debugPrintSerial(@B::StringForU32(p_mode.val.height).string)
         @BSys::debugPrintSerial("@")
         @BSys::debugPrintSerial(@B::StringForU32(p_mode.val.bpp).string)
+        @BSys::debugPrintSerial(", fbStart: ")
+        @BSys::debugPrintSerial(@B::StringHexForU32(fbStart).string)
+        @BSys::debugPrintSerial(", fbOff: ")
+        @BSys::debugPrintSerial(@B::StringHexForU32(fbOffset).string)
+        @BSys::debugPrintSerial(", fbSize: ")
+        @BSys::debugPrintSerial(@B::StringHexForU32(fbSize).string)
         @BSys::debugPrintSerial("\n")
 
         ret p_surface
@@ -132,7 +131,12 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
     @ commit fun: pMode ptr<blob<Mode>>
     ;
 
-    @ clear fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8
+    @ clear fun: p_mode ptr<blob<Mode>>, red u8, green u8, blue u8
+        rep y u32, y < p_mode.val.height, y <- y + 1
+            rep x u32, x < p_mode.val.width, x <- x + 1
+                it.drawPixel(p_mode, x, y, red, green, blue)
+            ;
+        ;
     ;
 
     @ drawPixel fun: p_mode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8

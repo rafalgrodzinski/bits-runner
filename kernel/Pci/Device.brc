@@ -70,11 +70,11 @@ bar5 u32 -> ptr<blob<Device>>
     p_device.val.subClass <- subClass
 
     p_device.val.bar0 <- bar0
-    p_device.val.bar0 <- bar1
-    p_device.val.bar0 <- bar2
-    p_device.val.bar0 <- bar3
-    p_device.val.bar0 <- bar4
-    p_device.val.bar0 <- bar5
+    p_device.val.bar1 <- bar1
+    p_device.val.bar2 <- bar2
+    p_device.val.bar3 <- bar3
+    p_device.val.bar4 <- bar4
+    p_device.val.bar5 <- bar5
 
     ret p_device
 ;
