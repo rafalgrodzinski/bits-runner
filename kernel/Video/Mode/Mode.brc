@@ -9,3 +9,16 @@
 
     @ aMetadata a
 ;
+
+@ Mode fun: id u32, width u32, height u32, bpp u32, a_metadata a -> ptr<blob<Mode>>
+    p_mode ptr<blob<Mode>> <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
+    if p_mode.vadr = 0: ret {0}
+
+    p_mode.val.id <- id
+    p_mode.val.width <- width
+    p_mode.val.height <- height
+    p_mode.val.bpp <- bpp
+    p_mode.val.aMetadata <- a_metadata
+
+    ret p_mode
+;

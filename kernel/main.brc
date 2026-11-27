@@ -40,8 +40,8 @@
     aFileBuffer a
 
     // Load shell
-    pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
-    //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/VDEMO.BIN"))
+    //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/SHELL.BIN"))
+    pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/VDEMO.BIN"))
     //pEntry <- @Storage::instance.bootFilesystem.getEntry(@B::String("/APPS/FIRE.BIN"))
     aFileBuffer <- @BSys::memAlloc(pEntry.val.fileSize)
     pEntry.val.read(0, pEntry.val.fileSize, aFileBuffer)

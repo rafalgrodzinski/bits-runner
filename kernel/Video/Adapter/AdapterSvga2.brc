@@ -1,108 +1,101 @@
 @module Video
 
 @import B
-@import Bus
+//@import Bus
 @import BSys
 @import Memory
+@import Pci
 
 // PCI
-SVGA2_VENDOR_ID u16 <- 0x15ad
-SVGA2_DEVICE_ID u16 <- 0x0405
+Adapter::Svga2::VENDOR_ID u16 <- 0x15ad
+Adapter::Svga2::DEVICE_ID u16 <- 0x0405
+
+Adapter::Svga2::FRAMEBUFFER_ADR a <- 0xe000_0000
 
 // Port offsets
-SVGA2_INDEX_PORT u16 <- 0x00
-SVGA2_VALUE_PORT u16 <- 0x01
+Adapter::Svga2::INDEX_PORT_OFF u16 <- 0x00
+Adapter::Svga2::VALUE_PORT_OFF u16 <- 0x01
 
 // Specification
-SVGA2_SPECS_VER u32 <- 0x9000_0002
+Adapter::Svga2::SPECS_VER u32 <- 0x9000_0002
 
 // Registers
-SVGA2_REG_ID u16 <- 0x00
-SVGA2_REG_ENABLE u16 <- 0x01
+Adapter::Svga2::REG_ID u16 <- 0x00
+Adapter::Svga2::REG_ENABLE u16 <- 0x01
 
-SVGA2_REG_WIDTH u16 <- 0x02
-SVGA2_REG_HEIGHT u16 <- 0x03
-SVGA2_REG_BPP u16 <- 0x07
+Adapter::Svga2::REG_WIDTH u16 <- 0x02
+Adapter::Svga2::REG_HEIGHT u16 <- 0x03
+Adapter::Svga2::REG_BPP u16 <- 0x07
 
-SVGA2_REG_FB_START u16 <- 0x0d
-SVGA2_REG_FB_OFFSET u16 <- 0x0e
-SVGA2_REG_FB_SIZE u16 <- 0x10
+Adapter::Svga2::REG_FB_START u16 <- 0x0d
+Adapter::Svga2::REG_FB_OFFSET u16 <- 0x0e
+Adapter::Svga2::REG_FB_SIZE u16 <- 0x10
 
-SVGA2_REG_FIFO_START u16 <- 0x12
-SVGA2_REG_FIFO_SIZE u16 <- 0x13
+Adapter::Svga2::REG_FIFO_START u16 <- 0x12
+Adapter::Svga2::REG_FIFO_SIZE u16 <- 0x13
+Adapter::Svga2::REG_CAPS u16 <- 0x11
 
-SVGA2_REG_CAPS u16 <- 0x11
-
-@ AdapterSvga2 blob: Adapter
+@ Adapter::Svga2 blob: Adapter
     portBase u16
+    modes blob<@B::Array, ptr<blob<Mode>>>
 
-    readReg fun: reg u16 -> u32
-        @BSys::out32(it.portBase + SVGA2_INDEX_PORT, reg)
-        ret @BSys::in32(it.portBase + SVGA2_VALUE_PORT)
-    ;
-
-    writeReg fun: reg u16, value u32
-        @BSys::out32(it.portBase + SVGA2_INDEX_PORT, reg)
-        @BSys::out32(it.portBase + SVGA2_VALUE_PORT, value)
-    ;
-
-    @ init fun: devicePci blob<@Bus::DevicePci>
+    @ init fun: p_pciDevice ptr<blob<@Pci::Device>> -> bool
         // Check if device matches
-        if devicePci.vendorId != SVGA2_VENDOR_ID or devicePci.deviceId != SVGA2_DEVICE_ID: ret
+        if p_pciDevice.val.vendorId != Adapter::Svga2::VENDOR_ID or p_pciDevice.val.deviceId != Adapter::Svga2::DEVICE_ID: ret false
 
         // Enable bus master, memory space, and IO space
-        devicePci.sendCommand(0b0111)
+        p_pciDevice.val.sendCommand(0b0111)
 
         // get base port for registers
-        it.portBase <- (devicePci.bar0 - 1).u16
+        it.portBase <- (p_pciDevice.val.bar0 - 1).u16
 
         // check version
-        it.writeReg(SVGA2_REG_ID, SVGA2_SPECS_VER)
-        if it.readReg(SVGA2_REG_ID) != SVGA2_SPECS_VER: ret
+        it.writeReg(Adapter::Svga2::REG_ID, Adapter::Svga2::SPECS_VER)
+        if it.readReg(Adapter::Svga2::REG_ID) != Adapter::Svga2::SPECS_VER: ret false
 
-        fifoStart u32 <- it.readReg(SVGA2_REG_FIFO_START)
-        fifoSize u32 <- it.readReg(SVGA2_REG_FIFO_SIZE)
-        caps u32 <- it.readReg(SVGA2_REG_CAPS)
+        /*fifoStart u32 <- it.readReg(Adapter::Svga2::REG_FIFO_START)
+        fifoSize u32 <- it.readReg(Adapter::Svga2::REG_FIFO_SIZE)
+        caps u32 <- it.readReg(Adapter::Svga2::REG_CAPS)*/
+
+        ret true
     ;
 
-    //
-    // MARK: proto<Adapter>
-    //
-
     @ getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
-        modes blob<@B::Array, ptr<blob<Mode>>>
+        if it.modes.count > 0: ret it.modes
 
-        pMode ptr<blob<Mode>> <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
+        /*pMode ptr<blob<Mode>> <- @BSys::memAlloc(blob<Mode>.size).ptr<blob<Mode>>
         pMode.val.id <- 0
         pMode.val.width <- 1024
         pMode.val.height <- 768
         pMode.val.bpp <- 32
-        modes.push(pMode)
+        modes.push(pMode)*/
 
-        ret modes
+        it.modes.push(Mode(0, 1024, 768, 32, 0))
+        //it.modes.push(Mode(1, 1024, 768, 32, 0))
+
+        ret it.modes
     ;
 
-    @ getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
+    @ getSurface fun: p_mode ptr<blob<Mode>> -> ptr<blob<Surface>>
         // Setup surface
-        pSurface ptr<blob<Surface>> <- @BSys::memAlloc(blob<Surface>.size).ptr<blob<Surface>>
-        pSurface.val.iAdapter <- {it.ptr}
-        pSurface.val.pMode <- pMode
+        p_surface ptr<blob<Surface>> <- Surface({it.ptr}, p_mode)
 
         // Setup adapter
-        pMetadata ptr<blob<Mode::Metadata::Svga2>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Svga2>>
+        pMetadata ptr<blob<Mode::Metadata::Svga2>> <- p_mode.val.aMetadata.ptr<blob<Mode::Metadata::Svga2>>
 
-        it.writeReg(SVGA2_REG_WIDTH, pMode.val.width)
-        it.writeReg(SVGA2_REG_HEIGHT, pMode.val.height)
-        it.writeReg(SVGA2_REG_BPP, pMode.val.bpp)
-        it.writeReg(SVGA2_REG_ENABLE, 1)
+        it.writeReg(Adapter::Svga2::REG_WIDTH, p_mode.val.width)
+        it.writeReg(Adapter::Svga2::REG_HEIGHT, p_mode.val.height)
+        it.writeReg(Adapter::Svga2::REG_BPP, p_mode.val.bpp)
+        it.writeReg(Adapter::Svga2::REG_ENABLE, 1)
 
-        fbStart u32 <- it.readReg(SVGA2_REG_FB_START)
-        fbOffset u32 <- it.readReg(SVGA2_REG_FB_OFFSET)
-        fbSize u32 <- it.readReg(SVGA2_REG_FB_SIZE)
-        pMetadata.val.aFramebuffer <- (fbStart + fbOffset).a
-        @Memory::PagingManager::instance.mapDirectMemory(fbStart.a, fbSize)
+        fbStart u32 <- it.readReg(Adapter::Svga2::REG_FB_START)
+        fbOffset u32 <- it.readReg(Adapter::Svga2::REG_FB_OFFSET)
+        fbSize u32 <- it.readReg(Adapter::Svga2::REG_FB_SIZE)
+        pMetadata.val.aFramebuffer <- Adapter::Svga2::FRAMEBUFFER_ADR // (fbStart + fbOffset).a
+        //@Memory::PagingManager::instance.mapDirectMemory(fbStart.a, fbSize)
+        @Memory::PagingManager::instance.mapMemory(pMetadata.val.aFramebuffer, fbStart, fbSize)
 
-        ret pSurface
+        ret p_surface
     ;
 
     @ commit fun: pMode ptr<blob<Mode>>
@@ -111,17 +104,27 @@ SVGA2_REG_CAPS u16 <- 0x11
     @ clear fun: pMode ptr<blob<Mode>>, red u8, green u8, blue u8
     ;
 
-    @ drawPixel fun: pMode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
-        pMetadata ptr<blob<Mode::Metadata::Svga2>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Svga2>>
-        pitch u32 <- (pMode.val.bpp / 8) * pMode.val.width
-        offset u32 <- y * pitch + (x * (pMode.val.bpp / 8))
+    @ drawPixel fun: p_mode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
+        p_metadata ptr<blob<Mode::Metadata::Svga2>> <- p_mode.val.aMetadata.ptr<blob<Mode::Metadata::Svga2>>
+        pitch u32 <- (p_mode.val.bpp / 8) * p_mode.val.width
+        offset u32 <- y * pitch + (x * (p_mode.val.bpp / 8))
 
         // 24 bit color
-        if pMode.val.bpp = 24 or pMode.val.bpp = 32
-            pPixel ptr<data<u8>> <- {pMetadata.val.aFramebuffer + offset}
-            pPixel.val[2] <- red
-            pPixel.val[1] <- green
-            pPixel.val[0] <- blue
+        if p_mode.val.bpp = 24 or p_mode.val.bpp = 32
+            p_pixel ptr<data<u8>> <- {p_metadata.val.aFramebuffer + offset}
+            p_pixel.val[2] <- red
+            p_pixel.val[1] <- green
+            p_pixel.val[0] <- blue
         ;
+    ;
+
+    readReg fun: reg u16 -> u32
+        @BSys::out32(it.portBase + Adapter::Svga2::INDEX_PORT_OFF, reg)
+        ret @BSys::in32(it.portBase + Adapter::Svga2::VALUE_PORT_OFF)
+    ;
+
+    writeReg fun: reg u16, value u32
+        @BSys::out32(it.portBase + Adapter::Svga2::INDEX_PORT_OFF, reg)
+        @BSys::out32(it.portBase + Adapter::Svga2::VALUE_PORT_OFF, value)
     ;
 ;

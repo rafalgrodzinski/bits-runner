@@ -1,5 +1,7 @@
 @module Video
 
+@import BSys
+
 @ Surface blob
     @ iAdapter proto<Adapter>
     @ pMode ptr<blob<Mode>>
@@ -97,4 +99,14 @@
             ;
         ;
     ;
+;
+
+@ Surface fun: i_adapter proto<Adapter>, p_mode ptr<blob<Mode>> -> ptr<blob<Surface>>
+    p_surface ptr<blob<Surface>> <- @BSys::memAlloc(blob<Surface>.size).ptr<blob<Surface>>
+    if p_surface.vadr = 0: ret {0}
+
+    p_surface.val.iAdapter <- i_adapter
+    p_surface.val.pMode <- p_mode
+
+    ret p_surface
 ;
