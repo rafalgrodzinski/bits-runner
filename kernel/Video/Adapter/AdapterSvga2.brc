@@ -41,6 +41,7 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
     specsVersion u32
     portBase u16
     modes blob<@B::Array, ptr<blob<Mode>>>
+    a_frontBuffer a
 
     @ init fun: p_pciDevice ptr<blob<@Pci::Device>> -> bool
         // Check if device matches
@@ -106,9 +107,9 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
         fbStart u32 <- it.readReg(Adapter::Svga2::REG_FB_START)
         fbOffset u32 <- it.readReg(Adapter::Svga2::REG_FB_OFFSET)
         fbSize u32 <- it.readReg(Adapter::Svga2::REG_FB_SIZE)
-        pMetadata.val.aFramebuffer <- Adapter::Svga2::FRAMEBUFFER_ADR // (fbStart + fbOffset).a
-        //@Memory::PagingManager::instance.mapDirectMemory(fbStart.a, fbSize)
-        @Memory::PagingManager::instance.mapMemory(pMetadata.val.aFramebuffer, fbStart, fbSize)
+        pageSize u32 <- p_mode.val.width * p_mode.val.height * p_mode.val.bpp / 8
+        it.a_frontBuffer <- Adapter::Svga2::FRAMEBUFFER_ADR
+        @Memory::PagingManager::instance.mapDirectMemory(fbStart.a, it.a_frontBuffer, pageSize)
 
         // Debug
         @BSys::debugPrintSerial("[VIDEO] mode: ")
@@ -140,13 +141,12 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
     ;
 
     @ drawPixel fun: p_mode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
-        p_metadata ptr<blob<Mode::Metadata::Svga2>> <- p_mode.val.aMetadata.ptr<blob<Mode::Metadata::Svga2>>
         pitch u32 <- (p_mode.val.bpp / 8) * p_mode.val.width
         offset u32 <- y * pitch + (x * (p_mode.val.bpp / 8))
 
         // 24 bit color
         if p_mode.val.bpp = 24 or p_mode.val.bpp = 32
-            p_pixel ptr<data<u8>> <- {p_metadata.val.aFramebuffer + offset}
+            p_pixel ptr<data<u8>> <- {it.a_frontBuffer + offset}
             p_pixel.val[2] <- red
             p_pixel.val[1] <- green
             p_pixel.val[0] <- blue
