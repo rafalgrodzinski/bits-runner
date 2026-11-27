@@ -17,7 +17,9 @@ Adapter::Svga2::INDEX_PORT_OFF u16 <- 0x00
 Adapter::Svga2::VALUE_PORT_OFF u16 <- 0x01
 
 // Specification
-Adapter::Svga2::SPECS_VER u32 <- 0x9000_0002
+Adapter::Svga2::SPECS_VER_0 u32 <- 0x9000_0000
+Adapter::Svga2::SPECS_VER_1 u32 <- 0x9000_0001
+Adapter::Svga2::SPECS_VER_2 u32 <- 0x9000_0002
 
 // Registers
 Adapter::Svga2::REG_ID u16 <- 0x00
@@ -36,22 +38,42 @@ Adapter::Svga2::REG_FIFO_SIZE u16 <- 0x13
 Adapter::Svga2::REG_CAPS u16 <- 0x11
 
 @ Adapter::Svga2 blob: Adapter
+    specsVersion u32
     portBase u16
     modes blob<@B::Array, ptr<blob<Mode>>>
 
     @ init fun: p_pciDevice ptr<blob<@Pci::Device>> -> bool
         // Check if device matches
         if p_pciDevice.val.vendorId != Adapter::Svga2::VENDOR_ID or p_pciDevice.val.deviceId != Adapter::Svga2::DEVICE_ID: ret false
-
+@BSys::debugPrintSerial("v1")
         // Enable bus master, memory space, and IO space
         p_pciDevice.val.sendCommand(0b0111)
-
+@BSys::debugPrintSerial("v2")
         // get base port for registers
         it.portBase <- (p_pciDevice.val.bar0 - 1).u16
-
+@BSys::debugPrintSerial("v3")
         // check version
-        it.writeReg(Adapter::Svga2::REG_ID, Adapter::Svga2::SPECS_VER)
-        if it.readReg(Adapter::Svga2::REG_ID) != Adapter::Svga2::SPECS_VER: ret false
+        // try v2
+        it.writeReg(Adapter::Svga2::REG_ID, Adapter::Svga2::SPECS_VER_2)
+        it.specsVersion <- it.readReg(Adapter::Svga2::REG_ID)
+
+        // try v1
+        if it.specsVersion != Adapter::Svga2::SPECS_VER_2
+            it.writeReg(Adapter::Svga2::REG_ID, Adapter::Svga2::SPECS_VER_1)
+            it.specsVersion <- it.readReg(Adapter::Svga2::REG_ID)
+        ;
+
+        // try v0
+        if it.specsVersion != Adapter::Svga2::SPECS_VER_2 and it.specsVersion != Adapter::Svga2::SPECS_VER_1
+            it.writeReg(Adapter::Svga2::REG_ID, Adapter::Svga2::SPECS_VER_0)
+            it.specsVersion <- it.readReg(Adapter::Svga2::REG_ID)
+        ;
+
+        @BSys::debugPrintSerial(@B::StringHexForU32(it.specsVersion).string)
+
+        if it.specsVersion != Adapter::Svga2::SPECS_VER_2 and it.specsVersion != Adapter::Svga2::SPECS_VER_1 and it.specsVersion != Adapter::Svga2::SPECS_VER_0: ret false
+
+@BSys::debugPrintSerial("v5")
 
         /*fifoStart u32 <- it.readReg(Adapter::Svga2::REG_FIFO_START)
         fifoSize u32 <- it.readReg(Adapter::Svga2::REG_FIFO_SIZE)
