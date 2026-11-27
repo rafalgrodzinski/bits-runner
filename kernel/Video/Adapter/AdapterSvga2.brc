@@ -10,7 +10,9 @@
 Adapter::Svga2::VENDOR_ID u16 <- 0x15ad
 Adapter::Svga2::DEVICE_ID u16 <- 0x0405
 
+// Mapped memory
 Adapter::Svga2::FRAMEBUFFER_ADR a <- 0xe000_0000
+Adapter::Svga2::COMMANDS_ADR a <- 0xe100_0000
 
 // Port offsets
 Adapter::Svga2::INDEX_PORT_OFF u16 <- 0x00
@@ -23,11 +25,14 @@ Adapter::Svga2::SPECS_VER_2 u32 <- 0x9000_0002
 
 // Registers
 Adapter::Svga2::REG_ID u16 <- 0x00
+Adapter::Svga2::REG_CAPS u16 <- 0x11
 Adapter::Svga2::REG_ENABLE u16 <- 0x01
+Adapter::Svga2::REG_CONFIG_DONE u16 <- 0x14
 
 Adapter::Svga2::REG_WIDTH u16 <- 0x02
 Adapter::Svga2::REG_HEIGHT u16 <- 0x03
 Adapter::Svga2::REG_BPP u16 <- 0x07
+Adapter::Svga2::REG_PITCH u16 <- 0x0c
 
 Adapter::Svga2::REG_FB_START u16 <- 0x0d
 Adapter::Svga2::REG_FB_OFFSET u16 <- 0x0e
@@ -35,12 +40,25 @@ Adapter::Svga2::REG_FB_SIZE u16 <- 0x10
 
 Adapter::Svga2::REG_FIFO_START u16 <- 0x12
 Adapter::Svga2::REG_FIFO_SIZE u16 <- 0x13
-Adapter::Svga2::REG_CAPS u16 <- 0x11
+
+Adapter::Svga2::REG_SYNC u16 <- 0x15
+Adapter::Svga2::REG_BUSY u16 <- 0x16
+
+// MARK: Command Register Offsets
+Adapter::Svga2::CMD_REG_IDX_MIN u32 <- 0
+Adapter::Svga2::CMD_REG_IDX_MAX u32 <- 1
+Adapter::Svga2::CMD_REG_IDX_NEXT_CMD u32 <- 2
+Adapter::Svga2::CMD_REG_IDX_STOP u32 <- 3
+
+// MARK: FIFO Commands
+Adapter::Svga2::CMD_UPDATE u32 <- 1
 
 @ Adapter::Svga2 blob: Adapter
     modes blob<@B::Array, ptr<blob<Mode>>>
 
     a_frontBuffer a
+    p_commands ptr<data<u32>>
+    nextCommand u32
 
     specsVersion u32
     portBase u16
@@ -71,9 +89,19 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
 
         if it.specsVersion != Adapter::Svga2::SPECS_VER_2 and it.specsVersion != Adapter::Svga2::SPECS_VER_1 and it.specsVersion != Adapter::Svga2::SPECS_VER_0: ret false
 
-        /*fifoStart u32 <- it.readReg(Adapter::Svga2::REG_FIFO_START)
+        // Setup commands queue and map FIFO memory
+        fifoStart u32 <- it.readReg(Adapter::Svga2::REG_FIFO_START)
         fifoSize u32 <- it.readReg(Adapter::Svga2::REG_FIFO_SIZE)
-        caps u32 <- it.readReg(Adapter::Svga2::REG_CAPS)*/
+        it.p_commands <- {Adapter::Svga2::COMMANDS_ADR}
+        @Memory::PagingManager::instance.mapMemory(it.p_commands.vadr, fifoStart.a, fifoSize)
+
+        it.nextCommand <- 16 // We skip the 4 cmd registers
+        it.p_commands.val[Adapter::Svga2::CMD_REG_IDX_MIN] <- it.nextCommand
+        it.p_commands.val[Adapter::Svga2::CMD_REG_IDX_MAX] <- fifoSize
+        it.p_commands.val[Adapter::Svga2::CMD_REG_IDX_NEXT_CMD] <- it.nextCommand
+        it.p_commands.val[Adapter::Svga2::CMD_REG_IDX_STOP] <- it.nextCommand
+
+        it.writeReg(Adapter::Svga2::REG_CONFIG_DONE, 1)
 
         ret true
     ;
@@ -81,8 +109,8 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
     @ getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
         if it.modes.count > 0: ret it.modes
 
-        it.modes.push(Mode(0, 800, 600, 32, 0))
-        //it.modes.push(Mode(1, 1024, 768, 32, 0))
+        it.modes.push(Mode(0, 800, 600, 32, 0, 0))
+        it.modes.push(Mode(1, 1024, 768, 32, 0, 0))
 
         ret it.modes
     ;
@@ -96,11 +124,15 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
         it.writeReg(Adapter::Svga2::REG_BPP, p_mode.val.bpp)
         it.writeReg(Adapter::Svga2::REG_ENABLE, 1)
 
+        // Update mode's pitch
+        p_mode.val.pitch <- it.readReg(Adapter::Svga2::REG_PITCH)
+
+        // Map framebuffer memory
         fbStart u32 <- it.readReg(Adapter::Svga2::REG_FB_START)
         fbOffset u32 <- it.readReg(Adapter::Svga2::REG_FB_OFFSET)
         fbSize u32 <- it.readReg(Adapter::Svga2::REG_FB_SIZE)
 
-        pageSize u32 <- p_mode.val.width * p_mode.val.height * (p_mode.val.bpp / 8)
+        pageSize u32 <- p_mode.val.height * p_mode.val.pitch
 
         it.a_frontBuffer <- Adapter::Svga2::FRAMEBUFFER_ADR
         @Memory::PagingManager::instance.mapMemory(it.a_frontBuffer, (fbStart + fbOffset).a, pageSize)
@@ -123,7 +155,16 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
         ret p_surface
     ;
 
-    @ commit fun: pMode ptr<blob<Mode>>
+    @ commit fun: p_mode ptr<blob<Mode>>
+        it.writeReg(Adapter::Svga2::REG_SYNC, 1)
+        rep it.readReg(Adapter::Svga2::REG_BUSY) != 0:
+
+        it.cmdWrite(Adapter::Svga2::CMD_UPDATE)
+        it.cmdWrite(0)
+        it.cmdWrite(0)
+        it.cmdWrite(p_mode.val.width)
+        it.cmdWrite(p_mode.val.height)
+        it.cmdCommit()
     ;
 
     @ clear fun: p_mode ptr<blob<Mode>>, red u8, green u8, blue u8
@@ -135,8 +176,7 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
     ;
 
     @ drawPixel fun: p_mode ptr<blob<Mode>>, x u32, y u32, red u8, green u8, blue u8
-        pitch u32 <- (p_mode.val.bpp / 8) * p_mode.val.width
-        offset u32 <- y * pitch + (x * (p_mode.val.bpp / 8))
+        offset u32 <- y * p_mode.val.pitch + (x * (p_mode.val.bpp / 8))
 
         // 24 bit color
         if p_mode.val.bpp = 24 or p_mode.val.bpp = 32
@@ -155,5 +195,19 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
     writeReg fun: reg u16, value u32
         @BSys::out32(it.portBase + Adapter::Svga2::INDEX_PORT_OFF, reg)
         @BSys::out32(it.portBase + Adapter::Svga2::VALUE_PORT_OFF, value)
+    ;
+
+    cmdWrite fun: command u32
+        it.p_commands.val[it.nextCommand / 4] <- command
+
+        it.nextCommand <- it.nextCommand + 4
+        // Loop back to the start of the buffer
+        if it.nextCommand >= it.p_commands.val[Adapter::Svga2::CMD_REG_IDX_MAX]
+            it.nextCommand <- it.p_commands.val[Adapter::Svga2::CMD_REG_IDX_MIN]
+        ;
+    ;
+
+    cmdCommit fun
+        it.p_commands.val[Adapter::Svga2::CMD_REG_IDX_NEXT_CMD] <- it.nextCommand
     ;
 ;
