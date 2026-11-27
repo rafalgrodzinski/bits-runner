@@ -48,6 +48,21 @@ DeviceType::CARDBUS_BRIDGE u8 <- 2
             bar4 u32 <- it.readRegister(busNum, deviceNum, funNum, 0x08)
             bar5 u32 <- it.readRegister(busNum, deviceNum, funNum, 0x09)
 
+            @BSys::debugPrintSerial("[PCI] ")
+            @BSys::debugPrintSerial(@B::StringForU32(busNum).string)
+            @BSys::debugPrintSerial(":")
+            @BSys::debugPrintSerial(@B::StringForU32(deviceNum).string)
+            @BSys::debugPrintSerial(":")
+            @BSys::debugPrintSerial(@B::StringForU32(funNum).string)
+
+            @BSys::debugPrintSerial(" ")
+
+            @BSys::debugPrintSerial(@B::StringHexForU32(vendorId).string)
+            @BSys::debugPrintSerial(":")
+            @BSys::debugPrintSerial(@B::StringHexForU32(deviceId).string)
+
+            @BSys::debugPrintSerial("\n")
+
             //it.addNormalDevice(busNum, deviceNum, funNum, vendorId, deviceId, class, subclass, bar0, bar1, bar2, bar3, bar4, bar5)
             p_device ptr<blob<Device>> <- Device(
                 busNum,

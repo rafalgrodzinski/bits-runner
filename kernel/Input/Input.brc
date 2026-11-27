@@ -18,19 +18,25 @@
         // Init Keyboard
         if it.keyboardPs2.init()
             it.primaryKeyboard <- {it.keyboardPs2.ptr}
+            @BSys::debugPrintSerial("[INPUT] Initialized Keyboard PS/2\n")
         else if it.keyboardBios.init()
             it.primaryKeyboard <- {it.keyboardBios.ptr}
+            @BSys::debugPrintSerial("[INPUT] Initialized Keyboard BIOS\n")
         else
             it.primaryKeyboard <- {it.keyboardNone.ptr}
+            @BSys::debugPrintSerial("[INPUT] Initialized Keyboard None\n")
         ;
 
         // Init Mouse
         if it.mousePs2.init()
             it.primaryMouse <- {it.mousePs2.ptr}
+            @BSys::debugPrintSerial("[INPUT] Initialized Mouse PS/2\n")
         else if it.mouseBios.init()
             it.primaryMouse <- {it.mouseBios.ptr}
+            @BSys::debugPrintSerial("[INPUT] Initialized Mouse BIOS\n")
         else
             it.primaryMouse <- {it.mouseNone.ptr}
+            @BSys::debugPrintSerial("[INPUT] Initialized Mouse None\n")
         ;
     ;
 ;

@@ -28,6 +28,7 @@
     @Term::init(@Term::MODE_80x25)
 
     @B::String("Initializing Bits Runner...").println()
+    @Devices::Serial::instance.init()
     @Pci::instance.init()
     @Devices::Timer::Pit::instance.init()
     @Storage::instance.init(biosBootDriveNumber, bootPartitionFirstSector)

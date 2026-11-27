@@ -1,9 +1,9 @@
 @module Video
 
-@import BiosService
-@import B
-@import Memory
 @import BSys
+@import B
+@import BiosService
+@import Memory
 
 VesaInfo blob
     @ signature data<u8, 4>
@@ -152,19 +152,19 @@ compModes fun: modeA boxed<ptr<blob<Mode>>>, modeB boxed<ptr<blob<Mode>>> -> enu
         ret it.modes
     ;
 
-    @ getSurface fun: pMode ptr<blob<Mode>> -> ptr<blob<Surface>>
+    @ getSurface fun: p_mode ptr<blob<Mode>> -> ptr<blob<Surface>>
         // Setup surface
         pSurface ptr<blob<Surface>> <- @BSys::memAlloc(blob<Surface>.size).ptr<blob<Surface>>
         pSurface.val.iAdapter <- {it.ptr}
-        pSurface.val.pMode <- pMode
+        pSurface.val.pMode <- p_mode
 
         // Setup adapter
-        pMetadata ptr<blob<Mode::Metadata::Vesa>> <- pMode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
-        @BiosService::Video::vesaSetMode(pMode.val.id)
+        pMetadata ptr<blob<Mode::Metadata::Vesa>> <- p_mode.val.aMetadata.ptr<blob<Mode::Metadata::Vesa>>
+        @BiosService::Video::vesaSetMode(p_mode.val.id)
 
         // Setup double buffering
         it.aFrontPageBuffer <- AdapterVesa::FRAMEBUFFER_ADR
-        pageSize u32 <- pMetadata.val.pitch * pMode.val.height
+        pageSize u32 <- pMetadata.val.pitch * p_mode.val.height
 
         // On device double buffering
         if it.aVesaFunctionsTable != 0 and it.memoryBlocksCount >= (pageSize * 2 + 0x10_000 - 1) / 0x10_000
@@ -179,7 +179,7 @@ compModes fun: modeA boxed<ptr<blob<Mode>>>, modeB boxed<ptr<blob<Mode>>> -> enu
         ;
 
         // Set palette for RGB332 in case of 8 bit color
-        if pMode.val.bpp = 8
+        if p_mode.val.bpp = 8
             palette data<u8, 1024>
 
             rep i u32, i < 256, i <- i + 1
@@ -194,6 +194,19 @@ compModes fun: modeA boxed<ptr<blob<Mode>>>, modeB boxed<ptr<blob<Mode>>> -> enu
             ;
 
             @BiosService::Video::vesaSetPalette(palette.adr)
+        ;
+
+        // Debug
+        @BSys::debugPrintSerial("[VIDEO] mode: ")
+        @BSys::debugPrintSerial(@B::StringForU32(p_mode.val.width).string)
+        @BSys::debugPrintSerial("x")
+        @BSys::debugPrintSerial(@B::StringForU32(p_mode.val.height).string)
+        @BSys::debugPrintSerial("@")
+        @BSys::debugPrintSerial(@B::StringForU32(p_mode.val.bpp).string)
+        if it.bufferMode = AdapterVesa::BUFFER_MODE_DEVICE
+            @BSys::debugPrintSerial(" HW_DB\n")
+        else
+            @BSys::debugPrintSerial(" SF_DB\n")
         ;
 
         ret pSurface

@@ -1,0 +1,97 @@
+@module BSys
+
+// MARK: Registers
+@ getEax raw<"=r"> -> u32
+    mov $0, eax
+;
+
+@ getEbx raw<"=r"> -> u32
+    mov $0, ebx
+;
+
+@ getEcx raw<"=r"> -> u32
+    mov $0, ecx
+;
+
+@ getEdx raw<"=r"> -> u32
+    mov $0, edx
+;
+
+@ getEsp raw<"=r"> -> u32
+    mov $0, esp
+;
+
+@ getCr0 raw<"=r"> -> u32
+    mov $0, cr0
+;
+
+@ getCr2 raw<"=r"> -> u32
+    mov $0, cr2
+;
+
+@ getCr3 raw<"=r"> -> u32
+    mov $0, cr3
+;
+
+@ setCr3 raw<"r, ~{memory}">: address u32
+    mov cr3, $0
+;
+
+// MARK: Ports
+@ out8 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u8
+    mov dx, $0
+    mov al, $1
+    out dx, al
+;
+
+@ out16 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u16
+    mov dx, $0
+    mov ax, $1
+    out dx, ax
+;
+
+@ out32 raw<"r, r, ~{eax}, ~{edx}">: port u16, value u32
+    mov dx, $0
+    mov eax, $1
+    out dx, eax
+;
+
+@ in8 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u8
+    mov dx, $1
+    in al, dx
+    mov $0, al
+;
+
+@ in16 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u16
+    mov dx, $1
+    in ax, dx
+    mov $0, ax
+;
+
+@ in32 raw<"=r, r, ~{eax}, ~{edx}">: port u16 -> u32
+    mov dx, $1
+    in eax, dx
+    mov $0, eax
+;
+
+// MARK: Other
+@ disableInterrupts raw<"=r, ~{eax}, ~{flags}"> -> bool
+    mov $0, 0
+
+    pushfd
+    pop eax
+    test eax, 0x200
+    jz .flag_not_set${:uid}
+    mov $0, 1
+
+.flag_not_set${:uid}:
+    cli
+;
+
+@ enableInterrupts raw<"~{flags}">
+    sti
+;
+
+@ halt raw
+    hlt
+;

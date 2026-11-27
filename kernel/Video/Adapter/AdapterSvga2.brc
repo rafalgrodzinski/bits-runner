@@ -95,6 +95,15 @@ Adapter::Svga2::REG_CAPS u16 <- 0x11
         //@Memory::PagingManager::instance.mapDirectMemory(fbStart.a, fbSize)
         @Memory::PagingManager::instance.mapMemory(pMetadata.val.aFramebuffer, fbStart, fbSize)
 
+        // Debug
+        @BSys::debugPrintSerial("[VIDEO] mode: ")
+        @BSys::debugPrintSerial(@B::StringForU32(p_mode.val.width).string)
+        @BSys::debugPrintSerial("x")
+        @BSys::debugPrintSerial(@B::StringForU32(p_mode.val.height).string)
+        @BSys::debugPrintSerial("@")
+        @BSys::debugPrintSerial(@B::StringForU32(p_mode.val.bpp).string)
+        @BSys::debugPrintSerial("\n")
+
         ret p_surface
     ;
 
