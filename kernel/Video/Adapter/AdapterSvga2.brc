@@ -191,9 +191,9 @@ Adapter::Svga2::CMD_UPDATE u32 <- 1
         // 16 bit color
         if p_mode.val.bpp = 16
             pixel u16
-            pixel <- pixel | (red & 0b0001_1111).u16 << 11
-            pixel <- pixel | (green & 0b0011_1111).u16 << 5
-            pixel <- pixel | (blue & 0b0001_1111).u16 << 0
+            pixel <- pixel | (red.u16 >> 3) << 11
+            pixel <- pixel | (green.u16 >> 2) << 5
+            pixel <- pixel | (blue.u16 >> 3) << 0
 
             p_pixel ptr<u16> <- {it.a_frontBuffer + offset}
             p_pixel.val <- pixel
