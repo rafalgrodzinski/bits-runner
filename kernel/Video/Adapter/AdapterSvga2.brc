@@ -31,6 +31,8 @@ Adapter::Svga2::REG_CONFIG_DONE u16 <- 0x14
 
 Adapter::Svga2::REG_WIDTH u16 <- 0x02
 Adapter::Svga2::REG_HEIGHT u16 <- 0x03
+Adapter::Svga2::REG_MAX_WIDTH u16 <- 0x04
+Adapter::Svga2::REG_MAX_HEIGHT u16 <- 0x05
 Adapter::Svga2::REG_BPP u16 <- 0x07
 Adapter::Svga2::REG_PITCH u16 <- 0x0c
 
@@ -96,6 +98,9 @@ Adapter::Svga2::CMD_UPDATE u32 <- 1
         if it.modes.count > 0: ret it.modes
         index u32
 
+        maxWidth u32 <- it.readReg(Adapter::Svga2::REG_MAX_WIDTH)
+        maxHeight u32 <- it.readReg(Adapter::Svga2::REG_MAX_HEIGHT)
+
         rep resI u32, resI < 3, resI <- resI + 1
             rep depthI u32, depthI < 3, depthI <- depthI + 1
                 width u32
@@ -125,12 +130,10 @@ Adapter::Svga2::CMD_UPDATE u32 <- 1
                 it.writeReg(Adapter::Svga2::REG_HEIGHT, height)
                 it.writeReg(Adapter::Svga2::REG_BPP, bpp)
 
-                readWidth u32 <- it.readReg(Adapter::Svga2::REG_WIDTH)
-                readHeight u32 <- it.readReg(Adapter::Svga2::REG_HEIGHT)
                 readBpp u32 <- it.readReg(Adapter::Svga2::REG_BPP)
                 pitch u32 <- it.readReg(Adapter::Svga2::REG_PITCH)
 
-                if width = readWidth and height = readHeight and bpp = readBpp
+                if width <= maxWidth and height <= maxHeight and bpp = readBpp
                     it.modes.push(Mode(index, width, height, bpp, pitch, 0))
                     index <- index + 1
 
