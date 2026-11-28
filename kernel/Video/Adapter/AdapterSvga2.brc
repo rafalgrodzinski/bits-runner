@@ -89,6 +89,87 @@ Adapter::Svga2::CMD_UPDATE u32 <- 1
 
         if it.specsVersion != Adapter::Svga2::SPECS_VER_2 and it.specsVersion != Adapter::Svga2::SPECS_VER_1 and it.specsVersion != Adapter::Svga2::SPECS_VER_0: ret false
 
+        ret true
+    ;
+
+    @ getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
+        if it.modes.count > 0: ret it.modes
+        index u32
+
+        rep resI u32, resI < 3, resI <- resI + 1
+            rep depthI u32, depthI < 3, depthI <- depthI + 1
+                width u32
+                height u32
+                bpp u32
+
+                if resI = 2
+                    width <- 1024
+                    height <- 768
+                else if resI = 1
+                    width <- 800
+                    height <- 600
+                else
+                    width <- 640
+                    height <- 480
+                ;
+
+                if depthI = 2
+                    bpp <- 32
+                else if depthI = 1
+                    bpp <- 16
+                else
+                    bpp <- 8
+                ;
+
+                it.writeReg(Adapter::Svga2::REG_WIDTH, width)
+                it.writeReg(Adapter::Svga2::REG_HEIGHT, height)
+                it.writeReg(Adapter::Svga2::REG_BPP, bpp)
+
+                readWidth u32 <- it.readReg(Adapter::Svga2::REG_WIDTH)
+                readHeight u32 <- it.readReg(Adapter::Svga2::REG_HEIGHT)
+                readBpp u32 <- it.readReg(Adapter::Svga2::REG_BPP)
+                pitch u32 <- it.readReg(Adapter::Svga2::REG_PITCH)
+
+                if width = readWidth and height = readHeight and bpp = readBpp
+                    it.modes.push(Mode(index, width, height, bpp, pitch, 0))
+                    index <- index + 1
+
+                    // Debug
+                    @BSys::debugPrintSerial("[VIDEO] scanned: ")
+                    @BSys::debugPrintSerial(@B::StringForU32(width).string)
+                    @BSys::debugPrintSerial("x")
+                    @BSys::debugPrintSerial(@B::StringForU32(height).string)
+                    @BSys::debugPrintSerial("@")
+                    @BSys::debugPrintSerial(@B::StringForU32(bpp).string)
+                    @BSys::debugPrintSerial(", pitch: ")
+                    @BSys::debugPrintSerial(@B::StringForU32(pitch).string)
+                    @BSys::debugPrintSerial("\n")
+                ;
+            ;
+        ;
+
+        ret it.modes
+    ;
+
+    @ getSurface fun: p_mode ptr<blob<Mode>> -> ptr<blob<Surface>>
+        // Setup surface
+        p_surface ptr<blob<Surface>> <- Surface({it.ptr}, p_mode)
+
+        it.writeReg(Adapter::Svga2::REG_WIDTH, p_mode.val.width)
+        it.writeReg(Adapter::Svga2::REG_HEIGHT, p_mode.val.height)
+        it.writeReg(Adapter::Svga2::REG_BPP, p_mode.val.bpp)
+        it.writeReg(Adapter::Svga2::REG_ENABLE, 1)
+
+        // Map framebuffer memory
+        fbStart u32 <- it.readReg(Adapter::Svga2::REG_FB_START)
+        fbOffset u32 <- it.readReg(Adapter::Svga2::REG_FB_OFFSET)
+        fbSize u32 <- it.readReg(Adapter::Svga2::REG_FB_SIZE)
+
+        pageSize u32 <- p_mode.val.height * p_mode.val.pitch
+
+        it.a_frontBuffer <- Adapter::Svga2::FRAMEBUFFER_ADR
+        @Memory::PagingManager::instance.mapMemory(it.a_frontBuffer, (fbStart + fbOffset).a, pageSize)
+
         // Setup commands queue and map FIFO memory
         fifoStart u32 <- it.readReg(Adapter::Svga2::REG_FIFO_START)
         fifoSize u32 <- it.readReg(Adapter::Svga2::REG_FIFO_SIZE)
@@ -103,40 +184,6 @@ Adapter::Svga2::CMD_UPDATE u32 <- 1
 
         it.writeReg(Adapter::Svga2::REG_CONFIG_DONE, 1)
 
-        ret true
-    ;
-
-    @ getModes fun -> blob<@B::Array, ptr<blob<Mode>>>
-        if it.modes.count > 0: ret it.modes
-
-        it.modes.push(Mode(0, 800, 600, 32, 0, 0))
-        it.modes.push(Mode(1, 1024, 768, 16, 0, 0))
-
-        ret it.modes
-    ;
-
-    @ getSurface fun: p_mode ptr<blob<Mode>> -> ptr<blob<Surface>>
-        // Setup surface
-        p_surface ptr<blob<Surface>> <- Surface({it.ptr}, p_mode)
-
-        it.writeReg(Adapter::Svga2::REG_WIDTH, p_mode.val.width)
-        it.writeReg(Adapter::Svga2::REG_HEIGHT, p_mode.val.height)
-        it.writeReg(Adapter::Svga2::REG_BPP, p_mode.val.bpp)
-        it.writeReg(Adapter::Svga2::REG_ENABLE, 1)
-
-        // Update mode's pitch
-        p_mode.val.pitch <- it.readReg(Adapter::Svga2::REG_PITCH)
-
-        // Map framebuffer memory
-        fbStart u32 <- it.readReg(Adapter::Svga2::REG_FB_START)
-        fbOffset u32 <- it.readReg(Adapter::Svga2::REG_FB_OFFSET)
-        fbSize u32 <- it.readReg(Adapter::Svga2::REG_FB_SIZE)
-
-        pageSize u32 <- p_mode.val.height * p_mode.val.pitch
-
-        it.a_frontBuffer <- Adapter::Svga2::FRAMEBUFFER_ADR
-        @Memory::PagingManager::instance.mapMemory(it.a_frontBuffer, (fbStart + fbOffset).a, pageSize)
-
         // Debug
         @BSys::debugPrintSerial("[VIDEO] mode: ")
         @BSys::debugPrintSerial(@B::StringForU32(p_mode.val.width).string)
@@ -150,16 +197,6 @@ Adapter::Svga2::CMD_UPDATE u32 <- 1
         @BSys::debugPrintSerial(@B::StringHexForU32(fbOffset).string)
         @BSys::debugPrintSerial(", fbSize: ")
         @BSys::debugPrintSerial(@B::StringHexForU32(fbSize).string)
-        @BSys::debugPrintSerial("\n")
-
-        @BSys::debugPrintSerial("actual: ")
-        @BSys::debugPrintSerial(@B::StringForU32(it.readReg(Adapter::Svga2::REG_WIDTH)).string)
-        @BSys::debugPrintSerial("x")
-        @BSys::debugPrintSerial(@B::StringForU32(it.readReg(Adapter::Svga2::REG_HEIGHT)).string)
-        @BSys::debugPrintSerial("@")
-        @BSys::debugPrintSerial(@B::StringForU32(it.readReg(Adapter::Svga2::REG_BPP)).string)
-        @BSys::debugPrintSerial("-")
-        @BSys::debugPrintSerial(@B::StringForU32(it.readReg(Adapter::Svga2::REG_PITCH)).string)
         @BSys::debugPrintSerial("\n")
 
         ret p_surface
