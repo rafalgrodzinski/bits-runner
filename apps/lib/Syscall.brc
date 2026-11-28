@@ -11,10 +11,11 @@ syscallRaw raw<"={eax}, m, m, m, m, m, m, ~{ebx}, ~{ecx}, ~{edx}, ~{esi}, ~{edi}
     mov $0, eax
 ;
 
-// System
+// MARK: System
 System::REBOOT u32 <- 0x000
 System::GET_TIMESTAMP u32 <- 0x010
-System::GET_INFO_PCI u32 <- 0x021
+System::GET_PCI_DEVICES_COUNT u32 <- 0x020
+System::GET_PCI_DEVICE_INFO u32 <- 0x021
 System::GRAB_RESOURCE u32 <- 0x030
 System::RELEASE_RESOURCE u32 <- 0x031
 
@@ -22,7 +23,7 @@ System::RELEASE_RESOURCE u32 <- 0x031
 @ System::ResourceCategory::CREATE_STORAGE_ENTRY u32 <- 0x02
 @ System::ResourceCategory::VIDEO_GET_SURFACE u32 <- 0x03
 
-@ InfoPciDevice blob
+@ PciDeviceInfo blob
         @ busNum u32
         @ deviceNum u32
         @ funNum u32
@@ -30,12 +31,7 @@ System::RELEASE_RESOURCE u32 <- 0x031
         @ vendorId u32
         @ deviceId u32
         @ class u32
-        @ subclass u32
-;
-
-@ InfoPci blob
-    devicesCount u32
-    devices data<blob<InfoPciDevice>, 16>
+        @ subClass u32
 ;
 
 @ System::reboot fun
@@ -46,9 +42,13 @@ System::RELEASE_RESOURCE u32 <- 0x031
     ret syscallRaw(System::GET_TIMESTAMP, 0, 0, 0, 0, 0)
 ;
 
-@ System::getInfoPci fun -> blob<InfoPci>
-    info blob<InfoPci>
-    syscallRaw(System::GET_INFO_PCI, info.adr.u32, 0, 0, 0, 0)
+@ System::getPciDevicesCount fun -> u32
+    ret syscallRaw(System::GET_PCI_DEVICES_COUNT, 0, 0, 0, 0, 0)
+;
+
+@ System::getPciDeviceInfo fun: index u32 -> blob<PciDeviceInfo>
+    info blob<PciDeviceInfo>
+    syscallRaw(System::GET_PCI_DEVICE_INFO, info.adr.u32, index, 0, 0, 0)
     ret info
 ;
 
@@ -60,7 +60,7 @@ System::RELEASE_RESOURCE u32 <- 0x031
     syscallRaw(System::RELEASE_RESOURCE, resourceId, 0, 0, 0, 0)
 ;
 
-// Memory
+// MARK: Memory
 Memory::GET_INFO u32 <- 0x100
 Memory::EXPAND_HEAP u32 <- 0x101
 
@@ -91,7 +91,7 @@ Memory::EXPAND_HEAP u32 <- 0x101
     ret syscallRaw(Memory::EXPAND_HEAP, size, 0, 0, 0, 0)
 ;
 
-// Process
+// MARK: Process
 Process::YIELD u32 <- 0x200
 Process::SLEEP u32 <- 0x201
 
@@ -103,7 +103,7 @@ Process::SLEEP u32 <- 0x201
     syscallRaw(Process::SLEEP, milliseconds, 0, 0, 0, 0)
 ;
 
-// Storage
+// MARK: Storage
 Storage::GET_ENTRY_INFO u32 <- 0x300
 Storage::DELETE_ENTRY u32 <- 0x301
 Storage::READ_ENTRY u32 <- 0x302
@@ -136,7 +136,7 @@ Storage::WRITE_ENTRY u32 <- 0x303
     ret syscallRaw(Storage::WRITE_ENTRY, resId, offset, size, a_source.u32, 0)
 ;
 
-// Input
+// MARK: Input
 Input::KEYBOARD_GET_ASCII u32 <- 0x401
 Input::MOUSE_GET_STATE u32 <- 0x410
 
@@ -157,14 +157,14 @@ Input::MOUSE_GET_STATE u32 <- 0x410
     ret mouseState
 ;
 
-// Terminal
+// MARK: Terminal
 Terminal::PRINT_CHARACTER u32 <- 0x501
 
 @ Terminal::printCharacter fun: character u8, attribute u8
     syscallRaw(Terminal::PRINT_CHARACTER, character, attribute, 0, 0, 0)
 ;
 
-// Video
+// MARK: Video
 Video::GET_MODES_COUNT u32 <- 0x600
 Video::GET_MODE_INFO u32 <- 0x601
 
@@ -219,7 +219,7 @@ Video::DRAW_BITMAP u32 <- 0x623
     syscallRaw(Video::DRAW_BITMAP, resId, xy, wh, bpp, a_data.u32)
 ;
 
-// Audio
+// MARK: Audio
 Audio::PLAY u32 <- 0x700
 Audio::STOP u32 <- 0x701
 
@@ -231,7 +231,7 @@ Audio::STOP u32 <- 0x701
     syscallRaw(Audio::STOP, 0, 0, 0, 0, 0)
 ;
 
-// Debug
+// MARK: Debug
 Debug::DUMP_PAGING u32 <- 0x00
 Debug::DUMP_STACK u32 <- 0x01
 Debug::DUMP_MEMORY u32 <- 0x02

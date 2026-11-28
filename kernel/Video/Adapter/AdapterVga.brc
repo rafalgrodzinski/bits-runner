@@ -154,6 +154,19 @@ VGA_MODE_640x480x4 u32 <- 0x00
             @BiosService::Video::vgaSetMode(0x12)
         ;
 
+        // Debug
+        @BSys::debugPrintSerial("[VIDEO] mode: ")
+        @BSys::debugPrintSerial(@B::StringForU32(pMode.val.width).string)
+        @BSys::debugPrintSerial("x")
+        @BSys::debugPrintSerial(@B::StringForU32(pMode.val.height).string)
+        @BSys::debugPrintSerial("@")
+        @BSys::debugPrintSerial(@B::StringForU32(pMode.val.bpp).string)
+        if pMode.val.id = VGA_MODE_320x240x8
+            @BSys::debugPrintSerial(" HW_DB\n")
+        else
+            @BSys::debugPrintSerial(" SF_DB\n")
+        ;
+
         ret pSurface
     ;
 

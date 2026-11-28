@@ -37,6 +37,8 @@
             cmd_reboot()
         else if cmd.isEqual(@B::String("time"))
             cmd_time()
+        else if cmd.isEqual(@B::String("lspci"))
+            cmd_lspci()
         // Mem
         else if cmd.isEqual(@B::String("mem"))
             cmd_mem()
@@ -73,7 +75,7 @@
     ;
 ;
 
-// System
+// MARK: System
 cmd_reboot fun
     @B::String("Rebooting...").println()
     @Syscall::System::reboot()
@@ -84,7 +86,36 @@ cmd_time fun
     @B::StringForU32(timestamp).println()
 ;
 
-// Memory
+cmd_lspci fun
+    count u32 <- @Syscall::System::getPciDevicesCount()
+
+    rep i u32, i < count, i <- i + 1
+        pciDeviceInfo blob<@Syscall::PciDeviceInfo> <- @Syscall::System::getPciDeviceInfo(i)
+
+        @B::StringForU32(pciDeviceInfo.busNum).print()
+        @B::String(":").print()
+        @B::StringForU32(pciDeviceInfo.deviceNum).print()
+        @B::String(":").print()
+        @B::StringForU32(pciDeviceInfo.funNum).print()
+
+        @B::String(" ").print()
+
+        @B::StringHexForU32(pciDeviceInfo.vendorId).print()
+        @B::String(":").print()
+        @B::StringHexForU32(pciDeviceInfo.deviceId).print()
+
+        @B::String(" ").print()
+
+        @B::StringHexForU32(pciDeviceInfo.class).print()
+
+        @B::String(":").print()
+        @B::StringHexForU32(pciDeviceInfo.subClass).print()
+
+        @B::String::println()
+    ;
+;
+
+// MARK: Memory
 cmd_mem fun
     info blob<@Syscall::Memory::Info> <- @Syscall::Memory::getInfo()
 

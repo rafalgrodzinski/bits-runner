@@ -1,24 +1,36 @@
 @module Video
 
-@import Bus
+@import BSys
+@import Pci
 
 @ instance blob<Video>
 
 @ Video blob
     @ primaryAdapter proto<Adapter>
 
-    adapterSvga2 blob<AdapterSvga2>
+    adapterSvga2 blob<Adapter::Svga2>
     adapterVesa blob<AdapterVesa>
     adapterVga blob<AdapterVga>
     adapterNone blob<AdapterNone>
 
     @ init fun
+        rep i u32, i < @Pci::instance.devices.count, i <- i + 1
+            if it.adapterSvga2.init(@Pci::instance.devices.at(i).ptr<blob<@Pci::Device>>)
+                it.primaryAdapter <- {it.adapterSvga2.ptr}
+                @BSys::debugPrintSerial("[VIDEO] Initialized VM SVGA II\n")
+                ret
+            ;
+        ;
+
         if it.adapterVesa.init()
             it.primaryAdapter <- {it.adapterVesa.ptr}
+            @BSys::debugPrintSerial("[VIDEO] Initialized VESA\n")
         else if it.adapterVga.init()
             it.primaryAdapter <- {it.adapterVga.ptr}
+            @BSys::debugPrintSerial("[VIDEO] Initialized VGA\n")
         else
             it.primaryAdapter <- {it.adapterNone.ptr}
+            @BSys::debugPrintSerial("[VIDEO] Initialized None\n")
         ;
     ;
 ;
